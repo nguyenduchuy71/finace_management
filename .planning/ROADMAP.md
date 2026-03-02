@@ -29,12 +29,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. VND currency amounts display as `đ 1.500.000` format (no decimals, dots as thousand separators)
   4. TanStack Query loading, error, and success states are all reachable in the browser by toggling MSW handler responses
   5. Zustand filter store exists and a filter state change in devtools causes a query param update (observable in Network tab)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Project setup — Vite + React 19 + TypeScript strict + Tailwind CSS + shadcn/ui initialization
-- [ ] 01-02: Data contracts — TypeScript domain types, Zod schemas, API service layer, TanStack Query config
-- [ ] 01-03: Mock API and state — MSW 2.x handlers with realistic fixture data, Zustand filter store
+- [ ] 01-01-PLAN.md — Vite + React 19 + TypeScript strict + Tailwind CSS + shadcn/ui scaffold and App shell
+- [ ] 01-02-PLAN.md — TypeScript domain types, Zod schemas, axios service layer, utility functions with tests
+- [ ] 01-03-PLAN.md — MSW 2.x handlers + Vietnamese fixture data, Zustand filter store, proof-of-concept transaction render
 
 ### Phase 2: Core Transaction Views
 **Goal**: Users can browse all bank and credit card transactions, apply filters, and search — the full read-only transaction viewing experience works end-to-end
@@ -91,7 +91,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data Infrastructure | 0/3 | Not started | - |
+| 1. Foundation and Data Infrastructure | 0/3 | Ready to execute | - |
 | 2. Core Transaction Views | 0/3 | Not started | - |
 | 3. Credit Card Billing Cycle | 0/2 | Not started | - |
 | 4. Dashboard and Polish | 0/2 | Not started | - |
