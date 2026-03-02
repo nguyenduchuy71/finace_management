@@ -87,23 +87,23 @@
 | FOUND-03 | Phase 1 | Pending |
 | FOUND-04 | Phase 1 | Pending |
 | FOUND-05 | Phase 1 | Pending |
+| UX-02 | Phase 1 | Pending |
 | BANK-01 | Phase 2 | Pending |
 | BANK-02 | Phase 2 | Pending |
 | BANK-03 | Phase 2 | Pending |
 | BANK-04 | Phase 2 | Pending |
 | CC-01 | Phase 2 | Pending |
 | CC-02 | Phase 2 | Pending |
-| CC-03 | Phase 3 | Pending |
-| CC-04 | Phase 3 | Pending |
 | FILTER-01 | Phase 2 | Pending |
 | FILTER-02 | Phase 2 | Pending |
 | FILTER-03 | Phase 2 | Pending |
 | FILTER-04 | Phase 2 | Pending |
-| DASH-01 | Phase 3 | Pending |
-| DASH-02 | Phase 3 | Pending |
 | DASH-03 | Phase 2 | Pending |
+| CC-03 | Phase 3 | Pending |
+| CC-04 | Phase 3 | Pending |
+| DASH-01 | Phase 4 | Pending |
+| DASH-02 | Phase 4 | Pending |
 | UX-01 | Phase 4 | Pending |
-| UX-02 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 22 total
@@ -112,4 +112,4 @@
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 after roadmap creation*
