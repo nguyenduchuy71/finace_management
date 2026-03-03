@@ -17,7 +17,7 @@
 
 - [ ] **BANK-01**: Người dùng có thể xem danh sách tất cả giao dịch của tài khoản ngân hàng (debit/credit)
 - [ ] **BANK-02**: Mỗi giao dịch hiển thị: ngày, mô tả, số tiền (VND integer format), loại giao dịch
-- [ ] **BANK-03**: Người dùng có thể chọn xem theo từng tài khoản ngân hàng riêng biệt
+- [x] **BANK-03**: Người dùng có thể chọn xem theo từng tài khoản ngân hàng riêng biệt
 - [ ] **BANK-04**: Danh sách giao dịch hỗ trợ pagination để xử lý số lượng lớn giao dịch
 
 ### Credit Card Transactions
@@ -30,7 +30,7 @@
 ### Filter & Search
 
 - [ ] **FILTER-01**: Người dùng có thể lọc giao dịch theo khoảng ngày (date range picker)
-- [ ] **FILTER-02**: Người dùng có thể lọc giao dịch theo tài khoản/thẻ
+- [x] **FILTER-02**: Người dùng có thể lọc giao dịch theo tài khoản/thẻ
 - [ ] **FILTER-03**: Người dùng có thể lọc theo loại giao dịch (income/expense)
 - [ ] **FILTER-04**: Người dùng có thể tìm kiếm giao dịch theo tên/mô tả (text search)
 
@@ -90,12 +90,12 @@
 | UX-02 | Phase 1 | Complete (01-02) |
 | BANK-01 | Phase 2 | Pending |
 | BANK-02 | Phase 2 | Pending |
-| BANK-03 | Phase 2 | Pending |
+| BANK-03 | Phase 2 | Complete |
 | BANK-04 | Phase 2 | Pending |
 | CC-01 | Phase 2 | Pending |
 | CC-02 | Phase 2 | Pending |
 | FILTER-01 | Phase 2 | Pending |
-| FILTER-02 | Phase 2 | Pending |
+| FILTER-02 | Phase 2 | Complete |
 | FILTER-03 | Phase 2 | Pending |
 | FILTER-04 | Phase 2 | Pending |
 | DASH-03 | Phase 2 | Complete |

@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 2 of 4 (Core Transaction Views) — IN PROGRESS
-Plan: 3 of 4 in current phase — COMPLETE (02-03)
-Status: Phase 2 plan 02-03 complete, ready for 02-04
-Last activity: 2026-03-03 — Plan 02-03 complete: TransactionRow, TransactionList (infinite scroll), CreditCardTransactionRow, CreditCardTransactionList, SearchInput, DateRangePicker, TransactionTypeFilter, FilterBar
+Plan: 4 of 4 in current phase — COMPLETE (02-04)
+Status: Phase 2 all plans complete — AccountTabs, CreditCardTabs, BankAccountsPage, CreditCardsPage fully composed
+Last activity: 2026-03-03 — Plan 02-04 complete: AccountTabs (account switcher), CreditCardTabs (card switcher), BankAccountsPage and CreditCardsPage fully wired
 
-Progress: [█████░░░░░] 50% (6/12 plans total)
+Progress: [██████░░░░] 58% (7/12 plans total)
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████░░░░░] 50% (6/12 plans total)
 | Phase 02 P01 | 18 min | 6 tasks | 24 files |
 | Phase 02 P02 | 15 min | 6 tasks | 7 files |
 | Phase 02 P03 | 2 min | 8 tasks | 8 files |
+| Phase 02 P04 | 5 min | 4 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -89,6 +90,8 @@ Recent decisions affecting current work:
 - [02-02]: Theme persisted to localStorage under finance-theme key
 - [02-03]: DateRangePicker auto-closes Popover only when both from AND to dates selected — single-date click keeps popover open for second selection
 - [02-03]: FilterBar resetFilters() resets all filter state including accountId/cardId defaults — acceptable since FilterBar is mounted within account-specific page contexts
+- [02-04]: CreditCardTabs uses card.cardName + card.cardNumber.slice(-4) — confirmed from CreditCard type (cardNumber field, not lastFour)
+- [02-04]: AccountTabs initializes accountId to first account only when accountId is null — avoids overriding existing store state on navigation back
 
 ### Pending Todos
 
@@ -102,5 +105,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 02-03-PLAN.md — TransactionRow, TransactionList (infinite scroll + Load More), CreditCardTransactionRow, CreditCardTransactionList, SearchInput (debounce), DateRangePicker (Calendar range), TransactionTypeFilter (Select), FilterBar (composition). 8 tasks, 8 files, 0 TypeScript errors.
+Stopped at: Completed 02-04-PLAN.md — AccountTabs (account switcher with Zustand init), CreditCardTabs (card switcher), BankAccountsPage and CreditCardsPage fully composed with real components. 4 tasks, 4 files, 0 TypeScript errors.
 Resume file: None
