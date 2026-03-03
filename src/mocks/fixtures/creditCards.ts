@@ -30,8 +30,8 @@ export const mockCreditCards: CreditCard[] = [
 ]
 
 // Billing cycle references (Vietnam UTC+7: statement cuts at 17:00 UTC = midnight VN)
-const CYCLE_JAN_START = '2025-12-15T17:00:00Z' // 15 Dec 2025 midnight VN
-const CYCLE_JAN_END = '2026-01-15T17:00:00Z'   // 15 Jan 2026 midnight VN
+const CYCLE_JAN_START = '2025-12-15T17:00:00Z' // 16 Dec 2025 00:00 VN (= statementDay 15 at 17:00 UTC)
+const CYCLE_JAN_END = '2026-01-15T17:00:00Z'   // 16 Jan 2026 00:00 VN (= statementDay 15 at 17:00 UTC)
 const CYCLE_FEB_START = '2026-01-15T17:00:00Z'
 const CYCLE_FEB_END = '2026-02-15T17:00:00Z'
 
