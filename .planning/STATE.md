@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-03-03T13:01:00.000Z"
+last_updated: "2026-03-03T13:08:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 12
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 2 of 4 (Core Transaction Views) — IN PROGRESS
-Plan: 4 of 4 in current phase — COMPLETE (02-04)
-Status: Phase 2 all plans complete — AccountTabs, CreditCardTabs, BankAccountsPage, CreditCardsPage fully composed
-Last activity: 2026-03-03 — Plan 02-04 complete: AccountTabs (account switcher), CreditCardTabs (card switcher), BankAccountsPage and CreditCardsPage fully wired
+Phase: 2 of 4 (Core Transaction Views) — COMPLETE
+Plan: 5 of 5 in current phase — COMPLETE (02-05)
+Status: Phase 2 all 5 plans complete — chatbot feature (ChatButton, ChatPanel, useChatApi, chatStore) wired into AppShell
+Last activity: 2026-03-03 — Plan 02-05 complete: chatStore (Zustand, localStorage API config), useChatApi (transaction context, OpenAI-compatible fetch), ChatButton (FAB), ChatMessage, ChatSettings (password input), ChatInput, ChatPanel (responsive), AppShell integration
 
-Progress: [██████░░░░] 58% (7/12 plans total)
+Progress: [███████░░░] 67% (8/12 plans total)
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [██████░░░░] 58% (7/12 plans total)
 | Phase 02 P02 | 15 min | 6 tasks | 7 files |
 | Phase 02 P03 | 2 min | 8 tasks | 8 files |
 | Phase 02 P04 | 5 min | 4 tasks | 4 files |
+| Phase 02 P05 | 3 min | 8 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,10 @@ Recent decisions affecting current work:
 - [02-03]: FilterBar resetFilters() resets all filter state including accountId/cardId defaults — acceptable since FilterBar is mounted within account-specific page contexts
 - [02-04]: CreditCardTabs uses card.cardName + card.cardNumber.slice(-4) — confirmed from CreditCard type (cardNumber field, not lastFour)
 - [02-04]: AccountTabs initializes accountId to first account only when accountId is null — avoids overriding existing store state on navigation back
+- [02-05]: chatStore API config persists to localStorage; message history does not — page-refresh clears chat per CONTEXT.md decision
+- [02-05]: useChatApi caps transaction context at 20 items to prevent LLM token overflow; filter state included in context text
+- [02-05]: ChatPanel mobile bottom sheet (max-h-85vh) + desktop side panel (380x520px sm: breakpoint)
+- [02-05]: OpenAI-compatible POST format with Vietnamese system prompt for transaction analysis
 
 ### Pending Todos
 
@@ -105,5 +110,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 02-04-PLAN.md — AccountTabs (account switcher with Zustand init), CreditCardTabs (card switcher), BankAccountsPage and CreditCardsPage fully composed with real components. 4 tasks, 4 files, 0 TypeScript errors.
+Stopped at: Completed 02-05-PLAN.md — chatStore (Zustand with localStorage API config persistence), useChatApi (transaction context + OpenAI-compatible API), ChatButton (fixed FAB), ChatMessage (user/assistant/error roles), ChatSettings (URL + password key inputs), ChatInput (Enter-to-send textarea), ChatPanel (mobile bottom sheet + desktop side panel), AppShell integration. 8 tasks, 8 files, 0 TypeScript errors. Phase 2 complete.
 Resume file: None
