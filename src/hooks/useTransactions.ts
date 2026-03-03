@@ -1,19 +1,24 @@
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { getTransactions } from '@/services/accounts'
 import { useFilterParams } from '@/stores/filterStore'
 
 export function useTransactions() {
-  // Reading filter state into the query key means TanStack Query automatically
-  // re-fetches when any filter changes — this is the correct data ownership boundary.
-  // API data lives in TanStack Query cache; filter state lives in Zustand.
   const { accountId, dateFrom, dateTo, searchQuery, txType } = useFilterParams()
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['transactions', accountId, { dateFrom, dateTo, searchQuery, txType }],
-    queryFn: () => {
-      if (!accountId) return { data: [], nextCursor: null, total: 0 }
-      return getTransactions(accountId)
+    queryFn: ({ pageParam }) => {
+      if (!accountId) return Promise.resolve({ data: [], nextCursor: null, total: 0 })
+      return getTransactions(accountId, pageParam as string | undefined, 20, {
+        search: searchQuery || undefined,
+        dateFrom,
+        dateTo,
+        txType,
+      })
     },
+    initialPageParam: undefined as string | undefined,
+    // CRITICAL: return undefined (not null) to signal no more pages — TanStack Query v5 uses undefined as sentinel
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: Boolean(accountId),
   })
 }
