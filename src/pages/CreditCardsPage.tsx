@@ -1,9 +1,17 @@
 import { CreditCardTabs } from '@/features/creditCards/CreditCardTabs'
 import { CreditCardTransactionList } from '@/features/creditCards/CreditCardTransactionList'
+import { BillingCycleInfoCard } from '@/features/creditCards/BillingCycleInfoCard'
 import { FilterBar } from '@/components/filters/FilterBar'
+import { useCreditCards } from '@/hooks/useCreditCards'
+import { useFilterStore } from '@/stores/filterStore'
 import { CreditCard } from 'lucide-react'
 
 export function CreditCardsPage() {
+  const { data: cardsData } = useCreditCards()
+  const cardId = useFilterStore((s) => s.cardId)
+  // useCreditCards uses useQuery — data is PaginatedResponse<CreditCard> directly
+  const card = cardsData?.data.find((c) => c.id === cardId) ?? null
+
   return (
     <div className="space-y-4">
       {/* Page header */}
@@ -14,6 +22,9 @@ export function CreditCardsPage() {
 
       {/* Card switcher — sets cardId in Zustand filter store */}
       <CreditCardTabs />
+
+      {/* Billing cycle info — shows current cycle dates and urgency badge */}
+      {card && <BillingCycleInfoCard card={card} />}
 
       {/* Filter bar — search, date range, transaction type */}
       <FilterBar />
