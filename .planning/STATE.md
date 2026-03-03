@@ -5,10 +5,10 @@ milestone_name: milestone
 status: unknown
 last_updated: "2026-03-03T13:38:04.525Z"
 progress:
-  total_phases: 2
+  total_phases: 4
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 12
+  completed_plans: 9
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 2 of 4 (Core Transaction Views) — COMPLETE
-Plan: 5 of 5 in current phase — COMPLETE (02-05)
-Status: Phase 2 all 5 plans complete — chatbot feature (ChatButton, ChatPanel, useChatApi, chatStore) wired into AppShell
-Last activity: 2026-03-03 — Plan 02-05 complete: chatStore (Zustand, localStorage API config), useChatApi (transaction context, OpenAI-compatible fetch), ChatButton (FAB), ChatMessage, ChatSettings (password input), ChatInput, ChatPanel (responsive), AppShell integration
+Phase: 3 of 4 (Credit Card Billing Cycle) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE (03-01)
+Status: Plan 03-01 complete — billing cycle utility layer (computeCurrentCycle, groupTransactionsByCycle, formatCycleDateRange, BillingCycle, BillingCycleGroupData), 8 tests pass, zero TypeScript errors
+Last activity: 2026-03-04 — Plan 03-01 complete: pure billing cycle date math module with TDD, VN timezone boundary convention (17:00 UTC = midnight VN), fixture comment corrections
 
-Progress: [███████░░░] 67% (8/12 plans total)
+Progress: [████████░░] 75% (9/12 plans total)
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [███████░░░] 67% (8/12 plans total)
 | Phase 02 P03 | 2 min | 8 tasks | 8 files |
 | Phase 02 P04 | 5 min | 4 tasks | 4 files |
 | Phase 02 P05 | 3 min | 8 tasks | 8 files |
+| Phase 03 P01 | 8 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,10 @@ Recent decisions affecting current work:
 - [02-05]: useChatApi caps transaction context at 20 items to prevent LLM token overflow; filter state included in context text
 - [02-05]: ChatPanel mobile bottom sheet (max-h-85vh) + desktop side panel (380x520px sm: breakpoint)
 - [02-05]: OpenAI-compatible POST format with Vietnamese system prompt for transaction analysis
+- [03-01]: 17:00 UTC = midnight VN (UTC+7) as billing cycle boundary constant — all cycle start/end timestamps use Date.UTC(y, m, statementDay, 17, 0, 0)
+- [03-01]: subDays applied to endVN (not endUTC) to produce inclusive last calendar day for display
+- [03-01]: Pending txs (no billingCycleStart) assigned to currentCycle.startISO key in groupTransactionsByCycle — enables single-pass Map grouping
+- [03-01]: ISO string localeCompare for newest-first cycle sort — no Date construction needed for descending UTC ISO order
 
 ### Pending Todos
 
@@ -109,6 +114,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-03
-Stopped at: Completed 02-05-PLAN.md — chatStore (Zustand with localStorage API config persistence), useChatApi (transaction context + OpenAI-compatible API), ChatButton (fixed FAB), ChatMessage (user/assistant/error roles), ChatSettings (URL + password key inputs), ChatInput (Enter-to-send textarea), ChatPanel (mobile bottom sheet + desktop side panel), AppShell integration. 8 tasks, 8 files, 0 TypeScript errors. Phase 2 complete.
+Last session: 2026-03-04
+Stopped at: Completed 03-01-PLAN.md — billing cycle utility layer: computeCurrentCycle (VN timezone, month/year rollover), groupTransactionsByCycle (pending to currentCycle, posted by billingCycleStart key), formatCycleDateRange (VN-local inclusive dates). BillingCycle and BillingCycleGroupData interfaces. 8 tests pass (TDD), 0 TypeScript errors. Phase 3 Plan 1 of 2 complete.
 Resume file: None

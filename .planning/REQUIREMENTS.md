@@ -24,8 +24,8 @@
 
 - [ ] **CC-01**: Người dùng có thể xem danh sách giao dịch của từng thẻ tín dụng
 - [ ] **CC-02**: Mỗi giao dịch thẻ hiển thị: ngày, merchant, số tiền, trạng thái (pending/posted)
-- [ ] **CC-03**: Người dùng có thể xem thông tin sao kê: ngày sao kê, ngày đến hạn, số dư hiện tại
-- [ ] **CC-04**: Ngày sao kê được tính toán chính xác theo timezone Việt Nam (UTC+7)
+- [x] **CC-03**: Người dùng có thể xem thông tin sao kê: ngày sao kê, ngày đến hạn, số dư hiện tại
+- [x] **CC-04**: Ngày sao kê được tính toán chính xác theo timezone Việt Nam (UTC+7)
 
 ### Filter & Search
 
@@ -99,8 +99,8 @@
 | FILTER-03 | Phase 2 | Pending |
 | FILTER-04 | Phase 2 | Pending |
 | DASH-03 | Phase 2 | Complete |
-| CC-03 | Phase 3 | Pending |
-| CC-04 | Phase 3 | Pending |
+| CC-03 | Phase 3 | Complete |
+| CC-04 | Phase 3 | Complete |
 | DASH-01 | Phase 4 | Pending |
 | DASH-02 | Phase 4 | Pending |
 | UX-01 | Phase 4 | Pending |
