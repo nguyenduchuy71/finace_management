@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Vite + React 19 + TypeScript strict + Tailwind CSS + shadcn/ui scaffold and App shell
+- [x] 01-01-PLAN.md — Vite + React 19 + TypeScript strict + Tailwind CSS + shadcn/ui scaffold and App shell
 - [ ] 01-02-PLAN.md — TypeScript domain types, Zod schemas, axios service layer, utility functions with tests
 - [ ] 01-03-PLAN.md — MSW 2.x handlers + Vietnamese fixture data, Zustand filter store, proof-of-concept transaction render
 
@@ -91,7 +91,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data Infrastructure | 0/3 | Ready to execute | - |
+| 1. Foundation and Data Infrastructure | 1/3 | In progress | - |
 | 2. Core Transaction Views | 0/3 | Not started | - |
 | 3. Credit Card Billing Cycle | 0/2 | Not started | - |
 | 4. Dashboard and Polish | 0/2 | Not started | - |

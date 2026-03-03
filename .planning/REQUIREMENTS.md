@@ -7,7 +7,7 @@
 
 ### Foundation
 
-- [ ] **FOUND-01**: Dự án được khởi tạo với Vite + React 19 + TypeScript strict mode + Tailwind CSS + shadcn/ui
+- [x] **FOUND-01**: Dự án được khởi tạo với Vite + React 19 + TypeScript strict mode + Tailwind CSS + shadcn/ui
 - [ ] **FOUND-02**: Mock API được cài đặt bằng MSW 2.x, trả về dữ liệu giao dịch ngân hàng và thẻ tín dụng mẫu thực tế
 - [ ] **FOUND-03**: API service layer được định nghĩa với Zod schema validation cho tất cả response từ third-party API
 - [ ] **FOUND-04**: TanStack Query v5 được cấu hình để quản lý server state (transactions, accounts, statements)
@@ -82,7 +82,7 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete (01-01) |
 | FOUND-02 | Phase 1 | Pending |
 | FOUND-03 | Phase 1 | Pending |
 | FOUND-04 | Phase 1 | Pending |
@@ -112,4 +112,4 @@
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after roadmap creation*
+*Last updated: 2026-03-03 after plan 01-01 completion*

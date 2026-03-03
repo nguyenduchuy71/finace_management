@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 1 of 4 (Foundation and Data Infrastructure)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-03-02 — Roadmap created, requirements mapped to 4 phases
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-03-03 — Plan 01-01 complete: Vite + React + Tailwind + shadcn + MSW scaffold
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 8% (1/12 plans total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: 35 min
+- Total execution time: 0.58 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation-and-data-infrastructure | 1/3 | 35 min | 35 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01 (35 min)
+- Trend: Baseline established
 
 *Updated after each plan completion*
 
@@ -45,6 +45,10 @@ Recent decisions affecting current work:
 - [Setup]: Frontend-only, React + TypeScript, no backend
 - [Setup]: Mock API (MSW) first — build UI without real API dependency
 - [Phase 1]: TanStack Query for server state, Zustand for UI state — boundary must be enforced from Phase 1, high refactor cost if mixed
+- [01-01]: QueryClient locked config — staleTime=5min, gcTime=10min, retry=2, refetchOnWindowFocus=false
+- [01-01]: Tailwind CSS v4 CSS-first configuration (no tailwind.config.js), tw-animate-css for animations
+- [01-01]: shadcn/ui New York style with default color scheme; @/ alias pointing to src/
+- [01-01]: MSW deferred render guard pattern (enableMocking().then() wraps ReactDOM.createRoot)
 
 ### Pending Todos
 
@@ -57,6 +61,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Roadmap written to ROADMAP.md, STATE.md initialized. Ready to plan Phase 1.
+Last session: 2026-03-03
+Stopped at: Completed 01-01-PLAN.md — project foundation scaffold complete
 Resume file: None
