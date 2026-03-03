@@ -122,3 +122,29 @@
     @apply bg-background text-foreground;
     }
 }
+
+/* Base sizing */
+html, body {
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode base — applied when html element has class="dark" */
+.dark {
+  color-scheme: dark;
+}
+
+/* Smooth theme transitions — applies to background and text only (not layout) */
+body {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Custom scrollbar for dark mode */
+.dark ::-webkit-scrollbar-track {
+  background: rgb(15 23 42);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85);
+}
