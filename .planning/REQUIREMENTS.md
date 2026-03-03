@@ -38,7 +38,7 @@
 
 - [ ] **DASH-01**: Người dùng có thể xem tổng thu và tổng chi trong kỳ được chọn
 - [ ] **DASH-02**: Người dùng có thể xem biểu đồ chi tiêu theo danh mục (category donut/bar chart bằng Recharts)
-- [ ] **DASH-03**: Tất cả trạng thái async được xử lý: loading skeleton, error state, empty state
+- [x] **DASH-03**: Tất cả trạng thái async được xử lý: loading skeleton, error state, empty state
 
 ### UX & Quality
 
@@ -98,7 +98,7 @@
 | FILTER-02 | Phase 2 | Pending |
 | FILTER-03 | Phase 2 | Pending |
 | FILTER-04 | Phase 2 | Pending |
-| DASH-03 | Phase 2 | Pending |
+| DASH-03 | Phase 2 | Complete |
 | CC-03 | Phase 3 | Pending |
 | CC-04 | Phase 3 | Pending |
 | DASH-01 | Phase 4 | Pending |

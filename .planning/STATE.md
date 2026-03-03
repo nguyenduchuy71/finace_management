@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-03T00:37:35.482Z"
+status: in_progress
+last_updated: "2026-03-03T01:00:00.000Z"
 progress:
-  total_phases: 1
+  total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 12
+  completed_plans: 5
 ---
 
 # Project State
@@ -18,32 +18,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Người dùng có thể xem toàn bộ giao dịch ngân hàng và thẻ tín dụng ở một nơi duy nhất, được tổ chức rõ ràng theo chu kỳ sao kê.
-**Current focus:** Phase 1 — Foundation and Data Infrastructure
+**Current focus:** Phase 2 — Core Transaction Views
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation and Data Infrastructure) — COMPLETE
-Plan: 3 of 3 in current phase — COMPLETE
-Status: Phase 1 complete, ready for Phase 2
-Last activity: 2026-03-03 — Plan 01-03 complete: MSW fixture data, Zustand filterStore, useTransactions hook, POC transaction render
+Phase: 2 of 4 (Core Transaction Views) — IN PROGRESS
+Plan: 2 of 4 in current phase — COMPLETE (02-02)
+Status: Phase 2 plan 02-02 complete, ready for 02-03
+Last activity: 2026-03-03 — Plan 02-02 complete: App shell, routing, dark mode, AppHeader, AppShell, page stubs
 
-Progress: [███░░░░░░░] 25% (3/12 plans total)
+Progress: [████░░░░░░] 42% (5/12 plans total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 23 min
-- Total execution time: 1.17 hours
+- Total plans completed: 5
+- Average duration: 21 min
+- Total execution time: 1.42 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-and-data-infrastructure | 3/3 COMPLETE | 70 min | 23 min |
+| 02-core-transaction-views | 2/4 IN PROGRESS | 15 min | 15 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (35 min), 01-02 (15 min), 01-03 (20 min)
+- Last 5 plans: 01-01 (35 min), 01-02 (15 min), 01-03 (20 min), 02-01 (15 min), 02-02 (15 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -53,6 +54,8 @@ Progress: [███░░░░░░░] 25% (3/12 plans total)
 | Phase 01 P01 | 35 min | 2 tasks | 13 files |
 | Phase 01 P02 | 15 min | 2 tasks | 12 files |
 | Phase 01 P03 | 20 min | 2 tasks | 7 files |
+| Phase 02 P01 | 18 min | 6 tasks | 24 files |
+| Phase 02 P02 | 15 min | 6 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -75,6 +78,14 @@ Recent decisions affecting current work:
 - [01-03]: useShallow required for object selectors in Zustand v5 — without it every render creates new object reference, triggering infinite re-render
 - [01-03]: Filter state in TanStack Query key — queryKey includes all Zustand filter params so any filter change auto-triggers re-fetch
 - [01-03]: mockTransactions sorted globally descending by transactionDate — combines both account arrays and sorts once at export time
+- [02-01]: useInfiniteQuery returns undefined (not null) as getNextPageParam sentinel — TanStack Query v5 requirement
+- [02-01]: TransactionFilters interface lives in accounts.ts and is imported by creditCards.ts to avoid circular deps
+- [02-01]: MSW credit card income filter returns empty array — CC transactions are always expenses by design
+- [02-01]: useDebounced uses setTimeout/clearTimeout cleanup — no external debounce lib needed
+- [02-02]: Apply dark class to document.documentElement immediately on module load to prevent FOUC
+- [02-02]: AppShell as layout route so AppHeader renders once and all child pages share the same layout without re-mounting on navigation
+- [02-02]: Route / redirects to /accounts with Navigate replace to avoid back-button trap
+- [02-02]: Theme persisted to localStorage under finance-theme key
 
 ### Pending Todos
 
@@ -88,5 +99,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 01-03-PLAN.md — MSW fixture data, Zustand filterStore, useTransactions hook, POC transaction render complete. Phase 1 complete.
+Stopped at: Completed 02-01-PLAN.md — useInfiniteQuery upgrade, MSW filter enhancement, TransactionFilters service layer, skeleton/empty state components, 10 shadcn components committed.
 Resume file: None
