@@ -1,6 +1,9 @@
+import { useMemo } from 'react'
 import { useCreditCardTransactions } from '@/hooks/useCreditCardTransactions'
+import { useCreditCards } from '@/hooks/useCreditCards'
 import { useFilterStore } from '@/stores/filterStore'
-import { CreditCardTransactionRow } from './CreditCardTransactionRow'
+import { groupTransactionsByCycle, computeCurrentCycle } from '@/utils/billingCycle'
+import { BillingCycleGroup } from './BillingCycleGroup'
 import { CreditCardTransactionListSkeleton } from './CreditCardTransactionListSkeleton'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, SearchX } from 'lucide-react'
@@ -12,6 +15,23 @@ export function CreditCardTransactionList() {
   const dateFrom = useFilterStore((s) => s.dateFrom)
   const dateTo = useFilterStore((s) => s.dateTo)
   const txType = useFilterStore((s) => s.txType)
+  const cardId = useFilterStore((s) => s.cardId)
+
+  const { data: cardsData } = useCreditCards()
+  // useCreditCards uses useQuery (not useInfiniteQuery) — data is PaginatedResponse<CreditCard> directly
+  const card = cardsData?.data.find((c) => c.id === cardId) ?? null
+
+  const allTransactions = data?.pages.flatMap((page) => page.data) ?? []
+
+  const now = useMemo(() => new Date().toISOString(), [])
+  const currentCycle = useMemo(
+    () => card ? computeCurrentCycle(card.statementDate, now) : null,
+    [card?.statementDate, now]
+  )
+  const cycleGroups = useMemo(
+    () => currentCycle ? groupTransactionsByCycle(allTransactions, currentCycle) : [],
+    [allTransactions, currentCycle]
+  )
 
   const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all')
 
@@ -28,8 +48,6 @@ export function CreditCardTransactionList() {
       </div>
     )
   }
-
-  const allTransactions = data?.pages.flatMap((page) => page.data) ?? []
 
   if (allTransactions.length === 0) {
     return (
@@ -48,9 +66,9 @@ export function CreditCardTransactionList() {
   }
 
   return (
-    <div className="space-y-2">
-      {allTransactions.map((tx) => (
-        <CreditCardTransactionRow key={tx.id} transaction={tx} />
+    <div className="space-y-4">
+      {cycleGroups.map((group) => (
+        <BillingCycleGroup key={group.cycleKey} group={group} />
       ))}
 
       {hasNextPage && (
