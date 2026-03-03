@@ -8,10 +8,10 @@
 ### Foundation
 
 - [x] **FOUND-01**: Dự án được khởi tạo với Vite + React 19 + TypeScript strict mode + Tailwind CSS + shadcn/ui
-- [ ] **FOUND-02**: Mock API được cài đặt bằng MSW 2.x, trả về dữ liệu giao dịch ngân hàng và thẻ tín dụng mẫu thực tế
+- [x] **FOUND-02**: Mock API được cài đặt bằng MSW 2.x, trả về dữ liệu giao dịch ngân hàng và thẻ tín dụng mẫu thực tế
 - [x] **FOUND-03**: API service layer được định nghĩa với Zod schema validation cho tất cả response từ third-party API
 - [ ] **FOUND-04**: TanStack Query v5 được cấu hình để quản lý server state (transactions, accounts, statements)
-- [ ] **FOUND-05**: Zustand store được cấu hình để quản lý UI state (filters, active tab, search query)
+- [x] **FOUND-05**: Zustand store được cấu hình để quản lý UI state (filters, active tab, search query)
 
 ### Bank Transactions
 
@@ -83,10 +83,10 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete (01-01) |
-| FOUND-02 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Complete |
 | FOUND-03 | Phase 1 | Complete (01-02) |
 | FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
+| FOUND-05 | Phase 1 | Complete |
 | UX-02 | Phase 1 | Complete (01-02) |
 | BANK-01 | Phase 2 | Pending |
 | BANK-02 | Phase 2 | Pending |

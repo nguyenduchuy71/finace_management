@@ -12,7 +12,7 @@ Starting from an empty Vite project, this roadmap delivers a personal finance da
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation and Data Infrastructure** - Project scaffolding, type contracts, mock API, state management wiring
+- [x] **Phase 1: Foundation and Data Infrastructure** - Project scaffolding, type contracts, mock API, state management wiring (completed 2026-03-03)
 - [ ] **Phase 2: Core Transaction Views** - Bank and credit card transaction lists with filter and search
 - [ ] **Phase 3: Credit Card Billing Cycle** - Statement cycle display, billing cycle grouping (product differentiator)
 - [ ] **Phase 4: Dashboard and Polish** - Summary charts, income/expense totals, responsive layout verification
@@ -91,7 +91,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Data Infrastructure | 2/3 | In progress | - |
+| 1. Foundation and Data Infrastructure | 3/3 | Complete   | 2026-03-03 |
 | 2. Core Transaction Views | 0/3 | Not started | - |
 | 3. Credit Card Billing Cycle | 0/2 | Not started | - |
 | 4. Dashboard and Polish | 0/2 | Not started | - |
