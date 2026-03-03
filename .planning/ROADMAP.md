@@ -92,6 +92,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Data Infrastructure | 3/3 | Complete   | 2026-03-03 |
-| 2. Core Transaction Views | 0/3 | Not started | - |
+| 2. Core Transaction Views | 3/4 | In Progress | - |
 | 3. Credit Card Billing Cycle | 0/2 | Not started | - |
 | 4. Dashboard and Polish | 0/2 | Not started | - |
