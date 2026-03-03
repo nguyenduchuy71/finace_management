@@ -9,7 +9,7 @@
 
 - [x] **FOUND-01**: Dự án được khởi tạo với Vite + React 19 + TypeScript strict mode + Tailwind CSS + shadcn/ui
 - [ ] **FOUND-02**: Mock API được cài đặt bằng MSW 2.x, trả về dữ liệu giao dịch ngân hàng và thẻ tín dụng mẫu thực tế
-- [ ] **FOUND-03**: API service layer được định nghĩa với Zod schema validation cho tất cả response từ third-party API
+- [x] **FOUND-03**: API service layer được định nghĩa với Zod schema validation cho tất cả response từ third-party API
 - [ ] **FOUND-04**: TanStack Query v5 được cấu hình để quản lý server state (transactions, accounts, statements)
 - [ ] **FOUND-05**: Zustand store được cấu hình để quản lý UI state (filters, active tab, search query)
 
@@ -43,7 +43,7 @@
 ### UX & Quality
 
 - [ ] **UX-01**: Website hiển thị đúng trên cả desktop lẫn mobile (responsive)
-- [ ] **UX-02**: Số tiền VND được format đúng: `đ 1.500.000` (không có decimal, dùng Intl.NumberFormat vi-VN)
+- [x] **UX-02**: Số tiền VND được format đúng: `đ 1.500.000` (không có decimal, dùng Intl.NumberFormat vi-VN)
 
 ## v2 Requirements
 
@@ -84,10 +84,10 @@
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete (01-01) |
 | FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Complete (01-02) |
 | FOUND-04 | Phase 1 | Pending |
 | FOUND-05 | Phase 1 | Pending |
-| UX-02 | Phase 1 | Pending |
+| UX-02 | Phase 1 | Complete (01-02) |
 | BANK-01 | Phase 2 | Pending |
 | BANK-02 | Phase 2 | Pending |
 | BANK-03 | Phase 2 | Pending |
@@ -112,4 +112,4 @@
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-03 after plan 01-01 completion*
+*Last updated: 2026-03-03 after plan 01-02 completion*

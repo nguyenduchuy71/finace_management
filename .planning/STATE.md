@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 1 of 4 (Foundation and Data Infrastructure)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-03 — Plan 01-01 complete: Vite + React + Tailwind + shadcn + MSW scaffold
+Last activity: 2026-03-03 — Plan 01-02 complete: TypeScript domain types, Zod schemas, API service layer, currency + date utilities
 
-Progress: [█░░░░░░░░░] 8% (1/12 plans total)
+Progress: [██░░░░░░░░] 17% (2/12 plans total)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 35 min
-- Total execution time: 0.58 hours
+- Total plans completed: 2
+- Average duration: 25 min
+- Total execution time: 0.83 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-and-data-infrastructure | 1/3 | 35 min | 35 min |
+| 01-foundation-and-data-infrastructure | 2/3 | 50 min | 25 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (35 min)
-- Trend: Baseline established
+- Last 5 plans: 01-01 (35 min), 01-02 (15 min)
+- Trend: Accelerating
 
 *Updated after each plan completion*
 
@@ -49,6 +49,10 @@ Recent decisions affecting current work:
 - [01-01]: Tailwind CSS v4 CSS-first configuration (no tailwind.config.js), tw-animate-css for animations
 - [01-01]: shadcn/ui New York style with default color scheme; @/ alias pointing to src/
 - [01-01]: MSW deferred render guard pattern (enableMocking().then() wraps ReactDOM.createRoot)
+- [01-02]: Import defineConfig from 'vitest/config' not 'vite' — vite's defineConfig doesn't include test property in strict TypeScript
+- [01-02]: formatVND uses Intl.NumberFormat('vi-VN') + digit-only regex extraction — platform-safe, immune to OS symbol variation
+- [01-02]: Zod schemas export both schema constant and z.infer<> type for dual runtime+compile-time use
+- [01-02]: Service functions call PaginatedResponseSchema(ItemSchema).parse() at Zod boundary for all API responses
 
 ### Pending Todos
 
@@ -62,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 01-01-PLAN.md — project foundation scaffold complete
+Stopped at: Completed 01-02-PLAN.md — domain types, Zod schemas, API service layer, currency/date utilities complete
 Resume file: None
