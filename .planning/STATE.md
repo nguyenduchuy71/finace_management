@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 06-02 (Testing & QA). Ready for 06-03 or 06-04.
-last_updated: "2026-03-04T13:34:16.894Z"
+stopped_at: "Completed 06-04 (Vercel Deployment Setup). Awaiting human checkpoint: deploy to Vercel + Lighthouse audit."
+last_updated: "2026-03-04T13:38:24.491Z"
 last_activity: 2026-03-04 — Plan 06-03 complete (6 tasks, 8 files). WCAG touch targets fixed, typography system established.
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 19
-  completed_plans: 18
+  completed_plans: 19
   percent: 89
 ---
 
@@ -70,6 +70,7 @@ Progress: [█████████░] 89% (17/19 plans total)
 | Phase 05-chatbot-integration P02 | 5 | 2 tasks | 1 files |
 | Phase 06-optimize-and-deploy P01 | 22 | 5 tasks | 4 files |
 | Phase 06 P03 | 18 | 6 tasks | 8 files |
+| Phase 06 P04 | 2 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,9 @@ Recent decisions affecting current work:
 - [Phase 06]: Node MSW server (setupServer) separate from browser worker (setupWorker) — test environment requires msw/node; src/mocks/server.ts is the test-only entry point
 - [Phase 06]: Per-test QueryClient via createWrapper() with gcTime:0 + staleTime:0 — ensures no query cache leakage between tests
 - [Phase 06]: jest-dom installed as devDep with setupFiles — toBeInTheDocument not in Vitest globals by default; test-setup.ts imports jest-dom + mocks scrollIntoView
+- [Phase 06-04]: VITE_ENABLE_MSW=false set in vercel.json env block — explicit opt-out of MSW at Vercel build time
+- [Phase 06-04]: main.tsx guards MSW with both import.meta.env.DEV AND VITE_ENABLE_MSW \!== 'false' — dual guard for production safety
+- [Phase 06-04]: npm ci used in vercel.json installCommand for reproducible installs
 
 ### Pending Todos
 
@@ -146,6 +150,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T13:34:09.638Z
-Stopped at: Completed 06-02 (Testing & QA). Ready for 06-03 or 06-04.
+Last session: 2026-03-04T13:38:24.487Z
+Stopped at: Completed 06-04 (Vercel Deployment Setup). Awaiting human checkpoint: deploy to Vercel + Lighthouse audit.
 Resume file: None
