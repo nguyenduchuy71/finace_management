@@ -5,7 +5,9 @@ import './index.css'
 
 async function enableMocking() {
   // Use import.meta.env.DEV (Vite) NOT process.env.NODE_ENV
-  if (!import.meta.env.DEV) return
+  // Also check VITE_ENABLE_MSW — set to 'false' in vercel.json to disable in production
+  const mswEnabled = import.meta.env.VITE_ENABLE_MSW !== 'false'
+  if (!import.meta.env.DEV || !mswEnabled) return
   const { worker } = await import('./mocks/browser')
   // Return the Promise so enableMocking().then() waits for registration
   return worker.start({ onUnhandledRequest: 'bypass' })
