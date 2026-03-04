@@ -148,3 +148,49 @@ body {
 .dark ::-webkit-scrollbar-thumb {
   background: rgb(51 65 85);
 }
+
+/*
+  TYPOGRAPHY SYSTEM:
+  Heading hierarchy:
+  - h1: text-2xl font-bold leading-tight (page title)
+  - h2: text-xl font-semibold leading-snug (section title)
+  - h3: text-lg font-semibold leading-snug (subsection)
+  - label: text-sm font-medium leading-snug (field labels, captions)
+
+  Body text:
+  - base: text-base font-normal leading-relaxed (paragraphs, descriptions)
+  - small: text-sm font-normal leading-relaxed (secondary text, hints)
+
+  SPACING SYSTEM:
+  Vertical: gap-2 (8px), gap-3 (12px), gap-4 (16px), gap-6 (24px)
+  Horizontal: px-2 (8px), px-3 (12px), px-4 (16px)
+  Section padding: p-4 or p-6
+  Component gaps: gap-4
+
+  INTERACTION:
+  - All interactive elements: min-h-[44px] min-w-[44px]
+  - Buttons, inputs, clickable areas must meet this minimum
+  - Transitions: transition-colors duration-200 or transition-opacity duration-200
+*/
+
+@layer utilities {
+  /* Heading styles — use these, never mix sizes */
+  .heading-h1 { @apply text-2xl font-bold leading-tight; }
+  .heading-h2 { @apply text-xl font-semibold leading-snug; }
+  .heading-h3 { @apply text-lg font-semibold leading-snug; }
+  .heading-label { @apply text-sm font-medium leading-snug; }
+
+  /* Body text — for content, descriptions, labels */
+  .body-base { @apply text-base font-normal leading-relaxed; }
+  .body-sm { @apply text-sm font-normal leading-relaxed; }
+
+  /* Spacing patterns — for consistent gaps and padding */
+  .card-padding { @apply p-4; }
+  .card-gap { @apply gap-4; }
+  .section-spacing { @apply space-y-4; }
+  .section-padding-x { @apply px-4; }
+  .section-padding-y { @apply py-4; }
+
+  /* Touch target — WCAG minimum 44x44px */
+  .touch-target { @apply min-h-[44px] min-w-[44px]; }
+}
