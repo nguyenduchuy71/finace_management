@@ -115,10 +115,26 @@ Plans:
 Plans:
 - [ ] TBD
 
+### Phase 6: Optimize & Deploy
+**Goal**: Performance optimization, UI polish refinements, comprehensive testing, and deployment to Vercel production.
+**Depends on**: Phase 5
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. Lighthouse performance score ≥90 on mobile, ≥95 on desktop
+  2. All TypeScript strict mode checks pass with 0 errors
+  3. Test suite passes: unit tests, integration tests, E2E coverage for critical flows
+  4. UI is polished: consistent spacing, improved visual hierarchy, better animations
+  5. App successfully deployed to Vercel with working production URL
+  6. No console errors or warnings in production build
+**Plans**: TBD
+
+Plans:
+- [ ] TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 (decimal phases appear between their surrounding integers)
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 (decimal phases appear between their surrounding integers)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -128,3 +144,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 (decimal phas
 | 4. Dashboard and Polish | 2/2 | Complete   | 2026-03-04 |
 | 5. Chatbot Integration | 3/3 | Complete   | 2026-03-04 |
 | 5.1. Chatbot UI Refinements | 0/? | Pending | - |
+| 6. Optimize & Deploy | 0/? | Pending | - |
