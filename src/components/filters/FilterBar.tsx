@@ -15,7 +15,7 @@ export function FilterBar() {
   const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all')
 
   return (
-    <div className="flex flex-wrap gap-2 py-3 border-b border-border">
+    <div className="flex flex-wrap gap-3 py-3 border-b border-border">
       <SearchInput />
       <DateRangePicker />
       <TransactionTypeFilter />
@@ -24,7 +24,7 @@ export function FilterBar() {
           variant="ghost"
           size="sm"
           onClick={resetFilters}
-          className="min-h-[44px] text-muted-foreground hover:text-foreground"
+          className="touch-target text-muted-foreground hover:text-foreground transition-colors duration-200"
         >
           <Filter className="h-4 w-4 mr-1.5 opacity-60" />
           Xóa bộ lọc

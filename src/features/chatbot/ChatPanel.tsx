@@ -51,17 +51,18 @@ export function ChatPanel() {
         sm:bottom-20 sm:right-4 sm:left-auto sm:w-[380px] sm:h-[520px] sm:rounded-2xl sm:max-h-none">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+        <div className="flex items-center justify-between section-padding-x py-2 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Trợ lý tài chính</span>
+            {/* heading-label: text-sm font-medium leading-snug for panel title */}
+            <span className="heading-label">Trợ lý tài chính</span>
           </div>
           <div className="flex items-center gap-1">
             {hasMessages && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                className="touch-target text-muted-foreground hover:text-destructive transition-colors duration-200"
                 onClick={clearMessages}
                 title="Xóa lịch sử chat"
                 aria-label="Xóa lịch sử chat"
@@ -72,7 +73,7 @@ export function ChatPanel() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="touch-target transition-colors duration-200"
               onClick={toggleSettings}
               aria-label="Cài đặt API"
             >
@@ -81,7 +82,7 @@ export function ChatPanel() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="touch-target transition-colors duration-200"
               onClick={closeChat}
               aria-label="Đóng"
             >
