@@ -22,29 +22,30 @@ export function StatCard({ variant, amount, transactionCount, isError, onRetry, 
     : 'text-red-600 dark:text-red-400'
 
   return (
-    <Card className="min-h-[140px]">
+    <Card className="min-h-[140px] transition-colors duration-200">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
+        {/* heading-label: text-sm font-medium leading-snug — matches card label pattern */}
+        <CardTitle className="heading-label text-muted-foreground">{label}</CardTitle>
         <Icon className={`h-5 w-5 ${colorClass}`} />
       </CardHeader>
-      <CardContent>
+      <CardContent className="card-gap flex flex-col">
         {isError ? (
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Không thể tải dữ liệu</p>
+            <p className="body-sm text-muted-foreground">Không thể tải dữ liệu</p>
             {onRetry && (
-              <Button variant="outline" size="sm" onClick={onRetry} className="min-h-[44px]">
+              <Button variant="outline" size="sm" onClick={onRetry} className="touch-target">
                 Thử lại
               </Button>
             )}
           </div>
         ) : transactionCount === 0 ? (
           <div>
-            <p className={`text-2xl font-bold ${colorClass}`}>{formatVND(0)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Không có giao dịch trong kỳ này</p>
+            <p className={`heading-h1 tabular-nums ${colorClass}`}>{formatVND(0)}</p>
+            <p className="body-sm text-muted-foreground mt-1">Không có giao dịch trong kỳ này</p>
           </div>
         ) : (
           <div>
-            <p className={`text-2xl font-bold ${colorClass}`}>{formatVND(amount)}</p>
+            <p className={`heading-h1 tabular-nums ${colorClass}`}>{formatVND(amount)}</p>
             {children}
           </div>
         )}

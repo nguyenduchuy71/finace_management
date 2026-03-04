@@ -11,7 +11,7 @@ export function TransactionRow({ transaction: tx }: TransactionRowProps) {
   const isIncome = tx.type === 'income'
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors dark:border-slate-700 dark:bg-slate-900">
+    <div className="flex items-center justify-between section-padding-x py-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors duration-200 dark:border-slate-700 dark:bg-slate-900">
       {/* Left: icon + description + date */}
       <div className="flex items-center gap-3 min-w-0">
         <div
@@ -28,18 +28,20 @@ export function TransactionRow({ transaction: tx }: TransactionRowProps) {
           )}
         </div>
         <div className="min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">
+          {/* heading-label: text-sm font-medium leading-snug for merchant name */}
+          <p className="heading-label text-foreground truncate">
             {tx.merchantName ?? tx.description}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          {/* body-sm: text-sm font-normal leading-relaxed for date */}
+          <p className="body-sm text-muted-foreground mt-0.5 !leading-none">
             {formatDisplayDate(tx.transactionDate)}
           </p>
         </div>
       </div>
 
-      {/* Right: amount */}
+      {/* Right: amount — heading-label weight with tabular nums for alignment */}
       <span
-        className={`shrink-0 font-semibold text-sm ml-4 tabular-nums ${
+        className={`shrink-0 heading-label ml-4 tabular-nums ${
           isIncome
             ? 'text-green-600 dark:text-green-400'
             : 'text-red-600 dark:text-red-400'

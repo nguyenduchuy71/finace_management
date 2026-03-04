@@ -40,7 +40,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
       <div className="group flex justify-end mb-3">
         <div className="flex flex-col items-end gap-1 max-w-[85%]">
           <div className="flex items-end gap-2">
-            <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-2 text-sm leading-relaxed">
+            {/* body-sm with leading-relaxed for readable chat bubbles */}
+            <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-2 body-sm">
               {message.content}
             </div>
             <div className="shrink-0 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
@@ -48,11 +49,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
             </div>
           </div>
           {/* Delete button — visible on hover (desktop) or always (mobile touch) */}
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive transition-colors duration-200"
               onClick={handleDelete}
               title="Xóa tin nhắn"
               aria-label="Xóa tin nhắn"
@@ -72,7 +73,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <div className="shrink-0 w-6 h-6 rounded-full bg-destructive/20 flex items-center justify-center mt-0.5">
             <AlertCircle className="h-3.5 w-3.5 text-destructive" />
           </div>
-          <div className="bg-destructive/10 text-destructive rounded-2xl rounded-tl-sm px-3 py-2 text-sm leading-relaxed border border-destructive/20">
+          {/* body-sm for error text — consistent with other message bubbles */}
+          <div className="bg-destructive/10 text-destructive rounded-2xl rounded-tl-sm px-3 py-2 body-sm border border-destructive/20">
             {message.content}
           </div>
         </div>
@@ -88,7 +90,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <div className="shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
             <Bot className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <div className="bg-muted text-foreground rounded-2xl rounded-tl-sm px-3 py-2 text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none
+          {/* body-sm with prose for markdown — leading-relaxed for readability */}
+          <div className="bg-muted text-foreground rounded-2xl rounded-tl-sm px-3 py-2 body-sm prose prose-sm dark:prose-invert max-w-none
             [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5
             [&_code]:bg-background [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono
             [&_pre]:bg-background [&_pre]:p-2 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre_code]:bg-transparent [&_pre_code]:p-0">
@@ -96,11 +99,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         </div>
         {/* Action buttons — visible on hover (desktop) or always (mobile touch) */}
-        <div className="flex gap-1 ml-8 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 ml-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground transition-colors duration-200"
             onClick={handleCopy}
             title="Sao chép"
             aria-label="Sao chép tin nhắn"
@@ -111,7 +114,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground transition-colors duration-200"
               onClick={handleRegenerate}
               disabled={isLoading}
               title="Tạo lại"
@@ -123,7 +126,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive transition-colors duration-200"
             onClick={handleDelete}
             title="Xóa"
             aria-label="Xóa tin nhắn"
