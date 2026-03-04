@@ -18,6 +18,18 @@ export function AppHeader() {
         {/* Navigation */}
         <nav className="flex items-center gap-1">
           <NavLink
+            to="/dashboard"
+            className={({ isActive }) =>
+              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] flex items-center ${
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`
+            }
+          >
+            Tổng quan
+          </NavLink>
+          <NavLink
             to="/accounts"
             className={({ isActive }) =>
               `px-3 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] flex items-center ${

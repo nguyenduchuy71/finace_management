@@ -3,6 +3,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { AppShell } from '@/components/layout/AppShell'
+import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 
@@ -24,6 +25,7 @@ export function App() {
         <Routes>
           <Route element={<AppShell />}>
             <Route index element={<Navigate to="/accounts" replace />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/accounts" element={<BankAccountsPage />} />
             <Route path="/credit-cards" element={<CreditCardsPage />} />
           </Route>
