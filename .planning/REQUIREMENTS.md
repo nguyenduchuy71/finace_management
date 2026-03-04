@@ -36,13 +36,13 @@
 
 ### Dashboard
 
-- [ ] **DASH-01**: Người dùng có thể xem tổng thu và tổng chi trong kỳ được chọn
+- [x] **DASH-01**: Người dùng có thể xem tổng thu và tổng chi trong kỳ được chọn
 - [ ] **DASH-02**: Người dùng có thể xem biểu đồ chi tiêu theo danh mục (category donut/bar chart bằng Recharts)
 - [x] **DASH-03**: Tất cả trạng thái async được xử lý: loading skeleton, error state, empty state
 
 ### UX & Quality
 
-- [ ] **UX-01**: Website hiển thị đúng trên cả desktop lẫn mobile (responsive)
+- [x] **UX-01**: Website hiển thị đúng trên cả desktop lẫn mobile (responsive)
 - [x] **UX-02**: Số tiền VND được format đúng: `đ 1.500.000` (không có decimal, dùng Intl.NumberFormat vi-VN)
 
 ## v2 Requirements
@@ -101,9 +101,9 @@
 | DASH-03 | Phase 2 | Complete |
 | CC-03 | Phase 3 | Complete |
 | CC-04 | Phase 3 | Complete |
-| DASH-01 | Phase 4 | Pending |
+| DASH-01 | Phase 4 | Complete |
 | DASH-02 | Phase 4 | Pending |
-| UX-01 | Phase 4 | Pending |
+| UX-01 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 22 total

@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-03T23:28:59.004Z"
+status: in_progress
+last_updated: "2026-03-04T00:20:00.000Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 12
+  completed_plans: 11
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 3 of 4 (Credit Card Billing Cycle) — COMPLETE
-Plan: 2 of 2 in current phase — COMPLETE (03-02)
-Status: Plan 03-02 complete — billing cycle React component layer (BillingCycleInfoCard, BillingCycleGroup, CreditCardTransactionList grouped render, CreditCardsPage integration). CC-03 and CC-04 satisfied. Phase 3 complete.
-Last activity: 2026-03-04 — Plan 03-02 complete: BillingCycleInfoCard with urgency badge, BillingCycleGroup with grouped header, CreditCardTransactionList switched to grouped render, CreditCardsPage with card info above FilterBar. 15/15 tests pass, 0 TypeScript errors.
+Phase: 4 of 4 (Dashboard and Polish) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE (04-01), awaiting visual verification checkpoint
+Status: Plan 04-01 complete — DashboardPage with income/expense stat cards, independent dashboardStore, MSW /api/dashboard/stats handler, DashboardDatePicker (responsive), AppHeader Tổng quan nav link, /dashboard route. DASH-01 satisfied. Paused at Task 4 visual verification checkpoint.
+Last activity: 2026-03-04 — Plan 04-01 tasks 1-3 complete. DashboardPage renders at /dashboard with StatCards, SourceSubtotals, DashboardDatePicker, chart placeholder. 15/15 tests pass, 0 TypeScript errors.
 
-Progress: [█████████░] 83% (10/12 plans total)
+Progress: [██████████] 92% (11/12 plans total)
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [█████████░] 83% (10/12 plans total)
 | Phase 02 P05 | 3 min | 8 tasks | 8 files |
 | Phase 03 P01 | 8 min | 2 tasks | 3 files |
 | Phase 03-credit-card-billing-cycle P02 | 3 | 5 tasks | 4 files |
+| Phase 04 P01 | 3 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [03-01]: ISO string localeCompare for newest-first cycle sort — no Date construction needed for descending UTC ISO order
 - [Phase 03-credit-card-billing-cycle]: useCreditCards returns PaginatedResponse<CreditCard> directly (useQuery not useInfiniteQuery) — access active card via cardsData?.data.find()
 - [Phase 03-credit-card-billing-cycle]: BillingCycleInfoCard urgency variants: destructive <=3 days, secondary <=7 days, default otherwise — matches alert patterns used elsewhere in app
+- [04-01]: Dashboard uses independent dashboardStore (not filterStore) — users can compare dashboard period to transaction list period without switching views
+- [04-01]: MSW /api/dashboard/stats includes all CC statuses (pending + posted) — pending CC transactions are real spending commitments
+- [04-01]: DashboardDatePicker uses native inputs on mobile (sm:hidden) and Calendar popover on desktop (hidden sm:flex) for touch-friendly UX
 
 ### Pending Todos
 
@@ -118,5 +122,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 03-02-PLAN.md — billing cycle React component layer: BillingCycleInfoCard (cycle dates + urgency badge), BillingCycleGroup (section header + grouped rows), CreditCardTransactionList (grouped render via groupTransactionsByCycle pipeline), CreditCardsPage (BillingCycleInfoCard between CreditCardTabs and FilterBar). CC-03 and CC-04 requirements satisfied. Phase 3 fully complete.
+Stopped at: Completed 04-01-PLAN.md tasks 1-3 (data layer, components, routing). Paused at Task 4 (checkpoint:human-verify) — visual verification of /dashboard layout, responsiveness, date picker behavior. Dev server running at http://localhost:5174/.
 Resume file: None
