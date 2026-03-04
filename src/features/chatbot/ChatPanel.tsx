@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Settings, X, MessageCircle } from 'lucide-react'
+import { Settings, X, MessageCircle, Trash2, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/stores/chatStore'
 import { ChatMessage } from './ChatMessage'
@@ -7,15 +7,30 @@ import { ChatInput } from './ChatInput'
 import { ChatSettings } from './ChatSettings'
 
 export function ChatPanel() {
-  const { isOpen, messages, showSettings, toggleSettings, closeChat } = useChatStore()
+  const { isOpen, messages, isLoading, showSettings, toggleSettings, closeChat, toggleChat, clearMessages } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Keyboard shortcut: Ctrl+Shift+K (Win/Linux) or Cmd+Shift+K (Mac) toggles chat
+  // Register OUTSIDE the early return so shortcut works when panel is closed
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const isMac = navigator.platform.toUpperCase().includes('MAC')
+      const modifier = isMac ? e.metaKey : e.ctrlKey
+      if (modifier && e.shiftKey && e.code === 'KeyK') {
+        e.preventDefault()
+        toggleChat()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [toggleChat])
 
   // Auto-scroll to latest message
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [messages, isOpen])
+  }, [messages, isLoading, isOpen])
 
   if (!isOpen) return null
 
@@ -42,6 +57,18 @@ export function ChatPanel() {
             <span className="font-semibold text-sm">Trợ lý tài chính</span>
           </div>
           <div className="flex items-center gap-1">
+            {hasMessages && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                onClick={clearMessages}
+                title="Xóa lịch sử chat"
+                aria-label="Xóa lịch sử chat"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -63,21 +90,41 @@ export function ChatPanel() {
           </div>
         </div>
 
-        {/* Settings (collapsible) */}
+        {/* Settings (collapsible inline section) */}
         {showSettings && <ChatSettings />}
 
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-4 min-h-0">
-          {!hasMessages && (
+          {!hasMessages && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
               <MessageCircle className="h-8 w-8 mb-3 opacity-40" />
               <p className="text-sm font-medium">Hỏi về giao dịch của bạn</p>
               <p className="text-xs mt-1">Ví dụ: "Chi tiêu nhiều nhất tháng này là gì?"</p>
+              <p className="text-xs mt-2 text-muted-foreground/60">Ctrl+Shift+K để mở/đóng</p>
             </div>
           )}
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
+
+          {/* Typing indicator — shown while waiting for LLM response */}
+          {isLoading && (
+            <div className="flex justify-start mb-3">
+              <div className="flex items-start gap-2">
+                <div className="shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
+                  <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
+                  <div className="flex gap-1 items-center h-5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
 
