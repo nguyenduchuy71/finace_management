@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Core Transaction Views** - Bank and credit card transaction lists with filter and search
 - [ ] **Phase 3: Credit Card Billing Cycle** - Statement cycle display, billing cycle grouping (product differentiator)
 - [x] **Phase 4: Dashboard and Polish** - Summary charts, income/expense totals, responsive layout verification (completed 2026-03-04)
+- [ ] **Phase 5: Chatbot Integration** - Web chat interface, bot settings (API key, model selection), chat via SDK
 
 ## Phase Details
 
@@ -84,6 +85,20 @@ Plans:
 - [ ] 04-01-PLAN.md — Dashboard data layer, StatCards, DashboardDatePicker, DashboardPage layout, routing and AppHeader nav
 - [ ] 04-02-PLAN.md — Recharts CategoryChart with donut/bar toggle, memoized chart data, mobile responsiveness audit
 
+### Phase 5: Chatbot Integration
+**Goal**: Users can configure and interact with an AI chatbot to get financial insights. The chatbot has a web chat interface, settings to manage API credentials and model selection, and uses an SDK to communicate with the LLM.
+**Depends on**: Phase 4
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. User can access a chat interface in the web application
+  2. User can configure chatbot settings including API key and model selection
+  3. User can send messages and receive responses from the chatbot via an LLM SDK
+  4. Chat interface is usable on mobile screens
+**Plans**: TBD
+
+Plans:
+- [ ] TBD
+
 ## Progress
 
 **Execution Order:**
@@ -95,3 +110,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Core Transaction Views | 3/4 | In Progress | - |
 | 3. Credit Card Billing Cycle | 1/2 | In Progress|  |
 | 4. Dashboard and Polish | 2/2 | Complete   | 2026-03-04 |
+| 5. Chatbot Integration | 0/TBD | Pending | - |
