@@ -1,0 +1,17 @@
+{
+  "buildCommand": "tsc -b && vite build",
+  "outputDirectory": "dist",
+  "installCommand": "npm ci",
+  "env": {
+    "VITE_ENABLE_MSW": "false"
+  },
+  "envPrefix": "VITE_",
+  "regions": ["sfo1"],
+  "functions": {},
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "preview": true
+    }
+  }
+}
