@@ -6,7 +6,6 @@
     "VITE_ENABLE_MSW": "false"
   },
   "regions": ["sfo1"],
-  "functions": {},
   "git": {
     "deploymentEnabled": {
       "main": true,
