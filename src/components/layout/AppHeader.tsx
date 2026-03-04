@@ -51,7 +51,8 @@ export function AppHeader() {
               }`
             }
           >
-            Thẻ tín dụng
+            <span className="hidden sm:inline">Thẻ tín dụng</span>
+            <span className="sm:hidden">Thẻ TD</span>
           </NavLink>
         </nav>
 

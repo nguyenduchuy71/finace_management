@@ -4,6 +4,8 @@ import { DashboardDatePicker } from '@/features/dashboard/DashboardDatePicker'
 import { StatCard } from '@/features/dashboard/StatCard'
 import { StatCardSkeleton } from '@/features/dashboard/StatCardSkeleton'
 import { SourceSubtotals } from '@/features/dashboard/SourceSubtotals'
+import { CategoryChart } from '@/features/dashboard/CategoryChart'
+import { CategoryChartSkeleton } from '@/features/dashboard/CategoryChartSkeleton'
 
 export function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboardStats()
@@ -64,12 +66,15 @@ export function DashboardPage() {
           </StatCard>
         )}
 
-        {/* Chart placeholder — CategoryChart component will be placed here in 04-02 */}
-        <div
-          id="dashboard-chart-slot"
-          className="sm:col-span-2 lg:col-span-1 min-h-[200px] rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground text-sm"
-        >
-          Biểu đồ danh mục (04-02)
+        {/* CategoryChart is memoized — only re-renders when dateFrom/dateTo changes.
+            Changing searchQuery or account in main filterStore does NOT trigger chart re-animation.
+            Reason: useDashboardStats uses dashboardStore (independent) not filterStore. */}
+        <div className="sm:col-span-2 lg:col-span-1">
+          {isLoading ? (
+            <CategoryChartSkeleton />
+          ) : (
+            <CategoryChart categoryBreakdown={data?.categoryBreakdown ?? []} />
+          )}
         </div>
       </div>
     </div>
