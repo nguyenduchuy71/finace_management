@@ -2,13 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-04T00:55:14.708Z"
+status: verifying
+stopped_at: Completed 05-02-PLAN.md — ChatSettings with API key input + model selector + clear chat. Ready for 05-03 SDK integration.
+last_updated: "2026-03-04T05:16:36.879Z"
+last_activity: 2026-03-04 — Plan 05-01 auto tasks complete (3/3 auto tasks). 15/15 tests pass, 0 TypeScript errors.
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -64,6 +67,7 @@ Progress: [██████████] 100% (12/12 plans total)
 | Phase 04 P01 | 3 min | 3 tasks | 11 files |
 | Phase 04-dashboard-and-polish P02 | 12 | 2 tasks | 5 files |
 | Phase 05-chatbot-integration P01 | 4 | 3 tasks | 5 files |
+| Phase 05-chatbot-integration P02 | 5 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -116,6 +120,8 @@ Recent decisions affecting current work:
 - [Phase 05-chatbot-integration]: Keyboard shortcut useEffect placed before early return so Ctrl+Shift+K works when ChatPanel is closed
 - [Phase 05-chatbot-integration]: react-markdown renders assistant messages with Tailwind prose classes; no remark/rehype plugins needed for v1
 - [Phase 05-chatbot-integration]: localStorage persistence in chatStore: saveMessages() called as side-effect in every set() mutation for messages
+- [Phase 05-chatbot-integration]: ChatSettings removed endpoint field — Anthropic SDK handles routing internally; only apiKey + model needed in ApiConfig
+- [Phase 05-chatbot-integration]: Xoa API key button conditionally visible when apiConfig exists — avoids confusing delete action on empty state
 
 ### Pending Todos
 
@@ -128,6 +134,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04
-Stopped at: Completed 05-01 auto tasks (3/3). Task 4 checkpoint:human-verify pending. Dev server at http://localhost:5176/. Chat UI enhancements (keyboard shortcut, typing indicator, markdown, hover actions) need visual verification.
+Last session: 2026-03-04T05:16:36.876Z
+Stopped at: Completed 05-02-PLAN.md — ChatSettings with API key input + model selector + clear chat. Ready for 05-03 SDK integration.
 Resume file: None
