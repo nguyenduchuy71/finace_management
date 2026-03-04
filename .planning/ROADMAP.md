@@ -78,11 +78,11 @@ Plans:
   2. User can see a category breakdown chart (donut or bar) showing spending distribution for the selected period
   3. All pages are usable on a 375px wide mobile screen — no horizontal overflow, no overlapping elements, tap targets are reachable
   4. Charts do not re-render and re-animate when filter state changes that do not affect chart data
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Dashboard summary — income/expense totals, DashboardPage layout
-- [ ] 04-02: Category chart — Recharts donut/bar chart with memoized data, responsive Tailwind breakpoints
+- [ ] 04-01-PLAN.md — Dashboard data layer, StatCards, DashboardDatePicker, DashboardPage layout, routing and AppHeader nav
+- [ ] 04-02-PLAN.md — Recharts CategoryChart with donut/bar toggle, memoized chart data, mobile responsiveness audit
 
 ## Progress
 
