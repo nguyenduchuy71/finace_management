@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-04T00:35:31.766Z"
+last_updated: "2026-03-04T00:55:14.708Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 15
+  completed_plans: 13
 ---
 
 # Project State
@@ -18,14 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Người dùng có thể xem toàn bộ giao dịch ngân hàng và thẻ tín dụng ở một nơi duy nhất, được tổ chức rõ ràng theo chu kỳ sao kê.
-**Current focus:** Phase 2 — Core Transaction Views
+**Current focus:** Phase 5 — Chatbot Integration
 
 ## Current Position
 
-Phase: 4 of 4 (Dashboard and Polish) — AWAITING FINAL VERIFICATION
-Plan: 2 of 2 in current phase — AUTO TASKS COMPLETE (04-02, 2/3 tasks; Task 3 is checkpoint:human-verify)
-Status: Plan 04-02 auto tasks complete — CategoryChart (donut/bar toggle, memoized) wired into DashboardPage. Dev server running at http://localhost:5175/. Awaiting user visual verification of DASH-02 + UX-01.
-Last activity: 2026-03-04 — Plan 04-02 auto tasks complete (2/2 auto tasks). 15/15 tests pass, 0 TypeScript errors.
+Phase: 5 of 5 (Chatbot Integration) — IN PROGRESS
+Plan: 1 of 3 in current phase — AUTO TASKS COMPLETE (05-01, 3/4 tasks; Task 4 is checkpoint:human-verify)
+Status: Plan 05-01 auto tasks complete — ChatMessage with react-markdown, ChatPanel with keyboard shortcut + typing indicator, chatStore with localStorage history. Dev server running at http://localhost:5176/. Awaiting user visual verification.
+Last activity: 2026-03-04 — Plan 05-01 auto tasks complete (3/3 auto tasks). 15/15 tests pass, 0 TypeScript errors.
 
 Progress: [██████████] 100% (12/12 plans total)
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100% (12/12 plans total)
 | Phase 03-credit-card-billing-cycle P02 | 3 | 5 tasks | 4 files |
 | Phase 04 P01 | 3 min | 3 tasks | 11 files |
 | Phase 04-dashboard-and-polish P02 | 12 | 2 tasks | 5 files |
+| Phase 05-chatbot-integration P01 | 4 | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,10 @@ Recent decisions affecting current work:
 - [04-01]: MSW /api/dashboard/stats includes all CC statuses (pending + posted) — pending CC transactions are real spending commitments
 - [04-01]: DashboardDatePicker uses native inputs on mobile (sm:hidden) and Calendar popover on desktop (hidden sm:flex) for touch-friendly UX
 - [Phase 04-02]: recharts 3.7.0 installed (latest); CategoryChart Card has no col-span — parent wrapper owns grid placement; AppHeader mobile abbreviation 'Thẻ TD' applied proactively; useMemo dep [categoryBreakdown] only
+- [Phase 05-chatbot-integration]: ApiConfig shape changed from {endpoint,apiKey} to {apiKey,model} — Anthropic SDK handles endpoint internally; ChatSettings updated to model selector
+- [Phase 05-chatbot-integration]: Keyboard shortcut useEffect placed before early return so Ctrl+Shift+K works when ChatPanel is closed
+- [Phase 05-chatbot-integration]: react-markdown renders assistant messages with Tailwind prose classes; no remark/rehype plugins needed for v1
+- [Phase 05-chatbot-integration]: localStorage persistence in chatStore: saveMessages() called as side-effect in every set() mutation for messages
 
 ### Pending Todos
 
@@ -124,5 +129,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 04-02 auto tasks (2/2). Task 3 checkpoint:human-verify pending. Dev server at http://localhost:5175/. CategoryChart at /dashboard needs visual verification.
+Stopped at: Completed 05-01 auto tasks (3/3). Task 4 checkpoint:human-verify pending. Dev server at http://localhost:5176/. Chat UI enhancements (keyboard shortcut, typing indicator, markdown, hover actions) need visual verification.
 Resume file: None

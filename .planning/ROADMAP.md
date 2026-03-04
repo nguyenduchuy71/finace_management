@@ -110,4 +110,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Core Transaction Views | 3/4 | In Progress | - |
 | 3. Credit Card Billing Cycle | 1/2 | In Progress|  |
 | 4. Dashboard and Polish | 2/2 | Complete   | 2026-03-04 |
-| 5. Chatbot Integration | 0/TBD | Pending | - |
+| 5. Chatbot Integration | 1/3 | In Progress|  |
