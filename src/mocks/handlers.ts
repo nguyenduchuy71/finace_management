@@ -112,4 +112,62 @@ export const handlers = [
       total: allTx.length,
     })
   }),
+
+  // GET /api/dashboard/stats — aggregates bank + CC transactions, supports dateFrom/dateTo filters
+  http.get('/api/dashboard/stats', ({ request }) => {
+    const url = new URL(request.url)
+    const dateFrom = url.searchParams.get('dateFrom')
+    const dateTo = url.searchParams.get('dateTo')
+
+    // Filter bank transactions by date range
+    let bankTx = mockTransactions
+    if (dateFrom) bankTx = bankTx.filter((tx) => tx.transactionDate >= dateFrom)
+    if (dateTo) bankTx = bankTx.filter((tx) => tx.transactionDate <= dateTo + 'T23:59:59Z')
+
+    // Filter CC transactions by date range (include ALL statuses — pending included per CONTEXT.md decision)
+    let ccTx = mockCreditCardTransactions
+    if (dateFrom) ccTx = ccTx.filter((tx) => tx.transactionDate >= dateFrom)
+    if (dateTo) ccTx = ccTx.filter((tx) => tx.transactionDate <= dateTo + 'T23:59:59Z')
+
+    // Bank aggregates — positive amount = income, negative = expense
+    const bankIncome = bankTx
+      .filter((tx) => tx.type === 'income')
+      .reduce((sum, tx) => sum + tx.amount, 0)
+    const bankExpense = bankTx
+      .filter((tx) => tx.type === 'expense')
+      .reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+
+    // CC aggregates — all CC transactions are expenses (purchases/fees negative, payments/refunds positive)
+    // Use abs(amount) for all CC transactions
+    const ccExpense = ccTx.reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+    // CC has no "income" in the traditional sense; payments reduce outstanding balance not income
+    const ccIncome = 0
+
+    const totalIncome = bankIncome + ccIncome
+    const totalExpense = bankExpense + ccExpense
+
+    // Category breakdown — combine bank categories and CC categories
+    const categoryMap = new Map<string, number>()
+    const allExpenses = [
+      ...bankTx.filter((tx) => tx.type === 'expense').map((tx) => ({ category: tx.category ?? 'other', amount: Math.abs(tx.amount) })),
+      ...ccTx.map((tx) => ({ category: tx.category ?? 'other', amount: Math.abs(tx.amount) })),
+    ]
+    for (const { category, amount } of allExpenses) {
+      categoryMap.set(category, (categoryMap.get(category) ?? 0) + amount)
+    }
+    const categoryBreakdown = Array.from(categoryMap.entries())
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount)
+
+    return HttpResponse.json({
+      totalIncome,
+      totalExpense,
+      bankIncome,
+      bankExpense,
+      ccIncome,
+      ccExpense,
+      categoryBreakdown,
+      transactionCount: bankTx.length + ccTx.length,
+    })
+  }),
 ]
