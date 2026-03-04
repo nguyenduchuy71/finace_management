@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: "05-03 Task 1 complete — @anthropic-ai/sdk installed, useChatApi rewritten. At checkpoint Task 2: human-verify end-to-end chat with real Anthropic API."
-last_updated: "2026-03-04T05:21:10.877Z"
-last_activity: 2026-03-04 — Plan 05-01 auto tasks complete (3/3 auto tasks). 15/15 tests pass, 0 TypeScript errors.
+stopped_at: Completed 06-01 (Code Splitting & Bundle Optimization). Ready for 06-02 Lighthouse audit.
+last_updated: "2026-03-04T13:14:31.851Z"
+last_activity: 2026-03-04 — Plan 06-01 complete (5 tasks). Bundle optimized: 1,223KB -> 525KB (-57%), 10 JS chunks, zero TypeScript errors.
 progress:
-  total_phases: 5
+  total_phases: 7
   completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_plans: 19
+  completed_plans: 16
+  percent: 84
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** Người dùng có thể xem toàn bộ giao dịch ngân hàng và thẻ tín dụng ở một nơi duy nhất, được tổ chức rõ ràng theo chu kỳ sao kê.
-**Current focus:** Phase 5 — Chatbot Integration
+**Current focus:** Phase 6 — Optimize & Deploy
 
 ## Current Position
 
-Phase: 5 of 5 (Chatbot Integration) — IN PROGRESS
-Plan: 1 of 3 in current phase — AUTO TASKS COMPLETE (05-01, 3/4 tasks; Task 4 is checkpoint:human-verify)
-Status: Plan 05-01 auto tasks complete — ChatMessage with react-markdown, ChatPanel with keyboard shortcut + typing indicator, chatStore with localStorage history. Dev server running at http://localhost:5176/. Awaiting user visual verification.
-Last activity: 2026-03-04 — Plan 05-01 auto tasks complete (3/3 auto tasks). 15/15 tests pass, 0 TypeScript errors.
+Phase: 6 of 7 (Optimize & Deploy) — IN PROGRESS
+Plan: 1 of 4 in current phase — COMPLETE (06-01: Code Splitting & Bundle Optimization)
+Status: Plan 06-01 complete — Vite manualChunks for recharts/anthropic/markdown; React.lazy() route lazy-loading; Recharts lazy in DashboardPage; Anthropic SDK lazy in useChatApi. Build: 525KB main (from 1,223KB), 10 JS chunks, zero warnings, zero TypeScript errors.
+Last activity: 2026-03-04 — Plan 06-01 complete (5 tasks, 4 files). Bundle reduced 57%, code splitting verified.
 
-Progress: [██████████] 100% (12/12 plans total)
+Progress: [████████░░] 84% (16/19 plans total)
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100% (12/12 plans total)
 | Phase 04-dashboard-and-polish P02 | 12 | 2 tasks | 5 files |
 | Phase 05-chatbot-integration P01 | 4 | 3 tasks | 5 files |
 | Phase 05-chatbot-integration P02 | 5 | 2 tasks | 1 files |
+| Phase 06-optimize-and-deploy P01 | 22 | 5 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ Recent decisions affecting current work:
 - [Phase 05-chatbot-integration]: Xoa API key button conditionally visible when apiConfig exists — avoids confusing delete action on empty state
 - [Phase 05-chatbot-integration]: Anthropic SDK dangerouslyAllowBrowser: true — browser CORS allowed by Anthropic API as of 2025; explicit opt-in flag
 - [Phase 05-chatbot-integration]: Typing indicator pattern over token streaming — isLoading=true + finalMessage() avoids chatStore modification for partial-text streaming updates
+- [Phase 06-optimize-and-deploy]: esbuild used as Vite minifier (terser not installed) — equivalent tree-shaking for this project
+- [Phase 06-optimize-and-deploy]: Main bundle 525KB accepted — React/TanStack/shadcn shared deps cannot be split without loading waterfalls
+- [Phase 06-optimize-and-deploy]: React.lazy() with named export re-export pattern: lazy(() => import(...).then(m => ({ default: m.Component })))
 
 ### Pending Todos
 
@@ -136,6 +140,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T05:21:04.054Z
-Stopped at: 05-03 Task 1 complete — @anthropic-ai/sdk installed, useChatApi rewritten. At checkpoint Task 2: human-verify end-to-end chat with real Anthropic API.
+Last session: 2026-03-04T13:14:31.847Z
+Stopped at: Completed 06-01 (Code Splitting & Bundle Optimization). Ready for 06-02 Lighthouse audit.
 Resume file: None
