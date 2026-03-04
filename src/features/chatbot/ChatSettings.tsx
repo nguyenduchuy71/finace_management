@@ -4,31 +4,27 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useChatStore, type ApiConfig } from '@/stores/chatStore'
 
+const MODELS = [
+  { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+  { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+  { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+]
+
 export function ChatSettings() {
   const { apiConfig, setApiConfig, toggleSettings } = useChatStore()
 
-  const [endpoint, setEndpoint] = useState(apiConfig?.endpoint ?? '')
+  const [model, setModel] = useState(apiConfig?.model ?? MODELS[0].value)
   const [apiKey, setApiKey] = useState(apiConfig?.apiKey ?? '')
   const [showKey, setShowKey] = useState(false)
   const [error, setError] = useState('')
 
   function handleSave() {
-    if (!endpoint.trim()) {
-      setError('Vui lòng nhập endpoint URL')
-      return
-    }
     if (!apiKey.trim()) {
       setError('Vui lòng nhập API key')
       return
     }
-    try {
-      new URL(endpoint)
-    } catch {
-      setError('Endpoint phải là URL hợp lệ (bắt đầu bằng https://)')
-      return
-    }
 
-    const config: ApiConfig = { endpoint: endpoint.trim(), apiKey: apiKey.trim() }
+    const config: ApiConfig = { apiKey: apiKey.trim(), model }
     setApiConfig(config)
     setError('')
     toggleSettings()
@@ -36,7 +32,7 @@ export function ChatSettings() {
 
   function handleClear() {
     setApiConfig(null)
-    setEndpoint('')
+    setModel(MODELS[0].value)
     setApiKey('')
     toggleSettings()
   }
@@ -51,13 +47,18 @@ export function ChatSettings() {
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs text-muted-foreground">API Endpoint (OpenAI-compatible)</label>
-        <Input
-          placeholder="https://api.openai.com/v1/chat/completions"
-          value={endpoint}
-          onChange={(e) => setEndpoint(e.target.value)}
-          className="text-sm"
-        />
+        <label className="text-xs text-muted-foreground">Model</label>
+        <select
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          className="w-full text-sm border border-input rounded-md px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          {MODELS.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
@@ -65,7 +66,7 @@ export function ChatSettings() {
         <div className="relative">
           <Input
             type={showKey ? 'text' : 'password'}
-            placeholder="sk-..."
+            placeholder="sk-ant-..."
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             className="text-sm pr-9"
@@ -86,7 +87,7 @@ export function ChatSettings() {
       {error && <p className="text-xs text-destructive">{error}</p>}
 
       <p className="text-xs text-muted-foreground">
-        API key được lưu trong localStorage của trình duyệt. Tương thích với API OpenAI và các endpoint tương tự.
+        API key được lưu trong localStorage của trình duyệt. Sử dụng Anthropic Claude API.
       </p>
 
       <div className="flex gap-2">
