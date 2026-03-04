@@ -2,7 +2,7 @@
 
 ## Overview
 
-Starting from an empty Vite project, this roadmap delivers a personal finance dashboard where a user can see all their bank and credit card transactions in one place, organized by billing cycle. Phase 1 lays the data infrastructure that everything else depends on. Phase 2 delivers the core transaction views with filtering. Phase 3 implements the product's main differentiator: credit card billing cycle display and grouping. Phase 4 adds the dashboard charts and polishes responsive behavior across devices.
+Starting from an empty Vite project, this roadmap delivers a personal finance dashboard where a user can see all their bank and credit card transactions in one place, organized by billing cycle. Phase 1 lays the data infrastructure that everything else depends on. Phase 2 delivers the core transaction views with filtering. Phase 3 implements the product's main differentiator: credit card billing cycle display and grouping. Phase 4 adds the dashboard charts and polishes responsive behavior across devices. Phase 5 adds an AI-powered chatbot for financial insights. Phase 6 optimizes performance, adds comprehensive testing, polishes the UI, and deploys to production.
 
 ## Phases
 
@@ -17,6 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 3: Credit Card Billing Cycle** - Statement cycle display, billing cycle grouping (product differentiator)
 - [x] **Phase 4: Dashboard and Polish** - Summary charts, income/expense totals, responsive layout verification (completed 2026-03-04)
 - [x] **Phase 5: Chatbot Integration** - Web chat interface, bot settings (API key, model selection), chat via SDK (completed 2026-03-04)
+- [ ] **Phase 6: Optimize & Deploy** - Performance optimization (code splitting, bundle reduction), comprehensive testing, UI polish, Vercel deployment
 
 ## Phase Details
 
@@ -116,20 +117,24 @@ Plans:
 - [ ] TBD
 
 ### Phase 6: Optimize & Deploy
-**Goal**: Performance optimization, UI polish refinements, comprehensive testing, and deployment to Vercel production.
+**Goal**: Performance optimization, UI polish refinements, comprehensive testing, and deployment to Vercel production. Reduce bundle size via code splitting, add comprehensive test coverage, polish UI for production quality, and deploy to Vercel with working production URL.
 **Depends on**: Phase 5
-**Requirements**: TBD
+**Requirements**: None (final phase focusing on quality and deployment)
 **Success Criteria** (what must be TRUE):
   1. Lighthouse performance score ≥90 on mobile, ≥95 on desktop
   2. All TypeScript strict mode checks pass with 0 errors
-  3. Test suite passes: unit tests, integration tests, E2E coverage for critical flows
-  4. UI is polished: consistent spacing, improved visual hierarchy, better animations
+  3. Test suite passes: unit tests, integration tests for critical flows (≥70% coverage)
+  4. UI is polished: consistent spacing, typography, visual hierarchy, smooth transitions
   5. App successfully deployed to Vercel with working production URL
   6. No console errors or warnings in production build
-**Plans**: TBD
+  7. Main JS bundle <500KB minified (from 1.2MB), gzip <150KB
+**Plans**: 4 plans
 
 Plans:
-- [ ] TBD
+- [x] 06-01-PLAN.md — Code splitting and bundle optimization (Vite manual chunks, route-based lazy loading, lazy-load Recharts/SDK)
+- [x] 06-02-PLAN.md — Comprehensive testing and QA (test script, unit/integration/component tests, ≥70% coverage)
+- [x] 06-03-PLAN.md — UI polish and refinements (global typography/spacing utilities, touch targets, responsive audit)
+- [x] 06-04-PLAN.md — Vercel deployment setup (vercel.json, environment variables, production configuration, final verification)
 
 ## Progress
 
@@ -144,4 +149,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6 (decima
 | 4. Dashboard and Polish | 2/2 | Complete   | 2026-03-04 |
 | 5. Chatbot Integration | 3/3 | Complete   | 2026-03-04 |
 | 5.1. Chatbot UI Refinements | 0/? | Pending | - |
-| 6. Optimize & Deploy | 0/? | Pending | - |
+| 6. Optimize & Deploy | 4/4 | Plans Created | 2026-03-04 |
