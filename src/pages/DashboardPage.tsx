@@ -1,11 +1,17 @@
+import { lazy, Suspense } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { DashboardDatePicker } from '@/features/dashboard/DashboardDatePicker'
 import { StatCard } from '@/features/dashboard/StatCard'
 import { StatCardSkeleton } from '@/features/dashboard/StatCardSkeleton'
 import { SourceSubtotals } from '@/features/dashboard/SourceSubtotals'
-import { CategoryChart } from '@/features/dashboard/CategoryChart'
 import { CategoryChartSkeleton } from '@/features/dashboard/CategoryChartSkeleton'
+
+// Recharts is ~372KB — lazy-load CategoryChart so recharts chunk only loads on dashboard mount.
+// CategoryChartSkeleton (no recharts dependency) shows while the chunk is fetched.
+const CategoryChart = lazy(() =>
+  import('@/features/dashboard/CategoryChart').then((m) => ({ default: m.CategoryChart }))
+)
 
 export function DashboardPage() {
   const { data, isLoading, isError, refetch } = useDashboardStats()
@@ -66,14 +72,16 @@ export function DashboardPage() {
           </StatCard>
         )}
 
-        {/* CategoryChart is memoized — only re-renders when dateFrom/dateTo changes.
-            Changing searchQuery or account in main filterStore does NOT trigger chart re-animation.
-            Reason: useDashboardStats uses dashboardStore (independent) not filterStore. */}
+        {/* CategoryChart is lazy-loaded (recharts chunk deferred until dashboard mount).
+            CategoryChartSkeleton is shown while the recharts chunk loads.
+            CRITICAL: useMemo dep [categoryBreakdown] only — see CategoryChart comment. */}
         <div className="sm:col-span-2 lg:col-span-1">
           {isLoading ? (
             <CategoryChartSkeleton />
           ) : (
-            <CategoryChart categoryBreakdown={data?.categoryBreakdown ?? []} />
+            <Suspense fallback={<CategoryChartSkeleton />}>
+              <CategoryChart categoryBreakdown={data?.categoryBreakdown ?? []} />
+            </Suspense>
           )}
         </div>
       </div>
