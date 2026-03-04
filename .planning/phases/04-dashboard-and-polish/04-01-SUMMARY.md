@@ -30,9 +30,9 @@ decisions:
   - "DashboardDatePicker uses native inputs on mobile (sm:hidden) and Calendar popover on desktop (hidden sm:flex) for touch-friendly UX"
   - "Chart placeholder div (id=dashboard-chart-slot) reserved in three-column grid for 04-02 implementation"
 metrics:
-  duration: "3 min"
+  duration: "7 min"
   completed_date: "2026-03-04"
-  tasks_completed: 3
+  tasks_completed: 4
   tasks_total: 4
   files_created: 8
   files_modified: 3
@@ -81,6 +81,10 @@ None — plan executed exactly as written.
 - [x] Zero TypeScript errors — npx tsc --noEmit exits 0
 - [x] All 15 tests pass — npx vitest run exits 0
 
+## Self-Check: PASSED
+
+All files verified present, all commits verified in git log.
+
 ## Commits
 
 | Hash | Message |
@@ -88,3 +92,4 @@ None — plan executed exactly as written.
 | 095a1fc | feat(04-01): add dashboard data layer — MSW handler, service, store, and hook |
 | 1813821 | feat(04-01): add StatCard components and DashboardDatePicker |
 | d2df2a4 | feat(04-01): add DashboardPage, /dashboard route, and Tổng quan nav link |
+| 7014764 | feat(04-01): add DashboardPage with income/expense stat cards and responsive layout (visual verify approved) |
