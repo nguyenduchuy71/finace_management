@@ -97,12 +97,28 @@ Plans:
 **Plans**: TBD
 
 Plans:
+- [ ] 05-01-PLAN.md
+- [ ] 05-02-PLAN.md
+- [ ] 05-03-PLAN.md
+
+### Phase 5.1: Chatbot UI Refinements
+**Goal**: Improve chatbot user experience with cleaner UI, better message display, and streamlined settings interface.
+**Depends on**: Phase 5
+**Requirements**: TBD
+**Success Criteria** (what must be TRUE):
+  1. TanStack DevTools popup removed (development-only tool)
+  2. Chat message styling is clean and easy to read
+  3. Settings interface is intuitive and not intrusive
+  4. Chat panel responsive on mobile and desktop
+**Plans**: TBD
+
+Plans:
 - [ ] TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 (decimal phases appear between their surrounding integers)
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -111,3 +127,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 3. Credit Card Billing Cycle | 1/2 | In Progress|  |
 | 4. Dashboard and Polish | 2/2 | Complete   | 2026-03-04 |
 | 5. Chatbot Integration | 3/3 | Complete   | 2026-03-04 |
+| 5.1. Chatbot UI Refinements | 0/? | Pending | - |
