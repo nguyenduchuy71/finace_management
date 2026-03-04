@@ -8,11 +8,11 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto section-padding-x h-14 flex items-center justify-between gap-4">
         {/* Logo / Brand */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <Wallet className="h-5 w-5 text-primary" />
-          <span className="font-bold text-lg tracking-tight">FinanceManager</span>
+          <span className="heading-h3 tracking-tight">FinanceManager</span>
         </div>
 
         {/* Navigation */}
@@ -20,7 +20,7 @@ export function AppHeader() {
           <NavLink
             to="/dashboard"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] flex items-center ${
+              `px-3 py-1.5 rounded-md heading-label transition-colors duration-200 touch-target flex items-center ${
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -32,7 +32,7 @@ export function AppHeader() {
           <NavLink
             to="/accounts"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] flex items-center ${
+              `px-3 py-1.5 rounded-md heading-label transition-colors duration-200 touch-target flex items-center ${
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -44,7 +44,7 @@ export function AppHeader() {
           <NavLink
             to="/credit-cards"
             className={({ isActive }) =>
-              `px-3 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[44px] flex items-center ${
+              `px-3 py-1.5 rounded-md heading-label transition-colors duration-200 touch-target flex items-center ${
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -62,7 +62,7 @@ export function AppHeader() {
           size="icon"
           onClick={toggleTheme}
           aria-label={theme === 'dark' ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
-          className="min-h-[44px] min-w-[44px]"
+          className="touch-target shrink-0 transition-colors duration-200"
         >
           {theme === 'dark' ? (
             <Sun className="h-5 w-5" />
