@@ -1,13 +1,25 @@
+import { useEffect, useCallback } from 'react'
 import { useShallow } from 'zustand/react/shallow'
+import Anthropic from '@anthropic-ai/sdk'
 import { useChatStore } from '@/stores/chatStore'
 import { useFilterStore } from '@/stores/filterStore'
 import { useTransactions } from '@/hooks/useTransactions'
 
-// NOTE: This hook will be replaced in 05-03 with Anthropic SDK integration.
-// For now it uses a placeholder that shows a "not configured" error until
-// the SDK integration is complete. The apiConfig shape is { apiKey, model }.
+const SYSTEM_PROMPT_BASE = `Bạn là trợ lý tài chính cá nhân cho người dùng Việt Nam. \
+Phân tích dữ liệu giao dịch và đưa ra lời khuyên thực tế, ngắn gọn bằng tiếng Việt. \
+Sử dụng markdown để định dạng câu trả lời (danh sách, in đậm cho số tiền quan trọng). \
+Luôn trả lời bằng tiếng Việt trừ khi người dùng hỏi bằng ngôn ngữ khác.`
+
 export function useChatApi() {
-  const { apiConfig, addMessage, setLoading, isLoading } = useChatStore()
+  const {
+    apiConfig,
+    messages,
+    addMessage,
+    setLoading,
+    isLoading,
+    setRegenerateCallback,
+  } = useChatStore()
+
   const { searchQuery, dateFrom, dateTo, txType, accountId } = useFilterStore(
     useShallow((s) => ({
       searchQuery: s.searchQuery,
@@ -22,51 +34,108 @@ export function useChatApi() {
   const { data: transactionPages } = useTransactions()
   const visibleTransactions = transactionPages?.pages.flatMap((p) => p.data) ?? []
 
-  async function sendMessage(userText: string) {
-    if (!userText.trim() || isLoading) return
+  const sendMessage = useCallback(
+    async (userText: string) => {
+      if (!userText.trim() || isLoading) return
 
-    if (!apiConfig?.apiKey) {
-      addMessage({
-        role: 'error',
-        content:
-          'Chưa cấu hình API. Nhấn biểu tượng cài đặt để nhập API key và chọn model.',
-      })
-      return
+      // Guard: API not configured
+      if (!apiConfig?.apiKey || !apiConfig?.model) {
+        addMessage({
+          role: 'error',
+          content:
+            'Chưa cấu hình API. Nhấn biểu tượng ⚙️ để nhập Anthropic API key và chọn model.',
+        })
+        return
+      }
+
+      // Add user message to store
+      addMessage({ role: 'user', content: userText })
+      setLoading(true)
+
+      // Build transaction context (cap at 20 to prevent token overflow)
+      const contextSample = visibleTransactions.slice(0, 20)
+      const filterDesc = [
+        accountId ? `tài khoản ${accountId}` : null,
+        dateFrom ? `từ ${dateFrom}` : null,
+        dateTo ? `đến ${dateTo}` : null,
+        txType !== 'all' ? `loại ${txType}` : null,
+        searchQuery ? `tìm kiếm "${searchQuery}"` : null,
+      ]
+        .filter(Boolean)
+        .join(', ')
+
+      const contextText =
+        contextSample.length > 0
+          ? `Dữ liệu ${contextSample.length} giao dịch${filterDesc ? ` (lọc: ${filterDesc})` : ''}:\n` +
+            contextSample
+              .map(
+                (tx) =>
+                  `- ${tx.transactionDate.slice(0, 10)}: ${tx.merchantName ?? tx.description} | ${tx.type === 'income' ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('vi-VN')}đ`
+              )
+              .join('\n')
+          : 'Không có giao dịch nào trong bộ lọc hiện tại.'
+
+      const systemPrompt = `${SYSTEM_PROMPT_BASE}\n\n${contextText}`
+
+      // Build conversation history from store messages (exclude error messages)
+      // Anthropic API accepts: { role: 'user' | 'assistant', content: string }[]
+      const conversationHistory = messages
+        .filter((m) => m.role === 'user' || m.role === 'assistant')
+        .map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }))
+
+      // Append the new user message to history
+      conversationHistory.push({ role: 'user', content: userText })
+
+      try {
+        const client = new Anthropic({
+          apiKey: apiConfig.apiKey,
+          dangerouslyAllowBrowser: true,
+        })
+
+        const stream = await client.messages.stream({
+          model: apiConfig.model,
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: conversationHistory,
+        })
+
+        // Collect full streamed response then add as single message
+        // (ChatPanel typing indicator is shown during isLoading=true)
+        const finalMessage = await stream.finalMessage()
+        const assistantText =
+          finalMessage.content.find((b) => b.type === 'text')?.text ??
+          'Không có phản hồi từ API.'
+
+        addMessage({ role: 'assistant', content: assistantText })
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Đã có lỗi khi kết nối tới Anthropic API.'
+        addMessage({ role: 'error', content: `Lỗi: ${message}` })
+      } finally {
+        setLoading(false)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [apiConfig, messages, visibleTransactions, searchQuery, dateFrom, dateTo, txType, accountId, isLoading]
+  )
+
+  // Register regenerate callback: re-send the last user message
+  useEffect(() => {
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
+    if (lastUserMessage) {
+      setRegenerateCallback(() => () => sendMessage(lastUserMessage.content))
+    } else {
+      setRegenerateCallback(null)
     }
+    return () => setRegenerateCallback(null)
+  }, [messages, sendMessage, setRegenerateCallback])
 
-    // Add user message immediately
-    addMessage({ role: 'user', content: userText })
-    setLoading(true)
-
-    // Build transaction context summary (limit to 20 transactions to avoid token overflow)
-    const contextSample = visibleTransactions.slice(0, 20)
-    const contextText =
-      contextSample.length > 0
-        ? `Dưới đây là ${contextSample.length} giao dịch hiện tại (lọc theo: tài khoản ${accountId ?? 'tất cả'}${dateFrom ? `, từ ${dateFrom}` : ''}${dateTo ? ` đến ${dateTo}` : ''}${txType !== 'all' ? `, loại ${txType}` : ''}${searchQuery ? `, tìm kiếm "${searchQuery}"` : ''}):\n\n` +
-          contextSample
-            .map(
-              (tx) =>
-                `- ${tx.transactionDate.slice(0, 10)}: ${tx.merchantName ?? tx.description} | ${tx.type === 'income' ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('vi-VN')}đ`
-            )
-            .join('\n')
-        : 'Không có giao dịch nào trong bộ lọc hiện tại.'
-
-    const _contextText = contextText // Will be used in 05-03 SDK integration
-
-    try {
-      // Placeholder: 05-03 will replace this with Anthropic SDK call using apiConfig.apiKey and apiConfig.model
-      addMessage({
-        role: 'error',
-        content: `SDK integration chưa hoàn thành. Vui lòng chờ 05-03. Model được chọn: ${apiConfig.model}`,
-      })
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Đã có lỗi khi kết nối tới API.'
-      addMessage({ role: 'error', content: `Lỗi: ${message}` })
-    } finally {
-      setLoading(false)
-    }
+  return {
+    sendMessage,
+    isLoading,
+    isConfigured: Boolean(apiConfig?.apiKey && apiConfig?.model),
   }
-
-  return { sendMessage, isLoading, isConfigured: Boolean(apiConfig?.apiKey) }
 }
