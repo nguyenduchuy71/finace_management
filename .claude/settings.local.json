@@ -9,7 +9,13 @@
       "Bash(grep:*)",
       "Bash(npx shadcn@latest:*)",
       "Bash(npx:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Skill(gsd:discuss-phase)",
+      "Skill(gsd:plan-phase)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(pkill:*)",
+      "Bash(curl:*)"
     ]
   }
 }
