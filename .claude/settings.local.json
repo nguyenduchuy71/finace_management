@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Skill(gsd:new-project)",
+      "Bash(node:*)",
+      "WebSearch",
+      "Skill(gsd:execute-phase)",
+      "Bash(grep:*)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(npx:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

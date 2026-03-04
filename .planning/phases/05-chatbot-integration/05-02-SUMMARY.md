@@ -75,7 +75,7 @@ Each task was committed atomically:
 1. **Task 1: Replace ChatSettings with API key + model selector + clear chat** - `fdc8385` (feat)
 2. **Task 2: Visual verification of ChatSettings** - approved by user (no code change)
 
-**Plan metadata:** TBD (docs commit)
+**Plan metadata:** `f1bf27b` (docs: complete plan)
 
 ## Files Created/Modified
 - `src/features/chatbot/ChatSettings.tsx` - Production-ready settings form: API key input with show/hide toggle, model Select dropdown with 4 Claude options, Luu cai dat save button, Xoa API key clear-credentials button, Xoa chat clear-history button
@@ -103,6 +103,15 @@ None - no external service configuration required.
 - chatStore.setApiConfig({apiKey, model}) wired correctly — 05-03 SDK integration can read apiConfig directly from store
 - clearMessages() confirmed working from settings panel
 - Ready for 05-03: Anthropic SDK integration and real LLM response streaming
+
+## Self-Check: PASSED
+
+- `src/features/chatbot/ChatSettings.tsx` — FOUND
+- `.planning/phases/05-chatbot-integration/05-02-SUMMARY.md` — FOUND
+- Commit `fdc8385` (feat task) — FOUND
+- Commit `f1bf27b` (docs metadata) — FOUND
+- TypeScript: zero errors (npx tsc --noEmit)
+- Verification checks: all 5 plan checks passed (model/apiKey present, no endpoint, 4 model options, SelectItem/SelectContent, clearMessages)
 
 ---
 *Phase: 05-chatbot-integration*
