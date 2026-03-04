@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 06-03 (UI Polish). Ready for 06-04 deployment.
-last_updated: "2026-03-04T13:22:10.576Z"
-last_activity: 2026-03-04 — Plan 06-03 complete (6 tasks, 8 files). WCAG touch targets fixed, typography utilities added.
+stopped_at: Completed 06-02 (Testing & QA). Ready for 06-03 or 06-04.
+last_updated: "2026-03-04T13:34:16.894Z"
+last_activity: 2026-03-04 — Plan 06-03 complete (6 tasks, 8 files). WCAG touch targets fixed, typography system established.
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
   percent: 89
 ---
 
@@ -131,6 +131,9 @@ Recent decisions affecting current work:
 - [Phase 06-optimize-and-deploy]: React.lazy() with named export re-export pattern: lazy(() => import(...).then(m => ({ default: m.Component })))
 - [Phase 06]: touch-target utility class established in index.css replacing inline min-h-[44px] min-w-[44px] pattern for WCAG AA compliance
 - [Phase 06]: heading-label/body-sm utility classes applied for consistent typography scale across all UI components
+- [Phase 06]: Node MSW server (setupServer) separate from browser worker (setupWorker) — test environment requires msw/node; src/mocks/server.ts is the test-only entry point
+- [Phase 06]: Per-test QueryClient via createWrapper() with gcTime:0 + staleTime:0 — ensures no query cache leakage between tests
+- [Phase 06]: jest-dom installed as devDep with setupFiles — toBeInTheDocument not in Vitest globals by default; test-setup.ts imports jest-dom + mocks scrollIntoView
 
 ### Pending Todos
 
@@ -143,6 +146,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T13:22:10.570Z
-Stopped at: Completed 06-03 (UI Polish). Ready for 06-04 deployment.
+Last session: 2026-03-04T13:34:09.638Z
+Stopped at: Completed 06-02 (Testing & QA). Ready for 06-03 or 06-04.
 Resume file: None
