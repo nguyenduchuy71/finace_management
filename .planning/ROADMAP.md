@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Core Transaction Views** - Bank and credit card transaction lists with filter and search
 - [ ] **Phase 3: Credit Card Billing Cycle** - Statement cycle display, billing cycle grouping (product differentiator)
 - [x] **Phase 4: Dashboard and Polish** - Summary charts, income/expense totals, responsive layout verification (completed 2026-03-04)
-- [ ] **Phase 5: Chatbot Integration** - Web chat interface, bot settings (API key, model selection), chat via SDK
+- [x] **Phase 5: Chatbot Integration** - Web chat interface, bot settings (API key, model selection), chat via SDK (completed 2026-03-04)
 
 ## Phase Details
 
@@ -110,4 +110,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 2. Core Transaction Views | 3/4 | In Progress | - |
 | 3. Credit Card Billing Cycle | 1/2 | In Progress|  |
 | 4. Dashboard and Polish | 2/2 | Complete   | 2026-03-04 |
-| 5. Chatbot Integration | 1/3 | In Progress|  |
+| 5. Chatbot Integration | 3/3 | Complete   | 2026-03-04 |

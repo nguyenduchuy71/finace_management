@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 05-02-PLAN.md — ChatSettings with API key input + model selector + clear chat. Ready for 05-03 SDK integration.
-last_updated: "2026-03-04T05:16:36.879Z"
+stopped_at: "05-03 Task 1 complete — @anthropic-ai/sdk installed, useChatApi rewritten. At checkpoint Task 2: human-verify end-to-end chat with real Anthropic API."
+last_updated: "2026-03-04T05:21:10.877Z"
 last_activity: 2026-03-04 — Plan 05-01 auto tasks complete (3/3 auto tasks). 15/15 tests pass, 0 TypeScript errors.
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 100
 ---
 
@@ -122,6 +122,8 @@ Recent decisions affecting current work:
 - [Phase 05-chatbot-integration]: localStorage persistence in chatStore: saveMessages() called as side-effect in every set() mutation for messages
 - [Phase 05-chatbot-integration]: ChatSettings removed endpoint field — Anthropic SDK handles routing internally; only apiKey + model needed in ApiConfig
 - [Phase 05-chatbot-integration]: Xoa API key button conditionally visible when apiConfig exists — avoids confusing delete action on empty state
+- [Phase 05-chatbot-integration]: Anthropic SDK dangerouslyAllowBrowser: true — browser CORS allowed by Anthropic API as of 2025; explicit opt-in flag
+- [Phase 05-chatbot-integration]: Typing indicator pattern over token streaming — isLoading=true + finalMessage() avoids chatStore modification for partial-text streaming updates
 
 ### Pending Todos
 
@@ -134,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T05:16:36.876Z
-Stopped at: Completed 05-02-PLAN.md — ChatSettings with API key input + model selector + clear chat. Ready for 05-03 SDK integration.
+Last session: 2026-03-04T05:21:04.054Z
+Stopped at: 05-03 Task 1 complete — @anthropic-ai/sdk installed, useChatApi rewritten. At checkpoint Task 2: human-verify end-to-end chat with real Anthropic API.
 Resume file: None
