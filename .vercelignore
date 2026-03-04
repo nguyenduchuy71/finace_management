@@ -1,0 +1,35 @@
+# Dependencies (installed fresh on Vercel)
+node_modules
+
+# Git-related
+.git
+.gitignore
+
+# Source control
+.github
+
+# Local development
+.env.local
+.env
+.DS_Store
+
+# Build artifacts (rebuilt on Vercel)
+dist
+.vercel
+
+# IDE/Editor
+.vscode
+.idea
+*.swp
+
+# Planning/documentation (not needed in production)
+.planning
+docs
+
+# Test files (not needed in production)
+src/**/*.test.ts
+src/**/*.test.tsx
+
+# Lint config
+.eslintignore
+eslint.config.js
