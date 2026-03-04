@@ -7,15 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 // Route-based lazy loading — page chunks load only when the route is navigated to.
 // AppShell stays static so layout renders immediately without a flash.
-const DashboardPage = lazy(() =>
-  import('@/pages/DashboardPage').then((m) => ({ default: m.DashboardPage }))
-)
-const BankAccountsPage = lazy(() =>
-  import('@/pages/BankAccountsPage').then((m) => ({ default: m.BankAccountsPage }))
-)
-const CreditCardsPage = lazy(() =>
-  import('@/pages/CreditCardsPage').then((m) => ({ default: m.CreditCardsPage }))
-)
+const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => m.DashboardPage ? Promise.resolve({ default: m.DashboardPage }) : Promise.reject(new Error('DashboardPage not found'))))
+const BankAccountsPage = lazy(() => import('@/pages/BankAccountsPage').then((m) => m.BankAccountsPage ? Promise.resolve({ default: m.BankAccountsPage }) : Promise.reject(new Error('BankAccountsPage not found'))))
+const CreditCardsPage = lazy(() => import('@/pages/CreditCardsPage').then((m) => m.CreditCardsPage ? Promise.resolve({ default: m.CreditCardsPage }) : Promise.reject(new Error('CreditCardsPage not found'))))
 
 function PageSkeleton() {
   return (
