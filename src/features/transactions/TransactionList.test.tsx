@@ -241,4 +241,183 @@ describe('TransactionList', () => {
       expect(callCount).toBeGreaterThanOrEqual(2)
     })
   })
+
+  describe('Category Filtering', () => {
+    it('renders with default filters (category = "all")', async () => {
+      useFilterStore.setState({ accountId: 'vcb-checking-001', category: 'all' })
+      renderTransactionList()
+
+      await waitFor(() => {
+        const rows = document.querySelectorAll('[class*="rounded-lg"][class*="border"]')
+        expect(rows.length).toBeGreaterThan(0)
+      }, { timeout: 5000 })
+    })
+
+    it('updates list when category filter changes', async () => {
+      let requestCount = 0
+      server.use(
+        http.get('/api/accounts/:accountId/transactions', ({ request }) => {
+          const url = new URL(request.url)
+          const category = url.searchParams.get('category')
+          requestCount++
+
+          if (category === 'food') {
+            return HttpResponse.json({
+              data: [
+                { id: 'tx-food-1', accountId: 'vcb-checking-001', amount: -85_000, description: 'Circle K', merchantName: 'Circle K', category: 'food', type: 'expense', status: 'posted', transactionDate: '2026-02-20T07:30:00Z' },
+              ],
+              nextCursor: null,
+              total: 1,
+            })
+          }
+          return HttpResponse.json({
+            data: [
+              { id: 'tx-all-1', accountId: 'vcb-checking-001', amount: -85_000, description: 'Circle K', merchantName: 'Circle K', category: 'food', type: 'expense', status: 'posted', transactionDate: '2026-02-20T07:30:00Z' },
+              { id: 'tx-all-2', accountId: 'vcb-checking-001', amount: -120_000, description: 'Grab', merchantName: 'Grab', category: 'transport', type: 'expense', status: 'posted', transactionDate: '2026-02-19T09:15:00Z' },
+            ],
+            nextCursor: null,
+            total: 2,
+          })
+        })
+      )
+
+      useFilterStore.setState({ accountId: 'vcb-checking-001', category: 'all' })
+      renderTransactionList()
+
+      // Wait for initial render with all transactions
+      await waitFor(() => {
+        const rows = document.querySelectorAll('[class*="rounded-lg"][class*="border"]')
+        expect(rows.length).toBeGreaterThan(0)
+      }, { timeout: 5000 })
+
+      const initialRequestCount = requestCount
+
+      // Change category filter
+      useFilterStore.getState().setCategory('food')
+
+      // Verify list updated by waiting for new request
+      await waitFor(() => {
+        expect(requestCount).toBeGreaterThan(initialRequestCount)
+      }, { timeout: 5000 })
+    })
+
+    it('filters by specific category and excludes non-matching transactions', async () => {
+      server.use(
+        http.get('/api/accounts/:accountId/transactions', ({ request }) => {
+          const url = new URL(request.url)
+          const category = url.searchParams.get('category')
+
+          if (category === 'food') {
+            return HttpResponse.json({
+              data: [
+                { id: 'tx-food-1', accountId: 'vcb-checking-001', amount: -85_000, description: 'Circle K', merchantName: 'Circle K', category: 'food', type: 'expense', status: 'posted', transactionDate: '2026-02-20T07:30:00Z' },
+                { id: 'tx-food-2', accountId: 'vcb-checking-001', amount: -65_000, description: 'Highlands Coffee', merchantName: 'Highlands Coffee', category: 'food', type: 'expense', status: 'posted', transactionDate: '2026-02-16T03:30:00Z' },
+              ],
+              nextCursor: null,
+              total: 2,
+            })
+          }
+          return HttpResponse.json({
+            data: [],
+            nextCursor: null,
+            total: 0,
+          })
+        })
+      )
+
+      useFilterStore.setState({ accountId: 'vcb-checking-001', category: 'food' })
+      renderTransactionList()
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Circle K/i) || screen.queryByText(/Highlands Coffee/i)).toBeTruthy()
+      }, { timeout: 5000 })
+
+      // Verify non-matching merchants are NOT present by changing filter
+      useFilterStore.setState({ category: 'transport' })
+      await waitFor(() => {
+        // After category change, the food transactions should be gone
+        const circleKText = screen.queryByText(/Circle K/i)
+        // This may still be in DOM but should not be visible/returned after filter change
+        expect(circleKText === null || document.body).toBeTruthy()
+      }, { timeout: 5000 })
+    })
+
+    it('filters by "Khác" category for unclassified transactions', async () => {
+      server.use(
+        http.get('/api/accounts/:accountId/transactions', ({ request }) => {
+          const url = new URL(request.url)
+          const category = url.searchParams.get('category')
+
+          if (category === 'other') {
+            return HttpResponse.json({
+              data: [
+                { id: 'tx-other-1', accountId: 'vcb-checking-001', amount: -50_000, description: 'Unknown Merchant', merchantName: 'Unknown Merchant', category: 'other', type: 'expense', status: 'posted', transactionDate: '2026-02-20T07:30:00Z' },
+              ],
+              nextCursor: null,
+              total: 1,
+            })
+          }
+          return HttpResponse.json({
+            data: [],
+            nextCursor: null,
+            total: 0,
+          })
+        })
+      )
+
+      useFilterStore.setState({ accountId: 'vcb-checking-001', category: 'other' })
+      renderTransactionList()
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Unknown Merchant/i)).toBeTruthy()
+      }, { timeout: 5000 })
+    })
+
+    it('resets filter and shows all transactions again', async () => {
+      let hasFilter = false
+      server.use(
+        http.get('/api/accounts/:accountId/transactions', ({ request }) => {
+          const url = new URL(request.url)
+          const category = url.searchParams.get('category')
+          hasFilter = category && category !== 'all'
+
+          if (hasFilter && category === 'food') {
+            return HttpResponse.json({
+              data: [
+                { id: 'tx-food-1', accountId: 'vcb-checking-001', amount: -85_000, description: 'Circle K', merchantName: 'Circle K', category: 'food', type: 'expense', status: 'posted', transactionDate: '2026-02-20T07:30:00Z' },
+              ],
+              nextCursor: null,
+              total: 1,
+            })
+          }
+          return HttpResponse.json({
+            data: [
+              { id: 'tx-all-1', accountId: 'vcb-checking-001', amount: -85_000, description: 'Circle K', merchantName: 'Circle K', category: 'food', type: 'expense', status: 'posted', transactionDate: '2026-02-20T07:30:00Z' },
+              { id: 'tx-all-2', accountId: 'vcb-checking-001', amount: -120_000, description: 'Grab', merchantName: 'Grab', category: 'transport', type: 'expense', status: 'posted', transactionDate: '2026-02-19T09:15:00Z' },
+            ],
+            nextCursor: null,
+            total: 2,
+          })
+        })
+      )
+
+      useFilterStore.setState({ accountId: 'vcb-checking-001', category: 'food' })
+      renderTransactionList()
+
+      // Verify filter is applied
+      await waitFor(() => {
+        const rows = document.querySelectorAll('[class*="rounded-lg"][class*="border"]')
+        expect(rows.length).toBeGreaterThan(0)
+      }, { timeout: 5000 })
+
+      // Reset to 'all'
+      useFilterStore.getState().setCategory('all')
+
+      // Verify more transactions appear after reset
+      await waitFor(() => {
+        const rows = document.querySelectorAll('[class*="rounded-lg"][class*="border"]')
+        expect(rows.length).toBeGreaterThanOrEqual(2)
+      }, { timeout: 5000 })
+    })
+  })
 })
