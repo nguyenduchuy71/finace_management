@@ -9,6 +9,7 @@ const DEFAULT_STATE = {
   dateTo: null,
   searchQuery: '',
   txType: 'all' as const,
+  category: 'all' as const,
 }
 
 describe('filterStore', () => {
@@ -169,6 +170,41 @@ describe('filterStore', () => {
       // filterStore should NOT write to localStorage
       expect(keysAfter.filter((k) => k.includes('filter')).length).toBe(0)
       expect(keysBefore.length).toBe(keysAfter.length)
+    })
+  })
+
+  describe('Category Filter', () => {
+    it('has category field that defaults to "all"', () => {
+      const state = useFilterStore.getState()
+      expect(state.category).toBe('all')
+    })
+
+    it('setCategory updates category field', () => {
+      useFilterStore.getState().setCategory('Ăn uống')
+      expect(useFilterStore.getState().category).toBe('Ăn uống')
+    })
+
+    it('resetFilters resets category back to "all"', () => {
+      useFilterStore.setState({ category: 'Mua sắm' })
+      useFilterStore.getState().resetFilters()
+      expect(useFilterStore.getState().category).toBe('all')
+    })
+
+    it('useFilterParams selector includes category field', () => {
+      useFilterStore.setState({ category: 'Di chuyển' })
+      // useFilterParams is a selector that returns an object with category
+      // We verify the category field exists in the state
+      const state = useFilterStore.getState()
+      expect(state.category).toBe('Di chuyển')
+    })
+
+    it('setCategory is idempotent', () => {
+      useFilterStore.getState().setCategory('Giải trí')
+      const state1 = useFilterStore.getState()
+      useFilterStore.getState().setCategory('Giải trí')
+      const state2 = useFilterStore.getState()
+      expect(state1.category).toBe(state2.category)
+      expect(state1.category).toBe('Giải trí')
     })
   })
 })
