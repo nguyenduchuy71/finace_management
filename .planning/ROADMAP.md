@@ -36,8 +36,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   4. All existing tests pass; no regression in transaction list rendering
 **Plans**: 3 plans
 - [x] 07-01-PLAN.md — Foundation: utilities, store, badge component (completed 2026-03-08)
-- [ ] 07-02-PLAN.md — UI Integration: FilterBar, TransactionRow, service wiring
-- [ ] 07-03-PLAN.md — MSW handlers and integration tests
+- [x] 07-02-PLAN.md — UI Integration: FilterBar, TransactionRow, service wiring (completed 2026-03-08)
+- [x] 07-03-PLAN.md — MSW handlers and integration tests (completed 2026-03-08)
 
 ## Phase 8: Budget Tracking
 **Goal**: Users set monthly budgets per category and see progress on dashboard.
@@ -48,7 +48,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. Dashboard shows budget progress bars per category (spent / budget) below stat cards
   3. Progress bar color changes: yellow ≥80%, red ≥100%
   4. Budgets persist in localStorage; no backend required
-**Plans**: 2–3 plans
+**Plans**: 2 plans
+- [ ] 08-01-PLAN.md — Budget store and progress bar component (Wave 1)
+- [ ] 08-02-PLAN.md — Settings UI and dashboard integration (Wave 2)
 
 ## Phase 9: Month-over-Month Dashboard
 **Goal**: Dashboard stat cards show spending delta vs previous month to highlight trends.
@@ -93,8 +95,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Dashboard and Polish | v1.0 | 2/2 | Complete | 2026-03-04 |
 | 5. Chatbot Integration | v1.0 | 3/3 | Complete | 2026-03-04 |
 | 6. Optimize & Deploy | v1.0 | 4/4 | Complete | 2026-03-04 |
-| 7. Transaction Categories | v1.1 | 1/3 | In Progress | 2026-03-08 |
-| 8. Budget Tracking | v1.1 | 0/? | Pending | — |
+| 7. Transaction Categories | v1.1 | 3/3 | Complete | 2026-03-08 |
+| 8. Budget Tracking | v1.1 | 0/2 | Pending | — |
 | 9. Month-over-Month Dashboard | v1.1 | 0/? | Pending | — |
 | 10. CSV Export | v1.1 | 0/? | Pending | — |
 | 11. Chatbot UX Polish | v1.1 | 0/? | Pending | — |
