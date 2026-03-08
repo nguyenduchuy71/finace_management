@@ -15,7 +15,8 @@ const CategoryChart = lazy(() =>
 )
 
 export function DashboardPage() {
-  const { data, isLoading, isError, refetch } = useDashboardStats()
+  const { data, incomeDelta, expenseDelta, deltaLoading, isLoading, isError, refetch } =
+    useDashboardStats()
 
   return (
     <div className="space-y-6">
@@ -39,6 +40,8 @@ export function DashboardPage() {
             variant="income"
             amount={data?.totalIncome ?? 0}
             transactionCount={data?.transactionCount ?? 0}
+            delta={incomeDelta}
+            deltaLoading={deltaLoading}
             isError={isError}
             onRetry={refetch}
           >
@@ -60,6 +63,8 @@ export function DashboardPage() {
             variant="expense"
             amount={data?.totalExpense ?? 0}
             transactionCount={data?.transactionCount ?? 0}
+            delta={expenseDelta}
+            deltaLoading={deltaLoading}
             isError={isError}
             onRetry={refetch}
           >

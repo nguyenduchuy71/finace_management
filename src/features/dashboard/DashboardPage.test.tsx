@@ -204,14 +204,14 @@ describe('DashboardPage', () => {
 
   describe('date range filter', () => {
     it('passes date range from store to API', async () => {
-      let capturedDateFrom: string | null = null
-      let capturedDateTo: string | null = null
+      const capturedCalls: Array<{ dateFrom: string | null; dateTo: string | null }> = []
 
       server.use(
         http.get('/api/dashboard/stats', ({ request }) => {
           const url = new URL(request.url)
-          capturedDateFrom = url.searchParams.get('dateFrom')
-          capturedDateTo = url.searchParams.get('dateTo')
+          const dateFrom = url.searchParams.get('dateFrom')
+          const dateTo = url.searchParams.get('dateTo')
+          capturedCalls.push({ dateFrom, dateTo })
 
           return HttpResponse.json({
             totalIncome: 5_000_000,
@@ -233,8 +233,14 @@ describe('DashboardPage', () => {
         expect(screen.getByText('Tổng thu')).toBeInTheDocument()
       }, { timeout: 5000 })
 
-      expect(capturedDateFrom).toBe('2026-01-01')
-      expect(capturedDateTo).toBe('2026-01-31')
+      // Now makes two calls: one for current month, one for previous month
+      expect(capturedCalls.length).toBe(2)
+      // First call should be current month
+      expect(capturedCalls[0].dateFrom).toBe('2026-01-01')
+      expect(capturedCalls[0].dateTo).toBe('2026-01-31')
+      // Second call should be previous month (Dec 2025)
+      expect(capturedCalls[1].dateFrom).toBe('2025-12-01')
+      expect(capturedCalls[1].dateTo).toBe('2025-12-31')
     })
   })
 })
