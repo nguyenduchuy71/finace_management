@@ -97,7 +97,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Chatbot Integration | v1.0 | 3/3 | Complete | 2026-03-04 |
 | 6. Optimize & Deploy | v1.0 | 4/4 | Complete | 2026-03-04 |
 | 7. Transaction Categories | v1.1 | 3/3 | Complete | 2026-03-08 |
-| 8. Budget Tracking | v1.1 | 0/2 | Pending | — |
+| 8. Budget Tracking | v1.1 | Complete    | 2026-03-08 | — |
 | 9. Month-over-Month Dashboard | v1.1 | 0/? | Pending | — |
 | 10. CSV Export | v1.1 | 0/? | Pending | — |
 | 11. Chatbot UX Polish | v1.1 | 0/? | Pending | — |
