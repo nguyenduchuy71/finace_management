@@ -1,7 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import React from 'react'
+import { render, screen } from '@testing-library/react'
 import { TransactionRow } from './TransactionRow'
 import { useCategoryOverrideStore } from '@/stores/categoryOverrideStore'
 import type { Transaction } from '@/types/account'
@@ -53,8 +51,6 @@ describe('TransactionRow', () => {
   it('does NOT render CategoryBadge for income transactions', () => {
     const { container } = render(<TransactionRow transaction={mockIncomeTransaction} />)
     // For income, no category badge button should appear
-    const buttons = container.querySelectorAll('button')
-    // Should have minimal buttons (no category popover trigger)
     expect(container).toBeTruthy()
   })
 
@@ -81,8 +77,7 @@ describe('TransactionRow', () => {
     expect(container).toBeTruthy()
   })
 
-  it('opens popover when CategoryBadge is clicked', async () => {
-    const user = userEvent.setup()
+  it('opens popover when CategoryBadge is clicked', () => {
     const txWithCategory: Transaction = {
       ...mockExpenseTransaction,
       category: 'Ăn uống' as any,
@@ -90,9 +85,9 @@ describe('TransactionRow', () => {
     render(<TransactionRow transaction={txWithCategory} />)
 
     // Find category badge button (first button after icon)
-    const buttons = screen.queryAllByRole('button')
+    const buttonElements = screen.queryAllByRole('button')
     // Should have at least one button for the category badge
-    expect(buttons.length).toBeGreaterThanOrEqual(1)
+    expect(buttonElements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('updates override when category is selected from popover', () => {
