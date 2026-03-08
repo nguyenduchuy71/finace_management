@@ -50,7 +50,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   4. Budgets persist in localStorage; no backend required
 **Plans**: 3 plans
 - [x] 08-01-PLAN.md — Budget store and progress bar component (completed 2026-03-08)
-- [ ] 08-02-PLAN.md — Settings UI and dashboard integration (Wave 2)
+- [x] 08-02-PLAN.md — Settings UI and dashboard integration (completed 2026-03-08)
 - [ ] 08-03-PLAN.md — Budget alerts and notifications (Wave 3)
 
 ## Phase 9: Month-over-Month Dashboard
