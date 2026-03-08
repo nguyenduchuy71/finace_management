@@ -48,9 +48,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. Dashboard shows budget progress bars per category (spent / budget) below stat cards
   3. Progress bar color changes: yellow ≥80%, red ≥100%
   4. Budgets persist in localStorage; no backend required
-**Plans**: 2 plans
-- [ ] 08-01-PLAN.md — Budget store and progress bar component (Wave 1)
+**Plans**: 3 plans
+- [x] 08-01-PLAN.md — Budget store and progress bar component (completed 2026-03-08)
 - [ ] 08-02-PLAN.md — Settings UI and dashboard integration (Wave 2)
+- [ ] 08-03-PLAN.md — Budget alerts and notifications (Wave 3)
 
 ## Phase 9: Month-over-Month Dashboard
 **Goal**: Dashboard stat cards show spending delta vs previous month to highlight trends.
