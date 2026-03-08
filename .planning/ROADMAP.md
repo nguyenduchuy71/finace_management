@@ -63,7 +63,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. Month boundaries use Vietnam UTC+7 timezone (not browser timezone)
   4. No extra API calls; delta calculated from existing dashboard data
 **Plans**: 1 plan
-- [ ] 09-01-PLAN.md — Month-over-month delta utilities, hook, and stat card integration
+- [x] 09-01-PLAN.md — Month-over-month delta utilities, hook, and stat card integration (completed 2026-03-08)
 
 ## Phase 10: CSV Export
 **Goal**: Filtered transactions can be exported to CSV for spreadsheets and tax prep.
@@ -74,7 +74,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. CSV includes columns: Ngày, Mô tả, Số tiền, Loại, Tài khoản, Danh mục
   3. Export respects active filters (date range, account, type, category)
   4. No attempt to read from infinite-scroll cache; dedicated service fetch
-**Plans**: 1–2 plans
+**Plans**: 2 plans
+- [ ] 10-01-PLAN.md — CSV utilities, export service, and tests (Wave 1)
+- [ ] 10-02-PLAN.md — ExportButton component and FilterBar integration (Wave 2)
 
 ## Phase 11: Chatbot UX Polish
 **Goal**: Improve chat UI with conversation starters, cleaner design, and verified copy button.
@@ -99,6 +101,6 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. Optimize & Deploy | v1.0 | 4/4 | Complete | 2026-03-04 |
 | 7. Transaction Categories | v1.1 | 3/3 | Complete | 2026-03-08 |
 | 8. Budget Tracking | v1.1 | 2/3 | In Progress | — |
-| 9. Month-over-Month Dashboard | v1.1 | Complete    | 2026-03-08 | — |
-| 10. CSV Export | v1.1 | 0/? | Pending | — |
+| 9. Month-over-Month Dashboard | v1.1 | 1/1 | Complete | 2026-03-08 |
+| 10. CSV Export | v1.1 | 0/2 | Planned | — |
 | 11. Chatbot UX Polish | v1.1 | 0/? | Pending | — |
