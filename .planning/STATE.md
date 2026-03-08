@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: Smart Insights & Polish
 status: in_progress
 stopped_at: ""
-last_updated: "2026-03-08T20:42:00.000Z"
-last_activity: 2026-03-08 — Phase 07 Plan 01 complete. Core category infrastructure (classification, override store, badge component).
+last_updated: "2026-03-08T20:48:00.000Z"
+last_activity: 2026-03-08 — Phase 07 Plan 02 complete. Category integration (FilterStore, CategoryFilter, TransactionRow display/override, TanStack Query wiring).
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 17
-  completed_plans: 1
-  percent: 6
+  completed_plans: 2
+  percent: 12
 ---
 
 # Project State
@@ -25,35 +25,36 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 1 of 5 (Transaction Categories) — IN PROGRESS
-Plan: 1 of 3 in current phase — COMPLETE (07-01: Core Category Infrastructure)
-Status: Plan 07-01 complete — Deterministic classification function, localStorage override store, color-coded badge component. All tests passing (17 new + 158 existing = 175 total).
-Last activity: 2026-03-08 — Plan 07-01 complete (3 tasks, 6 files). Classification algorithm and override persistence established.
+Phase: 07 of 5 (Transaction Categories) — IN PROGRESS
+Plan: 2 of 3 in current phase — COMPLETE (07-02: Category Integration into Transaction Rows and Filtering)
+Status: Plan 07-02 complete — FilterStore extended with category field, CategoryFilter component created, TransactionRow displays category with override, category wired to TanStack Query. All tests passing (19 new + 151 existing = 170 total).
+Last activity: 2026-03-08 — Plan 07-02 complete (3 tasks, 4 files created, 6 files modified). Category integration complete.
 
-Progress: [█░░░░░░░░░] 6% (1/17 plans in Phase 7)
+Progress: [██░░░░░░░░] 12% (2/17 plans in Phase 7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 12 min
-- Total execution time: 0.2 hours
+- Total plans completed: 2
+- Average duration: 17.5 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 07-transaction-categories | 1/3 IN PROGRESS | 12 min | 12 min |
+| 07-transaction-categories | 2/3 IN PROGRESS | 35 min | 17.5 min |
 
 **Recent Trend:**
-- Latest plan: 07-01 (12 min), 3 tasks, 6 files
-- Trend: v1.1 milestone execution started
+- Latest plan: 07-02 (23 min), 3 tasks, 4 created + 6 modified
+- Trend: Category integration ongoing
 
 *Updated after each plan completion*
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 07 P01 | 12 min | 3 tasks | 6 files |
+| Phase 07 P02 | 23 min | 3 tasks | 4 created, 6 modified |
 
 ## Accumulated Context
 
