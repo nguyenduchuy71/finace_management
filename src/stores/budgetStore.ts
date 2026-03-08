@@ -16,25 +16,25 @@ function getInitialBudgets(): Record<string, number> {
 
 const initialBudgets = getInitialBudgets()
 
-export const useBudgetStore = create<BudgetState>()((set) => ({
+export const useBudgetStore = create<BudgetState>()((set, get) => ({
   budgets: initialBudgets,
   setBudget: (category, amount) => {
-    set((state) => {
+    set((state: BudgetState) => {
       const newBudgets = { ...state.budgets, [category]: amount }
       localStorage.setItem('finance-budgets', JSON.stringify(newBudgets))
       return { budgets: newBudgets }
     })
   },
   clearBudget: (category) => {
-    set((state) => {
+    set((state: BudgetState) => {
       const newBudgets = { ...state.budgets }
       delete newBudgets[category]
       localStorage.setItem('finance-budgets', JSON.stringify(newBudgets))
       return { budgets: newBudgets }
     })
   },
-  getBudget: (category) => {
-    const state = useBudgetStore.getState()
+  getBudget: (category): number => {
+    const state = get()
     return state.budgets[category] ?? 0
   },
 }))

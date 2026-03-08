@@ -5,8 +5,9 @@ describe('Budget Store (Zustand + localStorage)', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear()
-    // Reset store state
-    useBudgetStore.setState({ budgets: {} })
+    // Reset store state with proper type
+    const emptyBudgets: Record<string, number> = {}
+    useBudgetStore.setState({ budgets: emptyBudgets })
   })
 
   afterEach(() => {
