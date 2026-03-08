@@ -1,479 +1,749 @@
 # Architecture Research
 
-**Domain:** Frontend-only personal finance dashboard (React + TypeScript)
-**Researched:** 2026-03-02
-**Confidence:** MEDIUM — Training knowledge (cutoff Aug 2025). WebSearch and WebFetch unavailable during research session. Patterns drawn from established React ecosystem conventions; verify against current TanStack Query and Zustand docs before implementation.
+**Domain:** Personal Finance Dashboard — v1.1 feature integration into existing React + Zustand + TanStack Query app
+**Researched:** 2026-03-08
+**Confidence:** HIGH (based on direct codebase inspection of all relevant source files)
+
+---
 
 ## Standard Architecture
 
-### System Overview
+### System Overview (Current + v1.1 additions marked)
 
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                        UI Layer (React)                        │
-├──────────────┬──────────────┬──────────────┬──────────────────┤
-│  Dashboard   │  Transaction │  Credit Card │  Account         │
-│  Page        │  List Page   │  Page        │  Summary Page    │
-│  (charts,    │  (filter,    │  (billing    │  (balances,      │
-│   totals)    │   search,    │   cycles,    │   accounts)      │
-│              │   paginate)  │   statements)│                  │
-└──────┬───────┴──────┬───────┴──────┬───────┴──────┬───────────┘
-       │              │              │              │
-┌──────┴──────────────┴──────────────┴──────────────┴───────────┐
-│                   Feature Hooks Layer                           │
-│   useTransactions()  useAccounts()  useCreditCards()          │
-│   useBillingCycles()  useDashboardSummary()                   │
-└──────────────────────────────┬────────────────────────────────┘
-                               │
-┌──────────────────────────────┴────────────────────────────────┐
-│              State Management Layer (Zustand)                   │
-│   accountsStore    transactionsStore    uiStore (filters,      │
-│                                         date range, search)    │
-└──────────────────────────────┬────────────────────────────────┘
-                               │
-┌──────────────────────────────┴────────────────────────────────┐
-│               API Service Layer                                 │
-│   apiClient (axios/fetch + base config)                        │
-│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│   │ accountsApi  │  │transactions  │  │ creditCard   │        │
-│   │              │  │ Api          │  │ Api          │        │
-│   └──────────────┘  └──────────────┘  └──────────────┘        │
-│                                                                 │
-│   [dev]  mockApiAdapter ──────────────────────────────────     │
-│   [prod] realApiAdapter ──────────────────────────────────     │
-└─────────────────────────────────────────────────────────────── ┘
-                               │
-┌──────────────────────────────┴────────────────────────────────┐
-│              Third-Party Banking API                            │
-│   GET /accounts   GET /transactions   GET /credit-cards        │
-│   (external — may require CORS proxy or token-based auth)      │
-└───────────────────────────────────────────────────────────────┘
++---------------------------------------------------------------------+
+|                          Pages (src/pages/)                          |
+|  +-----------------+  +------------------+  +--------------------+  |
+|  |  DashboardPage  |  | BankAccountsPage |  |  CreditCardsPage   |  |
+|  |  [MOD v1.1]     |  |  (unchanged)     |  |  (unchanged)       |  |
+|  +--------+--------+  +--------+---------+  +----------+---------+  |
+|           |                    |                        |            |
++---------------------------------------------------------------------+
+|                   Feature Components (src/features/)                 |
+|                                                                      |
+|  dashboard/                                                          |
+|  +---------------+  +-----------------+  +------------------------+ |
+|  | StatCard [MOD]|  | CategoryChart   |  | BudgetSection [NEW]    | |
+|  | +delta props  |  | (unchanged)     |  | BudgetProgress [NEW]   | |
+|  +---------------+  +-----------------+  +------------------------+ |
+|                                                                      |
+|  transactions/                                                       |
+|  +-------------------+  +--------------------------------------+    |
+|  | TransactionRow    |  | TransactionList (unchanged)          |    |
+|  | [MOD +CategoryBadge] | TransactionListSkeleton (unchanged)  |    |
+|  +-------------------+  +--------------------------------------+    |
+|                                                                      |
+|  creditCards/                                                        |
+|  +---------------------------+                                       |
+|  | CreditCardTransactionRow  |                                       |
+|  | [MOD +CategoryBadge]      |                                       |
+|  +---------------------------+                                       |
+|                                                                      |
+|  chatbot/                                                            |
+|  +------------------+  +-------------------+  +-----------------+   |
+|  | ChatPanel [MOD]  |  | ChatMessage       |  | ChatSettings    |   |
+|  | wires in starters|  | (already has copy)|  | [minor polish]  |   |
+|  +------------------+  +-------------------+  +-----------------+   |
+|  +---------------------------+                                       |
+|  | ConversationStarters [NEW]|                                       |
+|  +---------------------------+                                       |
+|                                                                      |
+|  components/filters/                                                 |
+|  +-----------------------------+  +----------------------------+    |
+|  | FilterBar [MOD]             |  | CategoryFilter [NEW]       |    |
+|  | +CategoryFilter +ExportBtn  |  | Select for category filter |    |
+|  +-----------------------------+  +----------------------------+    |
+|                                                                      |
++---------------------------------------------------------------------+
+|                    Hooks / Data Layer (src/hooks/)                   |
+|  +-------------------+  +--------------------+  +-----------------+ |
+|  | useTransactions   |  | useDashboardStats  |  | useExport [NEW] | |
+|  | (unchanged —      |  | [MOD: +prev period |  | cache read +    | |
+|  |  categoryId flows |  |  parallel query]   |  | Blob download   | |
+|  |  via queryKey)    |  |                    |  |                 | |
+|  +-------------------+  +--------------------+  +-----------------+ |
++---------------------------------------------------------------------+
+|                    State Layer (src/stores/)                         |
+|  +------------------+  +-----------------+  +-------------------+  |
+|  | filterStore [MOD]|  | dashboardStore  |  | chatStore         |  |
+|  | +categoryId field|  | (unchanged)     |  | (unchanged)       |  |
+|  +------------------+  +-----------------+  +-------------------+  |
+|  +------------------+  +-----------------+                          |
+|  | categoryStore    |  | budgetStore     |                          |
+|  | [NEW] overrides  |  | [NEW] monthly   |                          |
+|  | localStorage     |  | limits, local   |                          |
+|  +------------------+  +-----------------+                          |
++---------------------------------------------------------------------+
+|                  Service / Mock Layer                                |
+|  +-----------------+  +---------------------+  +-----------------+ |
+|  | services/       |  | services/dashboard.ts|  | mocks/          | |
+|  | accounts.ts     |  | [unchanged — two     |  | handlers.ts     | |
+|  | (unchanged)     |  |  separate API calls  |  | [MOD: prev      | |
+|  |                 |  |  used in v1.1]       |  |  period dates]  | |
+|  +-----------------+  +---------------------+  +-----------------+ |
++---------------------------------------------------------------------+
 ```
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| Page components | Route-level containers, compose feature components | React Router pages under `src/pages/` |
-| Feature components | Domain-specific UI (TransactionList, BillingCycleCard) | Under `src/components/[feature]/` |
-| Feature hooks | Business logic, data fetching, derived state | `src/hooks/use[Feature].ts` wrapping TanStack Query |
-| Zustand stores | Client-side state (filters, UI state, cached data) | `src/store/[domain]Store.ts` |
-| API service modules | API call functions grouped by domain | `src/services/[domain]Api.ts` |
-| API client | Shared axios/fetch instance with base URL, headers, interceptors | `src/services/apiClient.ts` |
-| Mock adapter | Intercepts API calls in dev, returns fixture data | `src/services/mockApi/` or MSW handlers |
-| Type definitions | Shared TypeScript interfaces for all domain models | `src/types/` |
+| Component | Responsibility | Status in v1.1 |
+|-----------|----------------|----------------|
+| `filterStore` | Transaction list UI filter state | Modified — add `categoryId` field + `setCategory` action |
+| `categoryStore` | User category overrides, localStorage persist | New |
+| `budgetStore` | Monthly budgets per category, localStorage persist | New |
+| `dashboardStore` | Dashboard date range, independent of filterStore | Unchanged |
+| `chatStore` | Chat messages, API config, open/close state | Unchanged |
+| `useDashboardStats` | Fetches current + previous period stats in parallel | Modified |
+| `useExport` | Reads TanStack Query cache, generates CSV Blob, triggers download | New |
+| `TransactionRow` | Bank transaction row | Modified — add CategoryBadge |
+| `CreditCardTransactionRow` | CC transaction row | Modified — add CategoryBadge |
+| `FilterBar` | Filter controls row | Modified — add CategoryFilter + Export button |
+| `CategoryFilter` | Dropdown for category filter | New |
+| `StatCard` | Income/expense summary card | Modified — add optional delta/deltaPercent props |
+| `BudgetProgress` | Single category: progress bar + inline budget input | New |
+| `BudgetSection` | Container for all BudgetProgress rows on DashboardPage | New |
+| `DashboardPage` | Page orchestrator | Modified — add BudgetSection, pass previousData to StatCards |
+| `ChatPanel` | Chat UI shell | Modified — wire in ConversationStarters |
+| `ChatMessage` | Message bubble with copy/regenerate/delete | Unchanged (copy button already present) |
+| `ChatSettings` | API key/model panel | Minor visual polish only |
+| `ConversationStarters` | Prompt chip list shown when messages.length === 0 | New |
 
-## Recommended Project Structure
+---
+
+## Recommended Project Structure (v1.1 delta view)
 
 ```
 src/
-├── pages/                    # Route-level components (one per route)
-│   ├── DashboardPage.tsx     # Overview: totals, charts, account summary
-│   ├── TransactionsPage.tsx  # Full transaction list with filter/search
-│   ├── CreditCardPage.tsx    # Credit card billing cycles + statements
-│   └── AccountsPage.tsx      # Bank account list and balances
-│
-├── components/               # Reusable UI components
-│   ├── dashboard/
-│   │   ├── BalanceSummary.tsx
-│   │   ├── SpendingChart.tsx
-│   │   └── RecentTransactions.tsx
-│   ├── transactions/
-│   │   ├── TransactionList.tsx
-│   │   ├── TransactionItem.tsx
-│   │   ├── TransactionFilters.tsx
-│   │   └── TransactionSearch.tsx
-│   ├── credit-card/
-│   │   ├── BillingCycleCard.tsx      # Shows current cycle + due date
-│   │   ├── StatementList.tsx
-│   │   └── CreditCardSummary.tsx
-│   └── shared/
-│       ├── LoadingSpinner.tsx
-│       ├── ErrorBoundary.tsx
-│       ├── EmptyState.tsx
-│       └── Pagination.tsx
-│
-├── hooks/                    # Feature hooks (data fetching + business logic)
-│   ├── useTransactions.ts    # Fetch + filter + paginate transactions
-│   ├── useAccounts.ts        # Fetch bank account list + balances
-│   ├── useCreditCards.ts     # Fetch credit card info
-│   ├── useBillingCycles.ts   # Compute/fetch billing cycle data
-│   └── useDashboard.ts       # Aggregate: totals, recent activity
-│
-├── store/                    # Zustand global state
-│   ├── transactionStore.ts   # Filter state, pagination, search query
-│   ├── accountStore.ts       # Selected account, cached account list
-│   └── uiStore.ts            # Date range selection, active tab, loading
-│
-├── services/                 # API service layer
-│   ├── apiClient.ts          # Base fetch/axios instance, headers, interceptors
-│   ├── accountsApi.ts        # getAccounts(), getAccountById()
-│   ├── transactionsApi.ts    # getTransactions(filters), getTransaction(id)
-│   ├── creditCardApi.ts      # getCreditCards(), getBillingCycles()
-│   └── mock/                 # Mock API adapter (dev only)
-│       ├── handlers.ts       # MSW request handlers or manual stubs
-│       ├── fixtures/
-│       │   ├── accounts.json
-│       │   ├── transactions.json
-│       │   └── creditCards.json
-│       └── index.ts          # Setup worker / toggle switch
-│
-├── types/                    # TypeScript domain models
-│   ├── account.ts            # BankAccount, AccountBalance
-│   ├── transaction.ts        # Transaction, TransactionType, TransactionFilter
-│   ├── creditCard.ts         # CreditCard, BillingCycle, Statement
-│   └── api.ts                # ApiResponse<T>, PaginatedResponse<T>, ApiError
-│
-├── utils/                    # Pure utility functions
-│   ├── formatCurrency.ts     # VND / multi-currency formatting
-│   ├── formatDate.ts         # Date display, billing cycle date math
-│   └── groupTransactions.ts  # Group by day, cycle, category
-│
-├── App.tsx                   # Router setup, providers
-└── main.tsx                  # Vite entry, MSW startup in dev
++-- features/
+|   +-- dashboard/
+|   |   +-- StatCard.tsx                [MOD] add optional delta + deltaPercent props
+|   |   +-- StatCardSkeleton.tsx        [unchanged]
+|   |   +-- CategoryChart.tsx           [unchanged]
+|   |   +-- CategoryChartSkeleton.tsx   [unchanged]
+|   |   +-- DashboardDatePicker.tsx     [unchanged]
+|   |   +-- SourceSubtotals.tsx         [unchanged]
+|   |   +-- BudgetProgress.tsx          [NEW] single category: bar + inline input
+|   |   +-- BudgetSection.tsx           [NEW] renders all category BudgetProgress rows
+|   |
+|   +-- transactions/
+|   |   +-- TransactionRow.tsx          [MOD] add CategoryBadge after merchant name
+|   |   +-- TransactionList.tsx         [unchanged]
+|   |   +-- TransactionListSkeleton.tsx [unchanged]
+|   |   +-- TransactionEmptyState.tsx   [unchanged]
+|   |
+|   +-- creditCards/
+|   |   +-- CreditCardTransactionRow.tsx [MOD] add CategoryBadge
+|   |   +-- (all other files unchanged)
+|   |
+|   +-- chatbot/
+|       +-- ChatPanel.tsx               [MOD] replace hardcoded empty state with ConversationStarters
+|       +-- ChatMessage.tsx             [unchanged — copy already exists]
+|       +-- ChatSettings.tsx            [minor polish — label spacing, model selector]
+|       +-- ChatInput.tsx               [unchanged]
+|       +-- ChatButton.tsx              [unchanged]
+|       +-- ConversationStarters.tsx    [NEW] clickable prompt chips
+|       +-- useChatApi.ts               [unchanged]
+|
++-- components/
+|   +-- filters/
+|   |   +-- FilterBar.tsx               [MOD] add CategoryFilter + ExportButton
+|   |   +-- CategoryFilter.tsx          [NEW] shadcn Select bound to filterStore.categoryId
+|   |   +-- SearchInput.tsx             [unchanged]
+|   |   +-- DateRangePicker.tsx         [unchanged]
+|   |   +-- TransactionTypeFilter.tsx   [unchanged]
+|   +-- ui/ (all unchanged — shadcn primitives)
+|
++-- stores/
+|   +-- filterStore.ts                  [MOD] add categoryId: string|null + setCategory action
+|   +-- categoryStore.ts                [NEW] overrides: Record<txId, category>, localStorage
+|   +-- budgetStore.ts                  [NEW] budgets: Record<category, number>, localStorage
+|   +-- dashboardStore.ts               [unchanged]
+|   +-- chatStore.ts                    [unchanged]
+|   +-- themeStore.ts                   [unchanged]
+|
++-- hooks/
+|   +-- useTransactions.ts              [unchanged — categoryId in filterStore flows into queryKey]
+|   +-- useDashboardStats.ts            [MOD] add parallel previous-period query
+|   +-- useExport.ts                    [NEW] synchronous cache read + Blob download
+|   +-- useAccounts.ts                  [unchanged]
+|   +-- useCreditCards.ts               [unchanged]
+|   +-- useCreditCardTransactions.ts    [unchanged]
+|   +-- useDebounced.ts                 [unchanged]
+|
++-- services/
+|   +-- dashboard.ts                    [unchanged — two separate calls handle prev period]
+|   +-- accounts.ts                     [unchanged]
+|   +-- apiClient.ts                    [unchanged]
+|   +-- creditCards.ts                  [unchanged]
+|
++-- utils/
+|   +-- categories.ts                   [NEW] merchant map + resolveCategory() pure function
+|   +-- export.ts                       [NEW] transactionsToCsv() pure function
+|   +-- dates.ts                        [MOD] add getPreviousPeriod() export
+|   +-- currency.ts                     [unchanged]
+|   +-- billingCycle.ts                 [unchanged]
+|
++-- mocks/
+|   +-- handlers.ts                     [MOD] /dashboard/stats handler returns period-filtered data
+|   +-- fixtures/ (all unchanged — transactions already have category field set)
+|
++-- types/
+    +-- account.ts                      [unchanged — Transaction.category: string|undefined exists]
+    +-- creditCard.ts                   [unchanged]
+    +-- api.ts                          [unchanged]
 ```
 
 ### Structure Rationale
 
-- **pages/:** One file per route. Keep them thin — they compose components, provide data via hooks, pass no raw API data down.
-- **components/[feature]/:** Co-locate all UI for a domain. `TransactionList` should not know about `BillingCycle`.
-- **hooks/:** The only place that touches `services/` and `store/` together. Pages import hooks, not services directly.
-- **services/:** Pure functions — no React, no state. Each file maps to one API resource domain. Swap mock/real via `apiClient.ts` config.
-- **store/:** Only UI-driven state (filters, search, pagination cursor). Server data lives in TanStack Query cache, not Zustand.
-- **types/:** Single source of truth. Import everywhere. Never redefine inline.
-- **mock/:** MSW handlers in `src/services/mock/` — activated in `main.tsx` via `import.meta.env.MODE === 'development'` guard.
+- **categoryStore and budgetStore** go in `src/stores/` alongside existing stores. Both use the same manual localStorage pattern already established in `chatStore.ts`.
+- **categories.ts and export.ts** go in `src/utils/` as pure functions. They have no React dependencies and are trivially testable.
+- **BudgetProgress and BudgetSection** go in `src/features/dashboard/` — they are specific to the dashboard domain, not shared primitives.
+- **ConversationStarters** goes in `src/features/chatbot/` — chatbot-domain component, not shared UI.
+- **CategoryFilter** goes in `src/components/filters/` alongside the other filter controls it joins in FilterBar.
+
+---
 
 ## Architectural Patterns
 
-### Pattern 1: API Service Abstraction with Environment-Switched Adapter
+### Pattern 1: Zustand Store with Manual localStorage Persistence
 
-**What:** The API client (`apiClient.ts`) exports a configured instance. Service modules (`transactionsApi.ts`, etc.) call only through this client. In development, an MSW worker intercepts all network requests and returns fixtures. In production, real requests go through.
+**What:** Zustand store with manual load-on-init and save-on-every-mutation. This exact pattern already exists in `chatStore.ts` for messages and API config.
 
-**When to use:** Always — this is the foundation for testable, swappable API layers.
+**When to use:** Client-only state that must survive page refresh. `categoryStore` (user overrides) and `budgetStore` (monthly limits) both qualify — no server sync needed.
 
-**Trade-offs:** MSW requires a service worker file in `public/`. Small setup cost. Worth it — no conditional logic scattered in components.
+**Trade-offs:** Simple with no external dependency. Risk of stale data if user clears storage, but acceptable for a personal-use app.
 
-**Example:**
+**Example (categoryStore):**
 ```typescript
-// src/services/apiClient.ts
-import axios from 'axios';
+// src/stores/categoryStore.ts
+import { create } from 'zustand'
 
-export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  headers: {
-    'Authorization': `Bearer ${import.meta.env.VITE_API_TOKEN}`,
-    'Content-Type': 'application/json',
-  },
-  timeout: 10_000,
-});
+const OVERRIDES_KEY = 'finance-category-overrides'
 
-// Interceptor: normalize error shape
-apiClient.interceptors.response.use(
-  (res) => res,
-  (error) => Promise.reject({
-    message: error.response?.data?.message ?? 'Unknown error',
-    status: error.response?.status,
+function loadOverrides(): Record<string, string> {
+  try {
+    const stored = localStorage.getItem(OVERRIDES_KEY)
+    return stored ? (JSON.parse(stored) as Record<string, string>) : {}
+  } catch { return {} }
+}
+
+interface CategoryState {
+  overrides: Record<string, string>  // txId -> category
+  setOverride: (txId: string, category: string) => void
+  removeOverride: (txId: string) => void
+}
+
+export const useCategoryStore = create<CategoryState>()((set) => ({
+  overrides: loadOverrides(),
+  setOverride: (txId, category) =>
+    set((s) => {
+      const overrides = { ...s.overrides, [txId]: category }
+      localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides))
+      return { overrides }
+    }),
+  removeOverride: (txId) =>
+    set((s) => {
+      const { [txId]: _, ...rest } = s.overrides
+      localStorage.setItem(OVERRIDES_KEY, JSON.stringify(rest))
+      return { overrides: rest }
+    }),
+}))
+```
+
+### Pattern 2: Category Resolution as a Pure Utility Function
+
+**What:** `resolveCategory(tx, overrides)` checks user overrides first, falls back to the `tx.category` field from the API, then consults a static merchant-name map, then returns `'other'`. No hook, no TanStack Query — pure local computation called per-render inside `TransactionRow`.
+
+**When to use:** Every render of `TransactionRow` and `CreditCardTransactionRow`.
+
+**Trade-offs:** Merchant map lives in client code, not the server. Updates require a code deploy. For a personal-use app this is fine. The map must be kept in sync with the fixture categories.
+
+**Known edge case:** `Grab` appears as both food delivery and ride-hailing. Use a description-substring heuristic: if `tx.description.toLowerCase().includes('đồ ăn')` classify as `food`, otherwise `transport`.
+
+```typescript
+// src/utils/categories.ts
+export const CATEGORY_LABELS: Record<string, string> = {
+  food:        'Ăn uống',
+  transport:   'Di chuyển',
+  shopping:    'Mua sắm',
+  grocery:     'Thực phẩm',
+  electronics: 'Điện tử',
+  income:      'Thu nhập',
+  transfer:    'Chuyển khoản',
+  other:       'Khác',
+}
+
+const MERCHANT_CATEGORY_MAP: Record<string, string> = {
+  'Circle K':         'food',
+  'Highlands Coffee': 'food',
+  'The Coffee House': 'food',
+  'Phúc Long':        'food',
+  'Lotteria':         'food',
+  'Grab':             'transport',  // see description heuristic below
+  'Shopee':           'shopping',
+  'Lazada':           'shopping',
+  'AEON Mall':        'shopping',
+  'Bách Hoá Xanh':    'grocery',
+  'VinMart':          'grocery',
+  'Điện Máy Xanh':    'electronics',
+}
+
+export function resolveCategory(
+  tx: { id: string; merchantName?: string; description: string; category?: string },
+  overrides: Record<string, string>
+): string {
+  if (overrides[tx.id]) return overrides[tx.id]
+  if (tx.category) return tx.category
+  if (tx.merchantName) {
+    if (tx.merchantName === 'Grab') {
+      return tx.description.toLowerCase().includes('đồ ăn') ? 'food' : 'transport'
+    }
+    if (MERCHANT_CATEGORY_MAP[tx.merchantName]) return MERCHANT_CATEGORY_MAP[tx.merchantName]
+  }
+  return 'other'
+}
+```
+
+### Pattern 3: Dual-Period Dashboard — Two Parallel useQuery Calls
+
+**What:** `useDashboardStats` fires two `useQuery` calls simultaneously — current period and previous period. Both share the same staleTime. The hook merges results before returning.
+
+**When to use:** Month-over-month comparison on StatCards.
+
+**Trade-offs:** Two API calls instead of one. In MSW dev mode this is invisible to the user. For a real API in v1.2, a single endpoint with `?includePrevious=true` would be more efficient, but that requires a backend change. The two-call approach avoids any API contract change for v1.1.
+
+**Implementation pattern:**
+```typescript
+// src/hooks/useDashboardStats.ts
+import { useQuery } from '@tanstack/react-query'
+import { getDashboardStats } from '@/services/dashboard'
+import { useDashboardDateRange } from '@/stores/dashboardStore'
+import { getPreviousPeriod } from '@/utils/dates'
+
+export function useDashboardStats() {
+  const { dateFrom, dateTo } = useDashboardDateRange()
+  const { prevFrom, prevTo } = getPreviousPeriod(dateFrom, dateTo)
+
+  const current = useQuery({
+    queryKey: ['dashboardStats', { dateFrom, dateTo }],
+    queryFn: () => getDashboardStats({ dateFrom, dateTo }),
+    staleTime: 1000 * 60 * 5,
   })
-);
-```
 
-```typescript
-// src/services/transactionsApi.ts
-import { apiClient } from './apiClient';
-import type { Transaction, TransactionFilter, PaginatedResponse } from '../types';
+  const previous = useQuery({
+    queryKey: ['dashboardStats', { dateFrom: prevFrom, dateTo: prevTo }],
+    queryFn: () => getDashboardStats({ dateFrom: prevFrom, dateTo: prevTo }),
+    staleTime: 1000 * 60 * 5,
+  })
 
-export async function getTransactions(
-  filters: TransactionFilter
-): Promise<PaginatedResponse<Transaction>> {
-  const { data } = await apiClient.get('/transactions', { params: filters });
-  return data;
-}
-```
-
-```typescript
-// src/main.tsx — MSW startup guard
-async function bootstrap() {
-  if (import.meta.env.MODE === 'development') {
-    const { worker } = await import('./services/mock');
-    await worker.start({ onUnhandledRequest: 'bypass' });
+  return {
+    data: current.data,
+    previousData: previous.data,
+    isLoading: current.isLoading || previous.isLoading,
+    isError: current.isError,
+    refetch: current.refetch,
   }
-  ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
-}
-bootstrap();
-```
-
-### Pattern 2: Feature Hook — Single Data Contract Between Service and UI
-
-**What:** Custom hooks are the only coupling point between the API service layer and the UI. A page component calls `useTransactions(filters)` and receives `{ data, isLoading, isError, error }`. It never calls `transactionsApi.getTransactions()` directly.
-
-**When to use:** Always. This keeps components ignorant of fetching mechanics, caching strategy, or API shape transformations.
-
-**Trade-offs:** Adds an indirection layer. Worth it — you can change the backend, caching library, or data shape without touching a single component.
-
-**Example:**
-```typescript
-// src/hooks/useTransactions.ts
-import { useQuery } from '@tanstack/react-query';
-import { getTransactions } from '../services/transactionsApi';
-import { useTransactionStore } from '../store/transactionStore';
-import type { Transaction } from '../types';
-
-export function useTransactions() {
-  const filters = useTransactionStore((s) => s.filters);
-
-  return useQuery({
-    queryKey: ['transactions', filters],
-    queryFn: () => getTransactions(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes — transactions don't change often
-    placeholderData: (prev) => prev, // keep old data while refetching on filter change
-  });
 }
 ```
 
-### Pattern 3: Zustand for UI State Only — Server State in TanStack Query
+`getPreviousPeriod` is added to `src/utils/dates.ts`. When `dateFrom`/`dateTo` are null (no range selected), it defaults to "last calendar month vs the month before last."
 
-**What:** Zustand owns filter values, pagination cursors, search strings, selected account IDs, and date range pickers. TanStack Query owns API response data and its caching/invalidation lifecycle. Never put API response arrays into Zustand.
+### Pattern 4: CSV Export via TanStack Query Cache Read
 
-**When to use:** Whenever both filter UI state and server data coexist in a feature (e.g., TransactionList with filter sidebar).
+**What:** `useExport` reads the `infiniteQuery` cache synchronously using `queryClient.getQueryData()` with the same key shape as `useTransactions`. No network call is made. A `Blob` is created, an object URL generated, and a synthetic `<a>` click triggers the browser download dialog.
 
-**Trade-offs:** Two state systems to learn. The boundary is clear: "Did this come from the server? → TanStack Query. Did the user select/type this? → Zustand."
+**When to use:** Export button click.
 
-**Example:**
+**Trade-offs:** Only exports pages that have been loaded (user has scrolled to). For this app with ~70–130 total transactions, all data is typically loaded after a few "Load more" clicks or the full list is visible. This is acceptable. Document this limitation in the UI ("Xuất giao dịch đã tải").
+
 ```typescript
-// src/store/transactionStore.ts
-import { create } from 'zustand';
-import type { TransactionFilter } from '../types';
+// src/hooks/useExport.ts
+import { useQueryClient } from '@tanstack/react-query'
+import type { InfiniteData } from '@tanstack/react-query'
+import { useFilterParams } from '@/stores/filterStore'
+import { transactionsToCsv } from '@/utils/export'
+import type { TransactionPage } from '@/services/accounts'
 
-interface TransactionStoreState {
-  filters: TransactionFilter;
-  setFilter: (key: keyof TransactionFilter, value: unknown) => void;
-  resetFilters: () => void;
-}
+export function useExport() {
+  const queryClient = useQueryClient()
+  const { accountId, dateFrom, dateTo, searchQuery, txType, categoryId } = useFilterParams()
 
-const defaultFilters: TransactionFilter = {
-  accountId: undefined,
-  type: undefined,
-  dateFrom: undefined,
-  dateTo: undefined,
-  search: '',
-  page: 1,
-  limit: 20,
-};
+  function exportCsv() {
+    const cached = queryClient.getQueryData<InfiniteData<TransactionPage>>(
+      ['transactions', accountId, { dateFrom, dateTo, searchQuery, txType, categoryId }]
+    )
+    const transactions = cached?.pages.flatMap((p) => p.data) ?? []
+    if (transactions.length === 0) return
 
-export const useTransactionStore = create<TransactionStoreState>((set) => ({
-  filters: defaultFilters,
-  setFilter: (key, value) =>
-    set((s) => ({ filters: { ...s.filters, [key]: value, page: 1 } })),
-  resetFilters: () => set({ filters: defaultFilters }),
-}));
-```
-
-### Pattern 4: Billing Cycle Date Math as Pure Utils
-
-**What:** Credit card billing cycle display requires date arithmetic (cycle start/end, days remaining, statement date). Keep this in pure utility functions in `src/utils/formatDate.ts`, not inside components or hooks.
-
-**When to use:** Any time you need to derive billing period from raw dates.
-
-**Trade-offs:** None — pure functions are easy to test and reuse.
-
-**Example:**
-```typescript
-// src/utils/formatDate.ts
-export function getCurrentBillingCycle(statementDay: number): {
-  cycleStart: Date;
-  cycleEnd: Date;
-  daysRemaining: number;
-} {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  let cycleEnd = new Date(currentYear, currentMonth, statementDay);
-  if (today > cycleEnd) {
-    cycleEnd = new Date(currentYear, currentMonth + 1, statementDay);
+    const csv = transactionsToCsv(transactions)
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `giao-dich-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
-  const cycleStart = new Date(cycleEnd.getFullYear(), cycleEnd.getMonth() - 1, statementDay + 1);
-  const daysRemaining = Math.ceil((cycleEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-  return { cycleStart, cycleEnd, daysRemaining };
+  return { exportCsv }
 }
 ```
+
+Note: `'\uFEFF'` BOM prefix ensures Excel on Windows correctly opens the UTF-8 CSV with Vietnamese characters.
+
+---
 
 ## Data Flow
 
-### Request Flow — Transaction List with Filters
+### Feature 1: Transaction Categories
 
 ```
-User changes filter (date range, account)
-    ↓
-TransactionFilters component calls store action: setFilter('dateFrom', value)
-    ↓
-useTransactionStore updates filters object
-    ↓
-useTransactions() hook re-runs (queryKey changes: ['transactions', newFilters])
-    ↓
-TanStack Query checks cache → cache miss → calls getTransactions(filters)
-    ↓
-getTransactions() → apiClient.get('/transactions', { params: filters })
-    ↓
-[dev] MSW intercepts → returns fixture JSON
-[prod] Real API responds with PaginatedResponse<Transaction>
-    ↓
-TanStack Query caches result, sets data in query cache
-    ↓
-useTransactions() returns { data: PaginatedResponse<Transaction>, isLoading: false }
-    ↓
-TransactionList renders TransactionItem[] from data.items
+TransactionRow renders
+  |
+  v
+useCategoryStore() -> overrides object (useShallow selector)
+  |
+  v
+resolveCategory(tx, overrides) -> category string (pure computation)
+  |
+  v
+CategoryBadge renders with label from CATEGORY_LABELS[category]
+
+-- User overrides category --
+User clicks badge -> category picker dropdown opens
+  |
+  v
+categoryStore.setOverride(tx.id, newCategory)
+  |
+  v  (Zustand state update, localStorage saved)
+CategoryBadge re-renders with new category (no network call)
+
+-- Category filter --
+CategoryFilter.onChange -> filterStore.setCategory(categoryId)
+  |
+  v  (filterStore.categoryId changes)
+useTransactions queryKey changes: ['transactions', accountId, { ..., categoryId }]
+  |
+  v  (TanStack Query cache miss -> new fetch)
+MSW handler: filter fixture transactions where category === categoryId
+  |
+  v
+TransactionList re-renders with filtered results
 ```
 
-### Request Flow — Dashboard Summary
+### Feature 2: Budget Tracking
 
 ```
-DashboardPage mounts
-    ↓
-useDashboard() hook fires parallel queries:
-  - useQuery(['accounts']) → getAccounts()
-  - useQuery(['transactions', { limit: 5 }]) → getTransactions()
-  - useQuery(['credit-cards']) → getCreditCards()
-    ↓
-All three resolve → hook computes derived values:
-  totalBalance = sum(accounts.map(a => a.balance))
-  totalIncome = sum(transactions.filter(t => t.type === 'credit').map(t => t.amount))
-  totalExpenses = sum(transactions.filter(t => t.type === 'debit').map(t => t.amount))
-    ↓
-DashboardPage receives { totalBalance, totalIncome, totalExpenses, recentTransactions }
-    ↓
-BalanceSummary, SpendingChart, RecentTransactions render independently
+DashboardPage renders
+  |
+  v
+useDashboardStats() -> data.categoryBreakdown (already computed by API)
+  |
+  v  (no new API call for budgets)
+budgetStore.budgets (from localStorage) -> per-category monthly limits
+  |
+  v
+BudgetSection iterates categoryBreakdown, renders BudgetProgress per row
+  |
+  v
+BudgetProgress:
+  spent = categoryBreakdown[category].amount (absolute value)
+  limit = budgetStore.budgets[category] ?? 0
+  percent = limit > 0 ? Math.min(spent / limit * 100, 100) : 0
+  warning = percent >= 80
+
+-- User sets/edits budget --
+User types in BudgetProgress input -> budgetStore.setBudget(category, amount)
+  |
+  v  (Zustand update, localStorage saved)
+BudgetProgress re-renders with new percent (no network call)
 ```
 
-### State Management Flow
+### Feature 3: Month-over-Month
 
 ```
-[Zustand: UI State]             [TanStack Query: Server State]
-  filters.dateFrom    ───────►  queryKey: ['transactions', filters]
-  filters.accountId   ───────►       ↓
-  filters.search      ───────►  fetch → cache → data
-  pagination.page     ───────►       ↓
-                                components read data
-                                (never stored in Zustand)
+DashboardPage renders
+  |
+  v
+useDashboardStats() fires TWO parallel queries:
+  Query A: ['dashboardStats', { dateFrom, dateTo }]       -> current period
+  Query B: ['dashboardStats', { dateFrom: prevFrom, dateTo: prevTo }] -> prev period
+  |
+  v  (both resolve; MSW handler returns period-appropriate sums)
+DashboardPage receives { data, previousData }
+  |
+  v
+StatCard (income):
+  amount = data.totalIncome
+  previousAmount = previousData?.totalIncome
+  delta = amount - (previousAmount ?? 0)
+  deltaPercent = previousAmount ? (delta / previousAmount * 100) : null
+  |
+  v
+DeltaBadge renders: arrow icon + percentage (green if positive, red if negative)
 ```
 
-### Mock/Real API Switch Flow
+### Feature 4: Chatbot UX
 
 ```
-main.tsx on startup:
-  if (MODE === 'development')
-    → import MSW worker
-    → worker.start()      ← intercepts all fetch/XHR in browser
-    → ReactDOM.createRoot(...)
+ChatPanel renders
+  |
+  v
+messages.length === 0 && !isLoading
+  ? <ConversationStarters onSelect={fn} />
+  : messages.map(<ChatMessage />)
 
-apiClient.get('/transactions')
-  → browser fetch('/transactions')
-  [dev]  MSW handler matches → returns fixtures/transactions.json
-  [prod] Actual network request → third-party banking API
+-- User clicks starter prompt --
+ConversationStarters.onSelect(promptText)
+  |
+  v
+Calls same handler as ChatInput submit (via shared prop or chatStore action)
+  |
+  v
+Existing useChatApi flow (unchanged)
+
+-- ChatMessage: no change needed --
+Copy, regenerate, delete buttons already implemented in ChatMessage.tsx
+ChatSettings: visual-only improvements, no data flow change
 ```
 
-## Scaling Considerations
+### Feature 5: CSV Export
 
-This is a personal-use, single-user frontend app. Scaling here means "handles growing data volumes gracefully", not multi-tenancy.
+```
+User clicks Export button in FilterBar
+  |
+  v
+useExport().exportCsv()
+  |
+  v  (synchronous, no network)
+queryClient.getQueryData(['transactions', accountId, { ...filterParams }])
+  -> InfiniteData<TransactionPage> | undefined
+  |
+  v
+transactions = pages.flatMap(p => p.data)
+  |
+  v
+transactionsToCsv(transactions) -> CSV string
+  (columns: Date, Description, Merchant, Category, Type, Amount VND, Status)
+  |
+  v
+new Blob(['\uFEFF' + csv], { type: 'text/csv' })
+  |
+  v
+URL.createObjectURL(blob) -> synthetic <a> click -> browser download dialog
+URL.revokeObjectURL(url)  -> cleanup
+```
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| < 500 transactions | No pagination needed; fetch all and filter client-side |
-| 500–5,000 transactions | Server-side pagination required (already in filter params); virtual scrolling for the list |
-| 5,000+ transactions | Infinite scroll or cursor-based pagination; consider pre-fetching next page |
-
-### Scaling Priorities
-
-1. **First bottleneck:** Large transaction lists will cause slow renders. Use virtualization (`@tanstack/react-virtual`) before adding more features. Add when item count exceeds ~200 visible rows.
-2. **Second bottleneck:** Dashboard charts recomputing on every render. Memoize aggregations with `useMemo`. Only recalculate when query data changes.
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Fetching API Data Directly Inside Components
-
-**What people do:** Call `fetch('/api/transactions')` or `transactionsApi.getTransactions()` directly inside a `useEffect` in a page or list component.
-
-**Why it's wrong:** No caching, no deduplication, no loading/error state standardization, waterfall requests, race conditions on fast filter changes.
-
-**Do this instead:** All fetching goes through TanStack Query hooks in `src/hooks/`. Components only receive `{ data, isLoading, isError }`.
-
-### Anti-Pattern 2: Storing Server Data in Zustand
-
-**What people do:** `accountStore.setAccounts(apiResponse.data)` — push API responses into Zustand.
-
-**Why it's wrong:** Duplicates state, creates staleness bugs (Zustand data out of sync with server), defeats TanStack Query's caching.
-
-**Do this instead:** TanStack Query is the cache for server data. Zustand holds only UI-driven state (what the user has selected, typed, or toggled).
-
-### Anti-Pattern 3: Conditional API URLs to Switch Mock/Real
-
-**What people do:** `const url = isDev ? '/mock/transactions' : 'https://api.bank.com/transactions'` scattered in service files.
-
-**Why it's wrong:** Conditional logic spreads across many files, mock diverges from real API shape silently, hard to maintain.
-
-**Do this instead:** One MSW setup in `main.tsx`. All service files call the same URL always. MSW intercepts in dev without any code change in services.
-
-### Anti-Pattern 4: Putting Billing Cycle Logic in JSX
-
-**What people do:** Computing cycle start/end dates inline inside `BillingCycleCard.tsx` render function.
-
-**Why it's wrong:** Untestable, duplicated if used in multiple places, inflates component complexity.
-
-**Do this instead:** Pure utility functions in `src/utils/formatDate.ts`. Import into the component. Easy to unit test in isolation.
-
-### Anti-Pattern 5: One Giant Transaction Store with Everything
-
-**What people do:** Single Zustand store with `filters`, `transactions`, `accounts`, `creditCards`, `selectedAccount`, `billingCycles`, `isLoading`, `error` all merged together.
-
-**Why it's wrong:** Unrelated state changes trigger re-renders in unrelated components. Becomes unmaintainable quickly.
-
-**Do this instead:** Separate stores by domain: `transactionStore` (filters only), `accountStore` (selected account), `uiStore` (global UI: date range, active tab). Each store is small and focused.
+---
 
 ## Integration Points
 
-### External Services
+### New Files (create from scratch)
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Third-party banking API | REST calls via `apiClient.ts` (axios instance) | Likely needs CORS handling; if API doesn't allow browser direct calls, a lightweight proxy (Vercel Edge Function or Cloudflare Worker) may be required — do not add a full backend |
-| MSW (Mock Service Worker) | Service worker in `public/mockServiceWorker.js`, handlers in `src/services/mock/handlers.ts` | Run `npx msw init public/` once during project setup |
-| Chart library (Recharts / Chart.js) | Import components directly; feed computed totals as props | No API integration needed — charts consume already-fetched data |
+| File | Depends On | Consumed By |
+|------|-----------|-------------|
+| `src/utils/categories.ts` | nothing (pure) | `TransactionRow`, `CreditCardTransactionRow`, `CategoryFilter` |
+| `src/utils/export.ts` | `src/utils/currency.ts`, `src/utils/dates.ts` | `src/hooks/useExport.ts` |
+| `src/stores/categoryStore.ts` | zustand | `TransactionRow`, `CreditCardTransactionRow` |
+| `src/stores/budgetStore.ts` | zustand | `BudgetProgress`, `BudgetSection` |
+| `src/hooks/useExport.ts` | TanStack Query, `utils/export.ts`, `filterStore` | `FilterBar` (ExportButton) |
+| `src/features/dashboard/BudgetProgress.tsx` | `budgetStore`, shadcn Progress | `BudgetSection` |
+| `src/features/dashboard/BudgetSection.tsx` | `BudgetProgress`, `budgetStore`, `useDashboardStats` | `DashboardPage` |
+| `src/features/chatbot/ConversationStarters.tsx` | `chatStore` or props only | `ChatPanel` |
+| `src/components/filters/CategoryFilter.tsx` | `filterStore`, shadcn Select | `FilterBar` |
 
-### Internal Boundaries
+### Modified Files (surgical changes)
+
+| File | What Changes | Risk |
+|------|-------------|------|
+| `src/stores/filterStore.ts` | Add `categoryId: string \| null` + `setCategory` action. Add `categoryId` to `useFilterParams` selector. | LOW — additive only; existing consumers unaffected |
+| `src/hooks/useDashboardStats.ts` | Add second `useQuery` for previous period; return `previousData`. | LOW — existing query unchanged; second is additive |
+| `src/utils/dates.ts` | Add `getPreviousPeriod(dateFrom, dateTo)` export. | LOW — new export, no changes to existing functions |
+| `src/features/transactions/TransactionRow.tsx` | Import `resolveCategory` + `useCategoryStore`; render `<CategoryBadge>` below merchant name. | LOW — layout addition only |
+| `src/features/creditCards/CreditCardTransactionRow.tsx` | Same CategoryBadge addition. | LOW |
+| `src/components/filters/FilterBar.tsx` | Add `<CategoryFilter />` and `<ExportButton>`. May need `flex-wrap` adjustment for 5 controls on mobile. | LOW |
+| `src/pages/DashboardPage.tsx` | Add `<BudgetSection>` below chart grid; pass `previousData` from hook to `StatCard`. | LOW |
+| `src/features/dashboard/StatCard.tsx` | Add optional `delta?: number` and `deltaPercent?: number` props; render `<DeltaBadge>` when provided. Existing renders unchanged. | LOW — additive props with defaults |
+| `src/features/chatbot/ChatPanel.tsx` | Replace hardcoded empty-state JSX with `<ConversationStarters onSelect={...} />`. | LOW |
+| `src/mocks/handlers.ts` | `/dashboard/stats` handler must return period-filtered data when called with previous-period dates; currently likely returns same fixture for all date params. | MEDIUM — handler logic needs date-aware filtering or a static previous-period fixture |
+
+### Internal Module Boundaries — No Circular Deps
 
 | Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Pages ↔ Hooks | Hooks called inside pages; pages receive typed return values | Pages must not import from `services/` directly |
-| Hooks ↔ Store | Hooks read from Zustand store for filter params | Hooks write to store only for derived UI state (e.g., total page count) |
-| Hooks ↔ Services | Hooks call service functions inside `queryFn` | One-directional: hooks call services, never the reverse |
-| Services ↔ API Client | Service functions call `apiClient.get/post` only | No raw `fetch()` or `axios` imports outside `apiClient.ts` |
-| Components ↔ Store | Feature components may read store directly for controlled inputs | Avoid prop-drilling filter state through 3+ levels; use store instead |
+|----------|--------------|-------|
+| `categoryStore` -> `TransactionRow` | Direct Zustand subscribe with `useShallow` | No TanStack Query involvement |
+| `budgetStore` -> `BudgetSection` | Direct Zustand subscribe | Reads `useDashboardStats` data separately for amounts |
+| `filterStore.categoryId` -> `useTransactions` | Via queryKey — `useFilterParams` must include `categoryId` | Critical: if omitted from `useFilterParams`, filter changes won't trigger refetch |
+| `useExport` -> TanStack Query cache | `queryClient.getQueryData()` synchronous read | Key shape must match `useTransactions` exactly |
+| `useDashboardStats` -> `StatCard` | Props through `DashboardPage` | `previousData` is optional; StatCard degrades gracefully if null |
+| `utils/categories.ts` | Pure function — no imports from stores or hooks | Safe to import from any component |
+| `utils/export.ts` | Pure function — imports only from `utils/currency.ts` and `utils/dates.ts` | Safe to import from hook |
 
-## Suggested Build Order
+---
 
-Build in this sequence to avoid blockers:
+## Build Order
 
-1. **Types first** (`src/types/`) — All domain models defined before any code that uses them. Unblocks everything.
-2. **Mock fixtures + MSW handlers** (`src/services/mock/`) — Enables UI development without the real API. Unblocks all UI work.
-3. **API client + service modules** (`src/services/apiClient.ts`, `*Api.ts`) — Thin wrappers; mock handles responses in dev.
-4. **Zustand stores** (`src/store/`) — Filter and UI state shapes defined before hooks need them.
-5. **Feature hooks** (`src/hooks/`) — Connect stores to TanStack Query. This is where business logic lives.
-6. **Shared components** (`src/components/shared/`) — LoadingSpinner, ErrorBoundary, EmptyState needed everywhere.
-7. **Feature components** (`src/components/[feature]/`) — Build per domain: Transactions, then CreditCard, then Dashboard.
-8. **Pages** (`src/pages/`) — Compose feature components. Thin wrappers that provide routing context.
-9. **Real API wiring** — Replace mock fixtures with real API base URL. Validate response shapes match TypeScript types.
+Build in this sequence to respect cross-feature dependencies.
+
+### Step 1: Transaction Categories
+
+Build first because `categoryStore` and `utils/categories.ts` are prerequisites for Budget Tracking (budgets are per-category). Also unblocks the category filter in FilterBar and the categoryId addition to filterStore.
+
+Files to create:
+- `src/utils/categories.ts` — merchant map + `resolveCategory()` + `CATEGORY_LABELS`
+- `src/stores/categoryStore.ts` — user overrides with localStorage
+
+Files to modify:
+- `src/stores/filterStore.ts` — add `categoryId` + `setCategory` + include in `useFilterParams`
+- `src/features/transactions/TransactionRow.tsx` — add CategoryBadge
+- `src/features/creditCards/CreditCardTransactionRow.tsx` — add CategoryBadge
+- `src/components/filters/CategoryFilter.tsx` — new component (shadcn Select)
+- `src/components/filters/FilterBar.tsx` — add CategoryFilter (ExportButton can come in Step 4)
+
+No circular dependency risk: `categoryStore` is a leaf store. `resolveCategory` is a pure function.
+
+### Step 2: Budget Tracking
+
+Build second because it requires Step 1's category definitions. Reuses `categoryBreakdown` already in `useDashboardStats` response — no new API work needed.
+
+Check if shadcn `progress` component is already installed (`src/components/ui/progress.tsx`). If not: `npx shadcn@latest add progress`.
+
+Files to create:
+- `src/stores/budgetStore.ts` — budgets per category, localStorage
+- `src/features/dashboard/BudgetProgress.tsx` — progress bar + inline number input
+- `src/features/dashboard/BudgetSection.tsx` — renders all categories present in `categoryBreakdown`
+
+Files to modify:
+- `src/pages/DashboardPage.tsx` — add `<BudgetSection categoryBreakdown={data?.categoryBreakdown} />` below chart grid
+
+### Step 3: Month-over-Month Dashboard
+
+Build third because it is self-contained to the dashboard layer. Does not depend on categories or budgets. Place after Step 2 to avoid simultaneous edits to `DashboardPage.tsx`.
+
+Files to modify:
+- `src/utils/dates.ts` — add `getPreviousPeriod(dateFrom, dateTo)` pure function
+- `src/hooks/useDashboardStats.ts` — add parallel previous-period query, return `previousData`
+- `src/features/dashboard/StatCard.tsx` — add optional `delta` + `deltaPercent` props + DeltaBadge
+- `src/pages/DashboardPage.tsx` — pass `previousData` from hook to StatCards
+- `src/mocks/handlers.ts` — update `/dashboard/stats` to return date-filtered fixture sums for previous period
+
+MSW handler note: The current handler most likely ignores date params and returns the same computed total. For month-over-month to work correctly in dev, the handler must compute period-specific totals from fixture data. The simplest approach is to filter `mockTransactions` by `dateFrom`/`dateTo` query params and compute totals on the fly, mirroring the production API behavior.
+
+### Step 4: CSV Export
+
+Build fourth because it is independent of categories, budgets, and dashboard. The only dependency is that `filterStore.categoryId` must be in the queryKey (done in Step 1). Place here to avoid FilterBar conflicts while Step 1 adds CategoryFilter.
+
+Files to create:
+- `src/utils/export.ts` — `transactionsToCsv()` pure function (header row, VND formatting, date formatting, BOM prefix)
+- `src/hooks/useExport.ts` — cache reader + Blob download trigger
+
+Files to modify:
+- `src/components/filters/FilterBar.tsx` — add ExportButton that calls `useExport().exportCsv()`
+
+### Step 5: Chatbot UX Polish
+
+Build last. Entirely self-contained. No store dependencies on other v1.1 features. Lowest regression risk — makes a good final step.
+
+Pre-check: `ChatMessage.tsx` already has copy button, regenerate button, and delete button. The CHAT-UX requirements for copy and message actions may already be met. Verify against the milestone spec before spending time here.
+
+Files to create:
+- `src/features/chatbot/ConversationStarters.tsx` — 3–5 clickable prompt chips (e.g., "Chi tiêu nhiều nhất tháng này?", "So sánh thu chi tháng này với tháng trước")
+
+Files to modify:
+- `src/features/chatbot/ChatPanel.tsx` — replace hardcoded empty-state div with `<ConversationStarters onSelect={handleStarterSelect} />`
+- `src/features/chatbot/ChatSettings.tsx` — visual polish (label alignment, better model selector options)
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Fetching Categories from an API Endpoint
+
+**What people do:** Add a `/categories` route to MSW handlers, create a `categoriesService.ts`, build a `useCategories()` hook with TanStack Query.
+
+**Why it's wrong:** Categories are a local classification concern for this app. The `Transaction.category` field already comes from the API fixture. User overrides are in `categoryStore` (localStorage). Adding an API call adds latency, a new cache entry, and MSW handler complexity for no benefit.
+
+**Do this instead:** Keep category resolution in `utils/categories.ts` as a pure function. `categoryStore` is the only state layer needed.
+
+### Anti-Pattern 2: Storing Budget State in TanStack Query
+
+**What people do:** Use `useQuery` with a `queryFn` that reads from localStorage, treating budgets as server-like state.
+
+**Why it's wrong:** Budgets are local user preferences. TanStack Query adds loading states, staleTime, gcTime, and refetch logic for data that is synchronously available from a local store.
+
+**Do this instead:** Zustand store with manual localStorage persistence — same pattern as `chatStore.ts`. Synchronous reads, instant updates, no loading states.
+
+### Anti-Pattern 3: Merging dashboardStore into filterStore
+
+**What people do:** Add dashboard date range to `filterStore` since both are "filter state."
+
+**Why it's wrong:** The existing codebase intentionally separates them. `dashboardStore` being independent of `filterStore` allows users to view a "January dashboard" while the transaction list is filtered to February. Merging breaks this UX contract established in v1.0.
+
+**Do this instead:** Keep `dashboardStore` independent. `categoryId` belongs in `filterStore` (it affects the transaction list). Dashboard budget monthly period is implicit (derived from dashboard date range) — no new store field needed.
+
+### Anti-Pattern 4: Making a New API Call for CSV Export
+
+**What people do:** Add an `/export` endpoint or loop through all transaction pages with fresh fetch calls.
+
+**Why it's wrong:** TanStack Query's `infiniteQuery` cache already contains all loaded pages. A network call is redundant and slower than a synchronous cache read.
+
+**Do this instead:** `queryClient.getQueryData()` with the same queryKey shape as `useTransactions`. The cache read is synchronous. Document that export covers loaded pages only (acceptable for ~70–130 total transactions in this app).
+
+### Anti-Pattern 5: Adding a New Store for Previous-Period Date Range
+
+**What people do:** Create a `comparisonStore` or `previousPeriodStore` to hold the previous month's date range.
+
+**Why it's wrong:** The previous period is entirely derived from the current dashboard date range — it is not independently configurable. Adding a store for derived data violates the principle that stores hold only non-derivable state.
+
+**Do this instead:** Compute `getPreviousPeriod(dateFrom, dateTo)` inline in `useDashboardStats` using a pure utility function. No new store needed.
+
+### Anti-Pattern 6: Skipping useShallow on New Store Selectors
+
+**What people do:** `const { overrides } = useCategoryStore()` — destructuring without `useShallow`.
+
+**Why it's wrong:** `useCategoryStore()` without `useShallow` returns a new object reference on every render, causing infinite re-render loops in components that read multiple fields. This bug already caused issues during v1.0 and was fixed with the Zustand v5 double-curry + `useShallow` pattern.
+
+**Do this instead:** Follow the established pattern from `filterStore.ts`:
+```typescript
+export function useCategoryOverrides() {
+  return useCategoryStore(useShallow((s) => ({ overrides: s.overrides })))
+}
+```
+
+---
+
+## Scaling Considerations
+
+This is a personal-use, single-user read-only app. The relevant concerns are bundle size and localStorage size, not server scaling.
+
+| Concern | v1.0 state | v1.1 additions | Mitigation |
+|---------|-----------|---------------|-----------|
+| Bundle size | 525KB (already over 500KB target) | +~5KB for new utils/stores | No new heavy dependencies introduced; Recharts already lazy-loaded |
+| localStorage | chat messages + API config | +category overrides, +budgets | Minimal: max ~200 tx overrides + ~10 budget entries, well under typical 5MB limit |
+| Re-renders | useShallow on all multi-field selectors | New stores must follow same pattern | Follow useShallow pattern, no concern |
+| TanStack Query cache | 1 infinite query per account + 1 dashboard query | +1 previous-period dashboard query | Adds one small object; no concern |
+| MSW handler complexity | Simple fixture returns | Date-aware filtering for previous period | Handler must filter `mockTransactions` by date params; one-time implementation cost |
+
+---
 
 ## Sources
 
-- Pattern knowledge: React ecosystem conventions, TanStack Query official documentation patterns (training data, cutoff Aug 2025) — MEDIUM confidence
-- MSW architecture: Mock Service Worker documentation patterns (training data) — MEDIUM confidence
-- Zustand + TanStack Query separation: Established community pattern documented across multiple React architecture guides (training data) — MEDIUM confidence
-- Billing cycle date math: Standard JavaScript Date API patterns — HIGH confidence (deterministic)
-- CORS consideration for banking APIs: Documented constraint in financial API integrations — MEDIUM confidence
-
-**Note:** Web search and WebFetch were unavailable during this research session. All patterns are based on training data (cutoff Aug 2025). Verify current TanStack Query v5 API, Zustand v5 API, and MSW v2 API against official docs before implementation. Core architectural patterns are stable and unlikely to have changed materially.
+- Direct codebase inspection (2026-03-08):
+  - `src/stores/filterStore.ts` — confirmed Zustand v5 double-curry + useShallow pattern
+  - `src/stores/chatStore.ts` — confirmed manual localStorage pattern to replicate
+  - `src/stores/dashboardStore.ts` — confirmed independence from filterStore
+  - `src/hooks/useDashboardStats.ts` — confirmed single-query structure to extend
+  - `src/hooks/useTransactions.ts` — confirmed queryKey shape for export cache read
+  - `src/services/dashboard.ts` — confirmed `DashboardStats.categoryBreakdown` already available
+  - `src/features/transactions/TransactionRow.tsx` — confirmed layout structure for badge insertion
+  - `src/features/chatbot/ChatPanel.tsx` — confirmed hardcoded empty state to replace
+  - `src/features/chatbot/ChatMessage.tsx` — confirmed copy/regenerate/delete already implemented
+  - `src/components/filters/FilterBar.tsx` — confirmed structure for new controls
+  - `src/mocks/fixtures/transactions.ts` — confirmed all transactions have `category` field (food/transport/shopping/grocery/electronics/income/transfer)
+  - `src/types/account.ts` — confirmed `Transaction.category: z.string().optional()` exists; no schema change needed
 
 ---
-*Architecture research for: Frontend-only personal finance dashboard*
-*Researched: 2026-03-02*
+*Architecture research for: FinanceManager v1.1 feature integration*
+*Researched: 2026-03-08*

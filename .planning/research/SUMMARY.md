@@ -1,243 +1,275 @@
 # Project Research Summary
 
-**Project:** Personal Finance Management Dashboard
-**Domain:** Frontend-only personal finance dashboard (bank + credit card transactions, Vietnamese market)
-**Researched:** 2026-03-02
-**Confidence:** MEDIUM
+**Project:** FinanceManager v1.1 — Smart Insights & Polish
+**Domain:** Frontend-only personal finance dashboard (Vietnamese market, React SPA)
+**Researched:** 2026-03-08
+**Confidence:** HIGH — research grounded in direct codebase inspection, not generic advice
 
 ## Executive Summary
 
-This is a read-only personal finance dashboard built entirely on the frontend, consuming a third-party banking API to display bank account transactions and credit card billing cycle data. The established approach for this type of application is a React + TypeScript SPA built with Vite, using TanStack Query for all server state (API data) and Zustand exclusively for UI-driven state such as filters and date range selections. The architecture is layered: pages compose feature components, feature components call feature hooks, and hooks are the only coupling point between the UI and the API service layer. Mock Service Worker (MSW) intercepts all API calls during development, enabling UI work to proceed in parallel with real API integration.
+FinanceManager v1.1 adds five features to an already-shipped v1.0 foundation: transaction category classification, monthly budget tracking, month-over-month dashboard comparison, chatbot UX polish, and CSV export. The existing stack (React 19, Zustand v5, TanStack Query v5, Tailwind v4, shadcn/ui, MSW v2) covers 95% of what v1.1 needs. Only one new npm dependency is required — `papaparse` for correct CSV serialization of Vietnamese text with commas — plus one new shadcn component (`progress`) added via CLI. Everything else reuses established patterns already in the codebase.
 
-The recommended stack is well-settled for this use case with no novel choices required. The core differentiator of this product — grouping credit card transactions by billing cycle rather than calendar month, which all major competitors (Mint, Monarch Money) fail to do correctly — is achievable with date-fns date arithmetic and requires billing cycle data from the third-party API. This is the single most important feature risk: if the API does not return statement/billing cycle dates, the primary differentiator falls back to a user-configured cycle date, which must be planned as a fallback from day one.
+The recommended build order is dictated by a single hard dependency: Transaction Categories must be built first because Budget Tracking groups spending by category. Every other feature is independent and can be built in any order after Categories. The architecture is purely additive — new stores (`categoryStore`, `budgetStore`), new pure utility functions (`categories.ts`, `export.ts`), and surgical modifications to existing components. No existing patterns are broken; no backend changes are needed; MSW mock handlers handle the development environment throughout.
 
-The two highest-impact risk categories are architectural and data integrity. Architecturally, the server-state vs. client-state split (TanStack Query vs. Zustand) must be decided and enforced from day one — retrofitting it is a high-cost refactor. For data integrity, the Vietnamese Dong (VND) currency is integer-only with no subunit, and amounts may arrive from the API as strings, not numbers; all currency arithmetic must use integer math from the moment data enters the application. Timezone handling for statement cycle boundaries (UTC API timestamps vs. Vietnam local dates) is a second data integrity risk that causes silent failures only in production or UTC-timezone CI environments.
+The primary risk area is correctness in two domains: (1) date boundary calculations for month-over-month comparisons, which must account for the Vietnam UTC+7 offset already established in the codebase, and (2) CSV export completeness, which must fetch all transactions via a dedicated service call rather than reading only the infinite-scroll loaded pages from cache. Both are well-understood problems with clear solutions documented in the research. A secondary risk is Zustand v5 selector correctness — the `useShallow` pattern established in v1.0 must be followed precisely in every new store, or infinite re-render loops will result.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The stack is React 19 + TypeScript 5.4 + Vite 5 as the foundation, with TanStack Query v5 handling all API data fetching and caching, and Zustand v4 for UI-only client state. UI components are built on shadcn/ui (Radix UI primitives + Tailwind CSS 3.x), charts use Recharts 2.x (SVG-based, declarative, React-native), and date arithmetic uses date-fns 3.x for billing cycle calculations. All API responses are validated at the service boundary using Zod 3.x schemas, which also provide TypeScript type inference to prevent the "type lie" problem when real API shapes differ from assumptions. Mock API development uses MSW 2.x, which intercepts real HTTP calls at the service worker level — no conditional URL logic in components.
+The v1.0 stack is locked and fully capable. v1.1 requires only: `papaparse@^5.5.3` (+ `@types/papaparse`) for CSV serialization, and `npx shadcn add progress` for budget progress bars. All other needs are already met.
 
-See full analysis: `.planning/research/STACK.md`
+**New dependencies for v1.1:**
+- `papaparse@^5.5.3`: CSV serialization — Vietnamese descriptions contain commas; naive CSV builders produce broken Excel files; `Papa.unparse()` handles all edge cases; ~24KB bundle cost is justified
+- `@types/papaparse` (devDep): TypeScript types — updated Dec 2025 on DefinitelyTyped
 
-**Core technologies:**
-- React 19 + TypeScript 5.4: UI framework with strict typing — finance data demands correctness; wrong balance display is a bug, not a cosmetic issue
-- Vite 5: Build tool and dev server — 10-100x faster HMR than CRA (deprecated), native ESM, integrates cleanly with MSW
-- TanStack Query v5: Server state management — handles caching, background refetch, loading/error states automatically; eliminates 80% of manual state boilerplate
-- Zustand v4: Client UI state — lightweight, minimal boilerplate for filter selections, date range, active account, modal state; never holds API data
-- shadcn/ui + Tailwind CSS 3.x: Component system — copy-owned components on Radix primitives; avoids MUI/Ant Design lock-in; dashboard aesthetics fully controllable
-- Recharts 2.x: Charts — declarative SVG React components; best for time-series spending trends and category breakdowns
-- date-fns 3.x: Date arithmetic — functional, tree-shakeable, tree-shakes to near-zero; required for billing cycle boundary calculations (cycle start/end, days until statement date)
-- Zod 3.x: API response validation — parse and validate at the service boundary; derive TypeScript types from schemas; prevents type drift when real API differs from mock
-- MSW 2.x: Mock API — intercepts real HTTP at network level in browser; single `main.tsx` guard; no conditional URLs in service files
-- axios 1.x: HTTP client — interceptors for auth headers, global error normalization; cleaner than raw fetch for a third-party API with authentication
+**Shadcn components to add via CLI (no new npm deps):**
+- `progress`: Budget progress bars — `npx shadcn@latest add progress`; uses `@radix-ui/react-progress` which is already a transitive dep
+
+**What NOT to add:**
+- `xlsx` / SheetJS — 800KB bundle for a CSV-only feature
+- `react-csv` — effectively abandoned (last published 2021)
+- `@tanstack/react-virtual` — 70–130 transactions do not require virtualization
+- Any ML/NLP library — rule-based categorization is sufficient and deterministic
+
+**Existing stack coverage for v1.1:**
+- Zustand v5 `persist` middleware: budget limits and category overrides (same localStorage pattern as `chatStore.ts`)
+- TanStack Query v5: two parallel `useQuery` calls for month-over-month (no new caching library needed)
+- date-fns v4 + @date-fns/tz v1: month boundary calculations with Vietnam UTC+7 timezone awareness
+- lucide-react: `TrendingUp`, `TrendingDown`, `ArrowUp`, `ArrowDown` already imported in `StatCard.tsx`
+- sonner: `toast.warning()` for budget threshold alerts (already installed)
+- shadcn/ui `Select`, `Badge`, `Button`: all present in `src/components/ui/`
 
 ### Expected Features
 
-The product's core differentiator is billing-cycle-grouped credit card transactions. Every major competitor groups by calendar month; this product groups by the actual billing cycle. This is the P1 feature that justifies building the app. All other features are table stakes expected by users of any finance dashboard.
+**Must have (v1.1 table stakes):**
+- Auto-classify expense transactions by category (merchant-name regex rules) — users expect zero manual entry for standard merchants
+- Category badge visible on every expense transaction row — instant visual scan of spending type
+- User can override any category inline (one-click popover, not modal) — persists to localStorage by transaction ID
+- Vietnamese merchant recognition by default: Grab, Shopee, MoMo, Circle K, Highlands, VinMart, AEON, etc.
+- Monthly budget per category with progress bar — green/amber/red threshold states (0–74%, 75–99%, 100%+)
+- Yellow warning at 80%, red at 100%+ — early warning, not post-mortem
+- Month-over-month delta on income/expense stat cards with directional arrow + percentage
+- CSV export of filtered transactions with UTF-8 BOM — non-negotiable for Windows + Excel (primary Vietnamese user setup)
+- Conversation starters in empty chat (4 Vietnamese-language prompts tied to app data context)
 
-See full analysis: `.planning/research/FEATURES.md`
-
-**Must have (table stakes — v1 launch):**
-- API integration layer (mock + real) — nothing else works without data; build with mock first
-- Transaction list for bank accounts — core feature, date/merchant/amount/category, date-descending default
-- Transaction list for credit cards — same fields plus card identifier and billing cycle grouping
-- Dashboard overview — balance, income total, expense total; one-glance financial summary
-- Credit card billing cycle display — statement date, cycle start/end, days until statement closes
-- Billing cycle transaction grouping — CC transactions grouped by billing cycle, not calendar month (the differentiator)
-- Date range filter — preset ranges (this week, this month, last month) plus custom; essential for all finance apps
-- Account filter — view one account at a time; dropdown or tab
-- Transaction text search — by merchant name and description
-- Loading, error, and empty states — mandatory for any async data fetch; skeleton loading on transaction rows
-- Responsive layout — mobile-first for transaction lists; dashboard grid collapses gracefully
-
-**Should have (competitive — v1.x after validation):**
-- Billing Cycle Summary Card — total spend this cycle + days until statement date at a glance
-- Category breakdown chart — donut chart by category for current billing cycle using Recharts
-- Spend vs. previous cycle comparison — "12% more than last cycle"; requires two full cycles of data
-- Running balance display — account balance after each transaction
-- Upcoming statement date highlight — "Statement closes in 3 days" visual badge
-- Filter by transaction type (income/expense toggle)
+**Should have (v1.2 — build after validation):**
+- "Apply override to all same-merchant" bulk action — only if override fatigue is reported
+- Sparkline trend charts (3-month) — needs real API with history
+- Absolute VND delta on hover alongside percentage delta
 
 **Defer (v2+):**
-- Budget tracking — full data model, rollover logic, highest-complexity feature; validate demand first
-- CSV/PDF export — low usage, maintenance surface; add only if explicitly requested
-- Transaction category editing — diverges from API data, requires backend persistence for durability
-- Notification/alert system — requires push infrastructure; out of scope for frontend-only
+- Savings goal tracking — distinct from spending limits
+- PDF export — large dependency (jsPDF, html2canvas); out of scope
+- Predictive spending ("you'll exceed budget by end of month") — needs 3+ months real data
+- Custom category creation — 6 fixed categories match Money Lover/Money Keeper conventions
+
+**Anti-features confirmed (do not build):**
+- ML/LLM per-transaction classification — API cost per transaction, latency on list render, overkill for ~100 tx/month
+- Income transactions should not show category badges — categories apply to expenses only
+- Chat history persistence across sessions — stale financial context; privacy risk on shared devices
+- Budget rollover — complicates mental model; static monthly reset matches how Vietnamese users think about bills
+- Budget push notifications — requires service worker; visual dashboard alert is sufficient
+
+**Vietnamese market specifics:**
+- Fixed 6 expense categories matching Money Lover/Money Keeper: Ăn uống, Mua sắm, Di chuyển, Giải trí, Hóa đơn, Khác
+- UTF-8 BOM (`'\uFEFF'`) is non-negotiable — Windows + Excel is the primary spreadsheet environment
+- Monthly budget mental model (not weekly) — aligns with Vietnamese billing cycle conventions
+- Emoji category icons match local app conventions for instant user familiarity
+- VND amounts as raw integers in CSV (not formatted strings) — Excel needs numeric values for SUM formulas
 
 ### Architecture Approach
 
-The architecture is a 5-layer frontend: UI pages compose feature components which call feature hooks; hooks are the single coupling point between the API service layer and the UI; the API service layer abstracts transport behind domain-specific functions (`getTransactions()`, `getCreditCards()`); and MSW intercepts all calls in development via a single startup guard in `main.tsx`. Server state (API data) lives exclusively in TanStack Query's cache. Client state (filters, selected account, date range, search term, open panels) lives exclusively in Zustand. These two stores must never be mixed: this boundary is the most important architectural rule in the codebase and must be enforced from day one.
+v1.1 is purely additive to the existing feature-based directory structure. Two new Zustand stores follow the established manual-localStorage pattern from `chatStore.ts`. Two new pure utility modules have no React dependencies and are trivially unit-testable. The `useDashboardStats` hook gains a parallel second query for the previous period. All other modifications are surgical prop additions or child component insertions with no existing contract breakage.
 
-See full analysis: `.planning/research/ARCHITECTURE.md`
+**New files to create:**
+1. `src/utils/categories.ts` — `resolveCategory()` pure function + `CATEGORY_LABELS` + `MERCHANT_CATEGORY_MAP` + `VALID_CATEGORIES` constant
+2. `src/utils/export.ts` — `transactionsToCsv()` pure function (Vietnamese headers, VND integers, RFC 4180 escaping)
+3. `src/stores/categoryStore.ts` — user overrides keyed by transaction ID, manual localStorage persist
+4. `src/stores/budgetStore.ts` — monthly limits as `Partial<Record<ValidCategory, number>>`, Zod-validated on load
+5. `src/hooks/useExport.ts` — dedicated service call (NOT cache read) + Blob download trigger
+6. `src/features/dashboard/BudgetProgress.tsx` — single category: shadcn Progress + inline number input
+7. `src/features/dashboard/BudgetSection.tsx` — container for all BudgetProgress rows, sibling to CategoryChart
+8. `src/features/chatbot/ConversationStarters.tsx` — 4 clickable prompt chips (pre-fill only, no auto-send)
+9. `src/components/filters/CategoryFilter.tsx` — shadcn Select bound to `filterStore.categoryId`
 
-**Major components:**
-1. Pages (`src/pages/`) — route-level containers; thin wrappers that compose feature components; import only from hooks, never from services
-2. Feature components (`src/components/[feature]/`) — domain-specific UI (TransactionList, BillingCycleCard, SpendingChart); co-located by domain, isolated from each other
-3. Feature hooks (`src/hooks/`) — business logic + data fetching; the only code that calls service functions; wrap TanStack Query; read Zustand store for filter params
-4. Zustand stores (`src/store/`) — UI state only: filter values, pagination cursor, search string, selected account ID; never API data
-5. API service layer (`src/services/`) — pure functions grouped by domain (accountsApi, transactionsApi, creditCardApi); all call through a single `apiClient.ts` instance; MSW intercepts in dev
-6. Type definitions (`src/types/`) — single source of truth for all domain models; import everywhere; never redefine inline
-7. Utility functions (`src/utils/`) — pure date math (billing cycle calculation), currency formatting, transaction grouping; separately testable, reusable
+**Files modified (surgical changes):**
+- `filterStore.ts` — add `categoryId: string|null` + `setCategory` action (additive; existing consumers unaffected)
+- `useDashboardStats.ts` — add parallel previous-period query with distinct key prefix `['dashboardStats', 'prev', ...]`
+- `StatCard.tsx` — add optional `delta?` + `deltaPercent?` props (additive with defaults; existing renders unchanged)
+- `TransactionRow.tsx` + `CreditCardTransactionRow.tsx` — add `<CategoryBadge>` after merchant name
+- `FilterBar.tsx` — add `<CategoryFilter>` + `<ExportButton>` (may need `flex-wrap` for mobile layout)
+- `DashboardPage.tsx` — add `<BudgetSection>` below chart grid; pass `previousData` to StatCards
+- `ChatPanel.tsx` — replace hardcoded empty-state JSX with `<ConversationStarters onSelect={...}>`
+- `src/utils/dates.ts` — add `getPreviousPeriod()` and `getCalendarMonthBoundaries()` exports
+- `mocks/handlers.ts` — update `/dashboard/stats` to return date-aware filtered sums for previous-period queries
 
-**Suggested build order (from ARCHITECTURE.md):**
-Types → Mock fixtures + MSW handlers → API client + service modules → Zustand stores → Feature hooks → Shared components → Feature components → Pages → Real API wiring
+**Key architectural boundaries to preserve:**
+- `dashboardStore` must remain independent from `filterStore` — this is an intentional v1.0 UX decision
+- `BudgetSection` must be a sibling component to `CategoryChart`, never a child — prevents chart re-animation on budget keystrokes
+- `categoryStore` and `budgetStore` must use Zustand v5 double-curry `create<T>()()` — not v4 single-curry
+- CSV export uses a dedicated `getTransactionsForExport(limit=1000)` service call — never `pages.flatMap()` from infinite query cache
 
 ### Critical Pitfalls
 
-The 6 critical pitfalls identified span security, data integrity, architecture, and performance. All 6 have Phase 1 prevention points — meaning they cannot be deferred to later phases without significant refactor cost.
+1. **useShallow selector includes action functions** — Zustand v5 `useShallow` comparing a function reference causes infinite re-render loop. Actions must be accessed via separate non-shallow selectors. Follow `filterStore.ts` lines 43–53 exactly. Verify with React DevTools Profiler after creating each new store.
 
-See full analysis: `.planning/research/PITFALLS.md`
+2. **CSV export reads only infinite-scroll loaded pages** — `pages.flatMap()` silently exports only what the user has scrolled to. Must use a dedicated `getTransactionsForExport()` service call with `limit=1000`, called outside TanStack Query. Test by filtering to >20 transactions and verifying CSV row count equals API total.
 
-1. **API called directly from browser / secret in VITE_ env vars** — API key is compiled into the JS bundle and visible in DevTools; real bank APIs often require server-side auth. Prevention: route authenticated calls through a serverless proxy (Netlify/Vercel function) that holds the secret; never use `VITE_API_KEY` for sensitive keys. Phase 1 must define the proxy strategy.
+3. **Month-over-month date boundaries drift by UTC+7** — `new Date(y, m, 1).toISOString()` produces wrong UTC boundary for Vietnam timezone. Use `Date.UTC(y, m-1, 1) - 7*3600*1000` pattern in `getCalendarMonthBoundaries()`. Write and unit-test this utility before building any delta UI; test December, January-to-February, and February-to-March boundaries explicitly.
 
-2. **Mock API contract diverges from real API schema** — mock built around UI assumptions; real API uses snake_case, string amounts, different conventions; discovered late when integration begins; requires full component rewrite. Prevention: read real API docs first; shape mock data to exactly match real API schema; use a typed adapter/mapper layer to transform API shape to UI shape.
+4. **Budget store keys mismatch API category strings** — progress bars show 0% if localStorage uses Vietnamese display labels instead of API slugs (`food`, `transport`, etc.). Define `VALID_CATEGORIES` as a typed const in `src/utils/categories.ts`. Type budget store as `Partial<Record<ValidCategory, number>>`. Add Zod deserialization that strips invalid keys on localStorage load.
 
-3. **Floating-point arithmetic on currency values** — `0.1 + 0.2 = 0.30000000000000004` in financial totals; VND amounts are integers with no subunit and may arrive as strings from Vietnamese banking APIs. Prevention: define amount types as integers in Phase 1 TypeScript contracts; sum only integers; never perform arithmetic on raw floats; use `Intl.NumberFormat` at render layer only.
+5. **CategoryChart memoization broken by budget store subscription** — chart animation replays on every budget field keystroke if any budget state subscription exists inside `CategoryChart`'s subtree. Keep `BudgetSection` as a separate grid row below the chart. Also replace `data?.categoryBreakdown ?? []` at `DashboardPage.tsx` line 83 with a module-scope `const EMPTY_BREAKDOWN: CategoryBreakdownItem[] = []` to stabilize the `useMemo` dependency.
 
-4. **Timezone confusion on statement dates and transaction timestamps** — API timestamps in UTC, statement cycle boundaries in Vietnam local time (UTC+7); `new Date("2025-12-15")` parses as midnight UTC, silently wrong; statement grouping fails only in UTC CI environments. Prevention: determine API timezone convention in Phase 1 and document it; use `date-fns-tz` with explicit `Asia/Ho_Chi_Minh` timezone for all statement cycle date parsing.
+6. **Conversation starters auto-send before apiConfig loads** — React 19 strict mode double-invokes effects; `chatStore` null-config guard persists an error message to localStorage. Starters must pre-fill `ChatInput` field only — never `useEffect` auto-send. The user must explicitly press Enter.
 
-5. **Fetching all transactions without pagination on first load** — mock has 20-50 rows; production may have 2,000-5,000; initial load hangs, DOM renders 5,000 nodes, mobile scroll is unusable. Prevention: design API adapter interface with pagination params (`page`, `limit`) from day one even if initial implementation returns all; add `@tanstack/react-virtual` for list virtualization before adding features.
-
-6. **Storing server data in Zustand / overengineered global state** — API response arrays pushed into Zustand, manual loading/error state dispatched via effects, cache invalidation written by hand; high-cost refactor if discovered late. Prevention: define the rule at project start — "API data lives in TanStack Query, user interaction state lives in Zustand" — and enforce it in code review.
+7. **Previous-period query fires when dateFrom is null** — `dashboardStore` starts with `dateFrom: null`. Gate both the previous-period query and all delta UI with `enabled: Boolean(dateFrom && dateTo)`. Use distinct key prefix `['dashboardStats', 'prev', ...]` to avoid cache collision with current-period query.
 
 ## Implications for Roadmap
 
-Based on the dependency graph, architectural build order, and pitfall phase-to-prevention mapping from all 4 research files, the following phase structure is recommended:
+The dependency graph is clear. The phase structure follows it directly, with Categories as the only non-negotiable first step.
 
-### Phase 1: Foundation and Data Infrastructure
+### Phase 1: Transaction Categories
 
-**Rationale:** The dependency graph from FEATURES.md is unambiguous — every feature requires API data, and API data requires the service layer, type definitions, and mock API to exist first. Pitfalls 1-6 all have Phase 1 prevention points. None of the Phase 1 decisions are easily changed later without high refactor cost. This is the highest-leverage phase.
+**Rationale:** Hard prerequisite for Budget Tracking — budgets group spending by category, so categories must exist first. Also establishes `VALID_CATEGORIES` constant, `categoryStore` localStorage pattern, and `filterStore.categoryId` addition that all other phases build on. The only MEDIUM-complexity item in v1.1; front-load it.
 
-**Delivers:** Working data foundation — TypeScript domain types, Zod-validated API service layer, MSW mock API with realistic fixture data mirroring real API schema, Zustand filter stores, TanStack Query configuration with correct staleTime settings, and a single-page proof of a working data fetch → render pipeline.
+**Delivers:** Auto-classification of all expense transactions, category badge on transaction rows, user override via one-click popover (persists to localStorage), category filter dropdown in FilterBar, `utils/categories.ts` and `categoryStore.ts` as shared infrastructure.
 
-**Addresses:** API integration (mock + real), TypeScript contracts for all domain models (Transaction, BankAccount, CreditCard, BillingCycle), server state vs. client state architectural boundary
+**Addresses features:** CAT-01 (auto-classify), CAT-02 (user override), CAT-03 (category filter)
 
-**Avoids:** API secret exposure, mock-to-real schema mismatch, float arithmetic on currency, timezone confusion (establish conventions here), overengineered global state, pagination not designed in from start
+**Avoids pitfalls:** Pitfall 1 (useShallow with actions — establish pattern here), Pitfall 2 (classifier on null merchantName — run against full fixture immediately), Pitfall 4 (budget key mismatch — define `VALID_CATEGORIES` here before budget store exists)
 
-**Research flag:** Needs `/gsd:research-phase` — the real third-party banking API (endpoint structure, authentication method, response schema, whether billing cycle data is available) must be verified before finalizing TypeScript types and mock fixtures. This is the highest-uncertainty point in the project.
+**First action before writing code:** Confirm the exact category strings in `src/mocks/handlers.ts` lines 149–159 `categoryBreakdown`. The `VALID_CATEGORIES` set must match what the API returns, not assumed values.
 
-### Phase 2: Core Transaction Views
+**Research flag:** Standard patterns — no additional research needed. Merchant map + `resolveCategory()` is a pure TypeScript pattern. Unit test classifier against all 70 bank + 59 CC fixture transactions before wiring to any component.
 
-**Rationale:** With the data layer in place, the transaction list and dashboard overview can be built with real data flowing through. FEATURES.md dependency graph shows these are independent of each other but both depend on Phase 1. ARCHITECTURE.md suggests building shared components before feature components.
+### Phase 2: Budget Tracking
 
-**Delivers:** Transaction list for bank accounts with date/merchant/amount/category display, transaction list for credit cards, dashboard overview with account balances and income/expense totals, filter controls (date range, account, transaction type, text search), and all loading/error/empty states.
+**Rationale:** Requires Phase 1's `VALID_CATEGORIES` and the category classification infrastructure. Reuses existing `useDashboardStats` `categoryBreakdown` data — no new API calls or MSW handler changes needed. After Categories, this is the highest user value feature for the lowest remaining implementation cost.
 
-**Uses:** TanStack Query `useQuery` via feature hooks, Zustand filter stores, shadcn/ui components, Tailwind CSS, date-fns for relative date display, Intl.NumberFormat for VND currency formatting
+**Delivers:** `budgetStore` with Zod-validated localStorage persistence, `BudgetProgress` (progress bar + inline input) and `BudgetSection` (container) components on Dashboard, green/amber/red threshold states, inline budget editing (blur/enter to save), total budget summary row.
 
-**Implements:** TransactionList component, TransactionFilters component, TransactionSearch component, DashboardPage with BalanceSummary, shared LoadingSpinner/ErrorBoundary/EmptyState components
+**Addresses features:** BUDGET-01 (budget storage), BUDGET-02 (progress bars on dashboard), BUDGET-03 (threshold alerts via sonner toast.warning)
 
-**Avoids:** Rendering all rows without virtualization (add `@tanstack/react-virtual`), non-explicit date formatting (use date-fns `format()` with `dd/MM/yyyy`, never `toLocaleDateString()`), full-page spinner (skeleton loading on individual data sections)
+**Avoids pitfalls:** Pitfall 4 (use `VALID_CATEGORIES` from Phase 1 for store typing), Pitfall 5 (keep `BudgetSection` as sibling grid row below `CategoryChart`, not inside it)
 
-**Research flag:** Standard patterns; skip `/gsd:research-phase`. TanStack Query filter + pagination pattern is well-documented.
+**Pre-check:** Verify `src/components/ui/progress.tsx` exists. If absent: `npx shadcn@latest add progress`.
 
-### Phase 3: Credit Card Billing Cycle Feature
+**Research flag:** Standard patterns — Zustand localStorage pattern is documented and proven by `chatStore.ts`. No additional research needed.
 
-**Rationale:** This is the product differentiator and the highest-complexity feature. It depends on Phase 2 (transaction list must exist) and requires the billing cycle date math utilities and statement date data from the API. It is isolated from the bank account features, making it a clean third phase. FEATURES.md flags billing cycle data availability as the single largest feature risk.
+### Phase 3: Month-over-Month Dashboard
 
-**Delivers:** Credit card billing cycle display (current cycle start/end, statement date, days until close), transactions grouped by billing cycle (not calendar month), BillingCycleCard component with period summary, and the statement cycle boundary date math utilities in `src/utils/formatDate.ts`.
+**Rationale:** Fully independent of Categories and Budget. Placed after Phase 2 to avoid simultaneous edits to `DashboardPage.tsx`. The date utility work here is the most technically precise task in v1.1 and benefits from dedicated focus.
 
-**Uses:** date-fns 3.x (addMonths, setDate, differenceInDays, isBefore), date-fns-tz for timezone-explicit parsing of statement dates, billing cycle API data from Phase 1 mock fixtures
+**Delivers:** `getPreviousPeriod()` and `getCalendarMonthBoundaries()` utilities in `src/utils/dates.ts` (with unit tests covering all boundary cases), parallel previous-period query in `useDashboardStats` with distinct cache key, delta props on `StatCard`, delta arrows hidden when no date range is selected, MSW `/dashboard/stats` handler updated to return date-aware filtered sums.
 
-**Implements:** BillingCycleCard component, `groupTransactionsByBillingCycle()` utility, `getCurrentBillingCycle()` utility, CreditCardPage, useBillingCycles hook
+**Addresses features:** DASH-V2-01 (delta on income/expense stat cards), DASH-V2-02 (delta on category breakdown)
 
-**Avoids:** Billing cycle logic in JSX (keep in pure utils), new Date() without timezone on statement dates, confusing "transaction date" and "statement date" in the UI
+**Avoids pitfalls:** Pitfall 3 (UTC+7 boundary drift — `getCalendarMonthBoundaries()` must be written and tested first), Pitfall 7 (null dateFrom guard — `enabled: Boolean(dateFrom && dateTo)`), layout shift from two queries settling at different times (use `placeholderData` or show skeleton until both queries settle)
 
-**Research flag:** Needs API verification — confirm whether the third-party API returns `statementDate`, `billingCycleStart/End`, and `paymentDueDate`. If not, the fallback (user-configured cycle day) must be designed in this phase. The fallback decision point may need `/gsd:research-phase` depending on what the real API provides.
+**First action before writing code:** Verify current MSW `/dashboard/stats` handler behavior — does it return static aggregated totals regardless of date params, or does it already filter by date? This determines the handler update scope.
 
-### Phase 4: Data Visualization and Polish
+**Research flag:** Careful implementation required — date boundary logic for UTC+7 is a known subtle correctness issue that won't surface in casual browser testing. Unit test all edge cases (December→January, January→February 28/29 days, February→March) in a UTC environment (`TZ=UTC npx vitest`) before wiring to UI.
 
-**Rationale:** Charts (category breakdown, spend vs. previous cycle comparison) depend on fully working transaction lists with correct billing cycle grouping. These are v1.x features per FEATURES.md and should not block the core product launch. Polish features (billing cycle summary card, upcoming statement date highlight, running balance) also belong here.
+### Phase 4: CSV Export
 
-**Delivers:** Category breakdown donut chart (Recharts), spend vs. previous billing cycle comparison, Billing Cycle Summary Card, upcoming statement date visual indicator, and responsive layout verification across breakpoints.
+**Rationale:** Fully independent of all other features. Placed after Phase 3 to avoid concurrent FilterBar edits — Phase 1 already added `CategoryFilter`; this phase adds `ExportButton` to the same FilterBar. The architectural decision (dedicated fetch vs. cache read) must be locked in first; it cannot be changed without breaking data completeness.
 
-**Uses:** Recharts 2.x for charts, `useMemo` for memoized chart data aggregation, React.memo on chart components to prevent re-animation on filter changes
+**Delivers:** `src/utils/export.ts` (pure function, unit tested with Vietnamese edge cases), dedicated `getTransactionsForExport()` in `src/services/accounts.ts` (limit=1000, no cursor, no TanStack Query caching), `src/hooks/useExport.ts` (calls service + Blob download), Export button in FilterBar, UTF-8 BOM, Vietnamese column headers, VND as raw integers, date-range-contextual filename.
 
-**Implements:** SpendingChart component, CategoryBreakdown component, BillingCycleSummaryCard, responsive Tailwind grid breakpoints verified on mobile
+**Addresses features:** EXP-01 (export currently filtered transactions), EXP-02 (UTF-8 BOM, Vietnamese characters, meaningful filename)
 
-**Avoids:** Chart libraries re-rendering on every transaction update (memoize chart data derivation), chart data computed inline in JSX (extract to hook or memo)
+**Avoids pitfalls:** Pitfall 6 (dedicated fetch not `pages.flatMap` — lock this in as Phase 4's first decision), UX pitfall (generic filename — include filter date range in filename)
 
-**Research flag:** Standard patterns; skip `/gsd:research-phase`. Recharts declarative API and Tailwind responsive breakpoints are well-documented.
+**First action before writing code:** Define `getTransactionsForExport(accountId, filters, limit=1000)` signature in `src/services/accounts.ts` and commit it before building any UI. This prevents the cache-read antipattern from being introduced under time pressure.
 
-### Phase 5: Real API Integration and Production Readiness
+**Research flag:** Standard patterns — Blob download via native Web API is well-documented. papaparse `Papa.unparse()` usage is straightforward. No additional research needed.
 
-**Rationale:** The mock API was built to match the real API schema (Phase 1 enforced this), so real integration should be primarily configuration — swap base URL, wire authentication. This phase validates that assumption and addresses production-only concerns: CORS, security review, performance under real data volumes.
+### Phase 5: Chatbot UX Polish
 
-**Delivers:** Real API integration (replace MSW with actual banking API calls), CORS proxy setup if required, API key security audit (no keys in JS bundle), performance verification with real transaction volumes, Content Security Policy headers, and the "looks done but isn't" checklist from PITFALLS.md completed.
+**Rationale:** Fully independent of all other features. Lowest regression risk — makes a safe final step. Verify what is already done before writing any new code; `ChatMessage.tsx` copy button, regenerate, and delete actions are already confirmed implemented.
 
-**Uses:** Actual third-party banking API, serverless proxy (Netlify/Vercel function) if CORS or auth requires it, `@tanstack/react-virtual` verified under real transaction count
+**Delivers:** `ConversationStarters.tsx` component with 4 Vietnamese-language prompts that pre-fill (never auto-send) `ChatInput`, improved message bubble visual polish, cleaner empty state, starters reappear after chat clear.
 
-**Implements:** Production API adapter, proxy function if needed, CSP meta tag, account number masking (last 4 digits only), no financial data in localStorage verification
+**Addresses features:** CHAT-UX-01 (conversation starters), CHAT-UX-02 (copy feedback — likely already done), CHAT-UX-03 (visual polish)
 
-**Avoids:** API key in VITE_ env vars, CORS proxy with Access-Control-Allow-Origin: * (restrict to production domain), financial data cached in localStorage
+**Avoids pitfalls:** Pitfall 6 variant (auto-send before apiConfig loads — pre-fill only, never `useEffect` send), iOS Safari clipboard requirement (call `clipboard.writeText()` only inside `onClick`, never in `setTimeout`)
 
-**Research flag:** May need `/gsd:research-phase` specifically for the proxy setup if the real API requires server-side OAuth or signed requests. Standard REST integration with Bearer token does not need additional research.
+**Pre-check:** Read `ChatMessage.tsx` fully and confirm copy button behavior before writing any code. Most of CHAT-UX-02 may already be complete. Audit `ChatSettings.tsx` for what polish is actually needed vs. already present.
+
+**Research flag:** No research needed — pure React + Tailwind work on existing components with known patterns.
 
 ### Phase Ordering Rationale
 
-- **Types before components** (Phase 1 → Phase 2): ARCHITECTURE.md build order is explicit — domain types must exist before any code that consumes them; this prevents refactoring component props when type shapes are discovered
-- **Mock API before UI** (Phase 1): MSW handlers enable all UI development to proceed without real API dependency; avoids the "blocked by API team" problem that kills frontend velocity
-- **Server-state architecture decided before first data fetch** (Phase 1): PITFALLS.md rates overengineered global state recovery as HIGH cost; the TanStack Query / Zustand boundary must be established in Phase 1 infrastructure, not discovered as a problem in Phase 3
-- **Transaction lists before charts** (Phase 2 → Phase 4): Category charts depend on transaction data; you cannot verify chart correctness until transaction data and categorization are stable
-- **Billing cycle after basic transactions** (Phase 2 → Phase 3): BillingCycleCard depends on TransactionList for CC transactions; building billing cycle display first would require building transaction list anyway
-- **Real API last** (Phase 5): Mock was built to exactly mirror real API schema (Phase 1 enforced this); integration should be a configuration change, not a code rewrite; production-only concerns (CORS, CSP) are meaningless on localhost
+- **Categories first** is the only non-negotiable ordering constraint. Budget Tracking depends on `VALID_CATEGORIES` and `categoryStore`. No other dependency is hard.
+- **Budget second** while Categories context is fresh in the codebase. Avoids re-opening `DashboardPage.tsx` after Month-over-Month adds its dashboard edits.
+- **Month-over-Month third** is self-contained but benefits from Categories and Budget already settling `DashboardPage.tsx` before adding delta UI to the same page.
+- **CSV Export fourth** keeps FilterBar modifications sequential: Categories adds the filter dropdown in Phase 1, Export adds the button in Phase 4.
+- **Chatbot last** has zero cross-feature dependencies and zero risk of breaking any data flow.
 
 ### Research Flags
 
-Needs `/gsd:research-phase` during planning:
-- **Phase 1:** Real third-party banking API research — verify endpoint structure, authentication method (Bearer vs. OAuth), response schema (field names, data types, amount format), and whether billing cycle / statement date data is available on the API. This is the most critical unknown in the project.
-- **Phase 5 (conditional):** Proxy setup research — if the real API requires server-side OAuth token exchange or signed requests, research the correct serverless proxy pattern for the chosen deployment platform (Netlify/Vercel/Cloudflare)
+**Phases needing careful implementation verification (not additional research):**
+- **Phase 1 (Categories):** Confirm `categoryBreakdown` key strings in handlers.ts before defining `VALID_CATEGORIES`. Run classifier unit test against full 70-transaction fixture before wiring to any component.
+- **Phase 3 (Month-over-Month):** Write and unit-test `getCalendarMonthBoundaries()` before building delta UI. Check MSW handler date-filtering behavior before modifying it.
+- **Phase 4 (CSV Export):** Lock in `getTransactionsForExport()` as a dedicated service function as Phase 4's first commit. Verify export row count equals API total, not loaded pages count.
 
-Phases with standard patterns (skip `/gsd:research-phase`):
-- **Phase 2:** TanStack Query filter + pagination with Zustand is a well-documented community pattern; shadcn/ui component integration is straightforward
-- **Phase 3:** date-fns billing cycle arithmetic is deterministic; the pattern is defined in STACK.md and ARCHITECTURE.md
-- **Phase 4:** Recharts declarative chart components and Tailwind responsive design are well-documented
+**Phases with fully standard patterns (implement directly):**
+- **Phase 2 (Budget):** Zustand localStorage pattern mirrors `chatStore.ts`. shadcn `progress` is a CLI add.
+- **Phase 5 (Chatbot):** Audit existing `ChatMessage.tsx` first — most work may already be done.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM | All library choices are well-reasoned from training data (Aug 2025 cutoff); React 19, TanStack Query v5, Zustand v4, shadcn/ui, Recharts 2.x, MSW 2.x, date-fns 3.x are all stable releases. WebFetch unavailable for current version verification — check shadcn/ui Tailwind 4 compatibility status before project start. |
-| Features | MEDIUM | Analysis based on established competitors (Mint, Monarch Money, Copilot, Empower) and standard banking UX patterns. The billing cycle grouping differentiator is well-identified. Key gap: real API billing cycle data availability is unverified and is the single largest feature risk. |
-| Architecture | MEDIUM | Patterns (TanStack Query / Zustand split, MSW adapter, feature hook layer) are established community conventions, not novel choices. HIGH confidence on the patterns themselves; MEDIUM because specific API integration pattern depends on unknown real API authentication method. |
-| Pitfalls | MEDIUM-HIGH | CORS specification, IEEE 754 float behavior, and timezone parsing are specification-level facts (HIGH). Vietnamese banking API specific conventions (amount as integer string) rated LOW confidence — must verify against real API docs. Other pitfalls (mock-to-real mismatch, global state antipatterns) are MEDIUM — well-documented community patterns. |
+| Stack | HIGH | Direct `package.json` and source file inspection; papaparse version confirmed via search (npm page returned 403 but search results concordant) |
+| Features | HIGH | v1.1 features validated against live codebase; Vietnamese market conventions confirmed via Money Lover/Money Keeper competitor analysis |
+| Architecture | HIGH | Every component boundary and data flow pattern mapped to specific source files with line references; no speculation |
+| Pitfalls | HIGH | Every pitfall maps to a specific line of existing code (e.g., `filterStore.ts` line 43, `DashboardPage.tsx` line 83); not generic React advice |
 
-**Overall confidence:** MEDIUM
+**Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Real API billing cycle data:** The core differentiator (billing cycle grouping) depends on the third-party API returning `statementDate`, `billingCycleStart`, `billingCycleEnd`, and ideally `paymentDueDate`. This is unverified. Resolution: inspect actual API documentation before Phase 3 begins; design Phase 1 mock to include this data so Phase 3 is unblocked; plan user-configured cycle day as the fallback path.
+- **papaparse version pinning**: npm page returned 403 during research; v5.5.3 confirmed via search results but not directly verified on registry. Pin to `^5.5.3`, run `npm install`, and verify `package-lock.json` after install before proceeding.
 
-- **Real API response schema:** Amount format (number vs. string), field naming convention (camelCase vs. snake_case), pagination pattern (offset/limit vs. cursor), and timestamp format (ISO 8601 UTC vs. local date strings) are all unknown for the real API. Resolution: read actual API documentation during Phase 1 research; build mock fixtures and Zod schemas to exactly match real API schema.
+- **MSW handler date filtering**: The current `/dashboard/stats` handler was inspected structurally but not runtime-tested. Month-over-Month phase must begin by verifying actual handler behavior: does it compute period-specific totals from fixture data based on date params, or return static aggregated sums? If static, update the handler before building any delta UI.
 
-- **Authentication and CORS model:** Whether the real API supports browser direct calls with a Bearer token, or requires server-side authentication (OAuth flow, signed requests), determines whether a proxy is needed and how much production architecture complexity is introduced. Resolution: determine in Phase 1 research; if proxy is required, plan Phase 5 accordingly.
+- **`categoryBreakdown` category key set**: Research identified a risk that fixture data uses both `'food'` and `'dining'` as separate keys. The exact set returned by `src/mocks/handlers.ts` lines 149–159 must be confirmed by direct inspection before defining `VALID_CATEGORIES`. Do not assume — read the handler.
 
-- **shadcn/ui + Tailwind 4 compatibility:** STACK.md notes that shadcn/ui's Tailwind 4 support was in progress as of early 2026. If Tailwind 4 is used, verify shadcn/ui compatibility before project initialization. If uncertain, use Tailwind 3.x (explicitly supported by shadcn/ui).
-
-- **Vietnamese locale date formatting:** VND currency formatting with `Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' })` may display differently across operating systems. PITFALLS.md flags this for explicit verification. Resolution: test VND output format during Phase 2 before relying on it for all currency display.
+- **iOS Safari clipboard**: The existing `ChatMessage.tsx` copy button may or may not invoke `clipboard.writeText()` directly inside `onClick`. Verify this before marking CHAT-UX-02 complete; iOS Safari requires the clipboard API to be called within a user gesture handler.
 
 ## Sources
 
-### Primary (HIGH confidence)
-- ECMAScript specification — IEEE 754 floating-point behavior (float arithmetic in JavaScript)
-- ECMAScript Internationalization API — `Intl.NumberFormat` currency formatting behavior
-- MDN Web Docs / Fetch Living Standard — CORS specification and browser enforcement
-- date-fns 3.x documentation — billing cycle arithmetic functions
+### Primary — HIGH confidence (direct codebase inspection)
+- `src/stores/filterStore.ts` lines 43–53 — useShallow selector pattern, Zustand v5 double-curry
+- `src/stores/chatStore.ts` lines 38–73, 82 — localStorage persistence pattern, apiConfig null guard
+- `src/stores/dashboardStore.ts` — null dateFrom/dateTo initial state
+- `src/features/dashboard/CategoryChart.tsx` lines 36–47, 84–96 — CATEGORY_LABELS, useMemo comment and `?? []` risk
+- `src/hooks/useDashboardStats.ts` — queryKey shape `['dashboardStats', { dateFrom, dateTo }]`
+- `src/hooks/useTransactions.ts` — infinite query key shape, undefined sentinel pattern
+- `src/features/chatbot/useChatApi.ts` lines 41, 47–54 — pages.flatMap pattern, apiConfig guard
+- `src/mocks/handlers.ts` line 41 — date comparison `tx.transactionDate >= dateFrom`; lines 149–159 — category aggregation
+- `src/mocks/fixtures/transactions.ts` — merchant names, category strings, income transactions without merchantName
+- `src/types/account.ts` line 19 — `merchantName: z.string().optional()`
+- `src/pages/DashboardPage.tsx` line 83 — `data?.categoryBreakdown ?? []` fallback
+- `src/features/chatbot/ChatMessage.tsx` lines 18–24, 101–125 — copy/regenerate/delete already implemented
+- `package.json` — locked stack versions
 
-### Secondary (MEDIUM confidence)
-- React 19 stable release (Dec 2024) — https://react.dev/blog
-- TanStack Query v5 migration guide — https://tanstack.com/query/v5/docs/framework/react/guides/migrating-to-v5
-- shadcn/ui component library — https://ui.shadcn.com/
-- MSW 2.x documentation — https://mswjs.io/docs/
-- Plaid API liabilities endpoint pattern — https://plaid.com/docs/liabilities/
-- Industry analysis of Mint, Monarch Money, Copilot, Empower — established competitor feature patterns (training data Aug 2025)
-- React ecosystem architectural conventions — TanStack Query / Zustand separation pattern (community consensus, documented in multiple architecture guides)
+### Secondary — MEDIUM confidence (WebSearch verification)
+- papaparse v5.5.3 — confirmed via search results (npm page returned 403)
+- `@types/papaparse` — updated Dec 2025 on DefinitelyTyped
+- shadcn/ui `progress` component — confirmed on ui.shadcn.com docs; uses `@radix-ui/react-progress`
+- Zustand `persist` middleware v5 double-curry pattern — confirmed across multiple concordant sources
+- UTF-8 BOM `'\uFEFF'` for Excel CSV — widely documented, RFC 4180 standard approach
 
-### Tertiary (LOW confidence)
-- Vietnamese banking API response format (VND as integer string) — known from VND monetary convention (0 decimal places, ISO 4217); actual format varies by provider; must verify against real API docs
-- Specific shadcn/ui + Tailwind 4 compatibility status (early 2026) — flagged in STACK.md as "in progress"; verify before project initialization
+### Tertiary — MEDIUM confidence (market/competitor research)
+- Money Lover, Money Keeper Vietnamese app conventions — 6-category structure with emoji icons
+- Nielsen Norman Group: Prompt controls in GenAI chatbots — conversation starters UX pattern
+- Eleken, G&Co. fintech UX best practices — budget progress bar threshold conventions (80%/100%)
+- B-Company, FintechNews SG — Vietnamese market context (Windows + Excel primary spreadsheet tool)
 
 ---
-*Research completed: 2026-03-02*
+*Research completed: 2026-03-08*
 *Ready for roadmap: yes*
