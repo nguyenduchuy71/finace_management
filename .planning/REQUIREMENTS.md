@@ -60,28 +60,21 @@
 | Multi-user auth | Personal tool, single user |
 | PDF export | CSV sufficient for v1.1; PDF deferred to v1.2 |
 
-## Traceability
+## Traceability to Roadmap
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| CAT-01 | Phase 7 | Pending |
-| CAT-02 | Phase 7 | Pending |
-| CAT-03 | Phase 7 | Pending |
-| BUDGET-01 | Phase 8 | Pending |
-| BUDGET-02 | Phase 8 | Pending |
-| BUDGET-03 | Phase 8 | Pending |
-| DASH-V2-01 | Phase 9 | Pending |
-| DASH-V2-02 | Phase 9 | Pending |
-| EXP-01 | Phase 10 | Pending |
-| EXP-02 | Phase 10 | Pending |
-| CHAT-UX-01 | Phase 11 | Pending |
-| CHAT-UX-02 | Phase 11 | Pending |
-| CHAT-UX-03 | Phase 11 | Pending |
+| Requirement | Phase | Phase Name | Status |
+|-------------|-------|-----------|--------|
+| CAT-01, CAT-02, CAT-03 | 7 | Transaction Categories | Pending |
+| BUDGET-01, BUDGET-02, BUDGET-03 | 8 | Budget Tracking | Pending |
+| DASH-V2-01, DASH-V2-02 | 9 | Month-over-Month Dashboard | Pending |
+| EXP-01, EXP-02 | 10 | CSV Export | Pending |
+| CHAT-UX-01, CHAT-UX-02, CHAT-UX-03 | 11 | Chatbot UX Polish | Pending |
 
 **Coverage:**
 - v1.1 requirements: 13 total
-- Mapped to phases: 13
+- Mapped to phases: 13 (Phases 7–11)
 - Unmapped: 0 ✓
+- Phase dependencies: 7 → 8, 7 → 10; all others independent
 
 ---
 *Requirements defined: 2026-03-08*
