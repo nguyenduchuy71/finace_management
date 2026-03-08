@@ -28,14 +28,18 @@ Người dùng có thể xem toàn bộ giao dịch ngân hàng và thẻ tín d
 - ✓ Người dùng có thể yêu cầu chatbot phân tích giao dịch via Anthropic SDK (ChatBot) — v1.0
 - ✓ App deployed to Vercel with production MSW guard — v1.0
 
-### Active (v1.1+)
+### Active (v1.1)
+
+- [ ] Transaction categories: auto-classify transactions, user can override (CAT-01, CAT-02, CAT-03) — v1.1
+- [ ] Budget tracking: set monthly budgets per category, progress bar on dashboard, alert when approaching limit (BUDGET-01, BUDGET-02, BUDGET-03) — v1.1
+- [ ] Month-over-month comparison: this month vs last month stat cards on dashboard (DASH-V2-01, DASH-V2-02) — v1.1
+- [ ] Chatbot UX polish: cleaner chat bubbles, conversation starters, copy button, better settings (CHAT-UX-01, CHAT-UX-02, CHAT-UX-03) — v1.1
+- [ ] CSV export: export filtered transactions to CSV (EXP-01, EXP-02) — v1.1
+
+### Deferred (v1.2+)
 
 - [ ] Kết nối với real third-party banking API (thay MSW mock) — API-01
 - [ ] Serverless proxy (Vercel Function) để xử lý CORS và bảo vệ API key — API-02
-- [ ] Người dùng có thể xuất danh sách giao dịch ra CSV — EXP-01
-- [ ] Budget tracking: đặt ngân sách theo danh mục và xem cảnh báo khi vượt — BUDGET-01
-- [ ] So sánh chi tiêu tháng này vs tháng trước trên dashboard — DASH-V2-01
-- [ ] Cải thiện chatbot UX: cleaner message display, better settings UI — CHAT-UX-01
 - [ ] Thêm thông báo khi số dư tài khoản thấp hoặc sắp đến ngày sao kê — NOTIF-01
 
 ### Out of Scope
@@ -92,5 +96,15 @@ Người dùng có thể xem toàn bộ giao dịch ngân hàng và thẻ tín d
 - TypeScript validator reads root tsconfig.json ✓ (added compilerOptions.paths)
 - Vitest strict mode TypeScript ✓ (defineConfig from vitest/config, not vite)
 
+## Current Milestone: v1.1 — Smart Insights & Polish
+
+**Goal:** Enrich the transaction experience with categories and budgets, add month-over-month comparison, polish the chatbot UX, and add CSV export.
+
+**Target features:**
+- Transaction categories (auto-classify + user override) + budget tracking with dashboard progress
+- Month-over-month comparison on dashboard stat cards
+- Chatbot UX polish — conversation starters, cleaner bubbles, better settings
+- CSV export of filtered transactions
+
 ---
-*Last updated: 2026-03-08 after v1.0 milestone completion*
+*Last updated: 2026-03-08 after v1.1 milestone started*

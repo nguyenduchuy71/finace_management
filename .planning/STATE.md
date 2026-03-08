@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Planning next milestone
-status: between_milestones
-stopped_at: "v1.0 archived. Ready to plan v1.1."
+milestone_name: Smart Insights & Polish
+status: planning
+stopped_at: ""
 last_updated: "2026-03-08T00:00:00.000Z"
-last_activity: 2026-03-08 — v1.0 milestone archived (6 phases, 19 plans). Ready for v1.1 planning.
+last_activity: 2026-03-08 — Milestone v1.1 started. Defining requirements.
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
