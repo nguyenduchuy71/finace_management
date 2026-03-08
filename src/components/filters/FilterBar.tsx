@@ -2,6 +2,7 @@ import { Filter } from 'lucide-react'
 import { SearchInput } from './SearchInput'
 import { DateRangePicker } from './DateRangePicker'
 import { TransactionTypeFilter } from './TransactionTypeFilter'
+import { CategoryFilter } from './CategoryFilter'
 import { Button } from '@/components/ui/button'
 import { useFilterStore } from '@/stores/filterStore'
 
@@ -11,13 +12,15 @@ export function FilterBar() {
   const dateFrom = useFilterStore((s) => s.dateFrom)
   const dateTo = useFilterStore((s) => s.dateTo)
   const txType = useFilterStore((s) => s.txType)
+  const category = useFilterStore((s) => s.category)
 
-  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all')
+  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all' || category !== 'all')
 
   return (
     <div className="flex flex-wrap gap-3 py-3 border-b border-border">
       <SearchInput />
       <DateRangePicker />
+      <CategoryFilter />
       <TransactionTypeFilter />
       {hasActiveFilters && (
         <Button

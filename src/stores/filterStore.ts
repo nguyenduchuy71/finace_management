@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
+import type { Category } from '@/types/categories'
 
 interface FilterState {
   accountId: string | null
@@ -8,12 +9,14 @@ interface FilterState {
   dateTo: string | null
   searchQuery: string
   txType: 'all' | 'income' | 'expense'
+  category: Category | 'all'
   // Actions
   setAccountId: (id: string | null) => void
   setCardId: (id: string | null) => void
   setDateRange: (from: string | null, to: string | null) => void
   setSearchQuery: (q: string) => void
   setTxType: (type: FilterState['txType']) => void
+  setCategory: (category: Category | 'all') => void
   resetFilters: () => void
 }
 
@@ -24,6 +27,7 @@ const defaultState = {
   dateTo: null,
   searchQuery: '',
   txType: 'all' as const,
+  category: 'all' as const,
 }
 
 export const useFilterStore = create<FilterState>()((set) => ({
@@ -33,6 +37,7 @@ export const useFilterStore = create<FilterState>()((set) => ({
   setDateRange: (dateFrom, dateTo) => set({ dateFrom, dateTo }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setTxType: (txType) => set({ txType }),
+  setCategory: (category) => set({ category }),
   resetFilters: () => set(defaultState),
 }))
 
@@ -48,6 +53,7 @@ export function useFilterParams() {
       dateTo: state.dateTo,
       searchQuery: state.searchQuery,
       txType: state.txType,
+      category: state.category,
     }))
   )
 }
