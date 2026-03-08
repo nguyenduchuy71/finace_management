@@ -25,7 +25,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
-### 📋 Phase 7: Transaction Categories
+## Phase 7: Transaction Categories
 **Goal**: Each transaction shows a category badge auto-classified from merchant name. Users can override and filter by category.
 **Depends on**: Phase 6 (v1.0 complete)
 **Requirements**: CAT-01, CAT-02, CAT-03
@@ -34,9 +34,12 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. User can click category badge to override (modal or inline edit) — override persists in localStorage
   3. FilterBar has new category filter control; filtering by category narrows the list
   4. All existing tests pass; no regression in transaction list rendering
-**Plans**: 2–3 plans
+**Plans**: 3 plans
+- [ ] 07-01-PLAN.md — Foundation: utilities, store, badge component
+- [ ] 07-02-PLAN.md — UI Integration: FilterBar, TransactionRow, service wiring
+- [ ] 07-03-PLAN.md — MSW handlers and integration tests
 
-### 📋 Phase 8: Budget Tracking
+## Phase 8: Budget Tracking
 **Goal**: Users set monthly budgets per category and see progress on dashboard.
 **Depends on**: Phase 7 (categories must exist first)
 **Requirements**: BUDGET-01, BUDGET-02, BUDGET-03
@@ -47,7 +50,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   4. Budgets persist in localStorage; no backend required
 **Plans**: 2–3 plans
 
-### 📋 Phase 9: Month-over-Month Dashboard
+## Phase 9: Month-over-Month Dashboard
 **Goal**: Dashboard stat cards show spending delta vs previous month to highlight trends.
 **Depends on**: Phase 6 (dashboard exists)
 **Requirements**: DASH-V2-01, DASH-V2-02
@@ -58,7 +61,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   4. No extra API calls; delta calculated from existing dashboard data
 **Plans**: 1–2 plans
 
-### 📋 Phase 10: CSV Export
+## Phase 10: CSV Export
 **Goal**: Filtered transactions can be exported to CSV for spreadsheets and tax prep.
 **Depends on**: Phase 7 (categories needed for CSV column)
 **Requirements**: EXP-01, EXP-02
@@ -69,7 +72,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   4. No attempt to read from infinite-scroll cache; dedicated service fetch
 **Plans**: 1–2 plans
 
-### 📋 Phase 11: Chatbot UX Polish
+## Phase 11: Chatbot UX Polish
 **Goal**: Improve chat UI with conversation starters, cleaner design, and verified copy button.
 **Depends on**: Phase 5 (chatbot exists from v1.0)
 **Requirements**: CHAT-UX-01, CHAT-UX-02, CHAT-UX-03
@@ -90,7 +93,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 4. Dashboard and Polish | v1.0 | 2/2 | Complete | 2026-03-04 |
 | 5. Chatbot Integration | v1.0 | 3/3 | Complete | 2026-03-04 |
 | 6. Optimize & Deploy | v1.0 | 4/4 | Complete | 2026-03-04 |
-| 7. Transaction Categories | v1.1 | 0/? | Pending | — |
+| 7. Transaction Categories | v1.1 | 0/3 | Pending | — |
 | 8. Budget Tracking | v1.1 | 0/? | Pending | — |
 | 9. Month-over-Month Dashboard | v1.1 | 0/? | Pending | — |
 | 10. CSV Export | v1.1 | 0/? | Pending | — |
