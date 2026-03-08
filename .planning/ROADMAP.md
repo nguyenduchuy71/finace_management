@@ -62,7 +62,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. Delta hidden and replaced with "Chưa đủ dữ liệu" when current month < 5 transactions
   3. Month boundaries use Vietnam UTC+7 timezone (not browser timezone)
   4. No extra API calls; delta calculated from existing dashboard data
-**Plans**: 1–2 plans
+**Plans**: 1 plan
+- [ ] 09-01-PLAN.md — Month-over-month delta utilities, hook, and stat card integration
 
 ## Phase 10: CSV Export
 **Goal**: Filtered transactions can be exported to CSV for spreadsheets and tax prep.
@@ -97,7 +98,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 5. Chatbot Integration | v1.0 | 3/3 | Complete | 2026-03-04 |
 | 6. Optimize & Deploy | v1.0 | 4/4 | Complete | 2026-03-04 |
 | 7. Transaction Categories | v1.1 | 3/3 | Complete | 2026-03-08 |
-| 8. Budget Tracking | v1.1 | Complete    | 2026-03-08 | — |
-| 9. Month-over-Month Dashboard | v1.1 | 0/? | Pending | — |
+| 8. Budget Tracking | v1.1 | 2/3 | In Progress | — |
+| 9. Month-over-Month Dashboard | v1.1 | 0/1 | Pending | — |
 | 10. CSV Export | v1.1 | 0/? | Pending | — |
 | 11. Chatbot UX Polish | v1.1 | 0/? | Pending | — |
