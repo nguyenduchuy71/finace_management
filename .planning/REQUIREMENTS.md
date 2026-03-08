@@ -64,7 +64,8 @@
 
 | Requirement | Phase | Phase Name | Status |
 |-------------|-------|-----------|--------|
-| CAT-01, CAT-02, CAT-03 | 7 | Transaction Categories | Pending |
+| CAT-01, CAT-02 | 7 | Transaction Categories | In Progress (07-01 foundation) |
+| CAT-03 | 7 | Transaction Categories | Pending (07-02 and 07-03) |
 | BUDGET-01, BUDGET-02, BUDGET-03 | 8 | Budget Tracking | Pending |
 | DASH-V2-01, DASH-V2-02 | 9 | Month-over-Month Dashboard | Pending |
 | EXP-01, EXP-02 | 10 | CSV Export | Pending |
