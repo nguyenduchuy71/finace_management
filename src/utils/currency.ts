@@ -29,3 +29,17 @@ export function formatVNDSigned(amount: number): string {
   const sign = amount < 0 ? '- ' : ''
   return `${sign}${formatVND(abs)}`
 }
+
+/**
+ * Parse VND currency input (with thousand separators) to integer.
+ * Examples: "100.000" → 100000, "1.500.000" → 1500000, "0" → 0, "" → 0
+ * Removes all non-digit characters and parses the remaining digits.
+ */
+export function parseVND(input: string): number {
+  if (!input || !input.trim()) {
+    return 0
+  }
+  // Extract all digits, ignoring thousand separators and other characters
+  const digitsOnly = input.replace(/\D/g, '')
+  return digitsOnly ? parseInt(digitsOnly, 10) : 0
+}
