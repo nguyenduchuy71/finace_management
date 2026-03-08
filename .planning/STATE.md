@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: "Completed 06-04 (Vercel Deployment Setup). Awaiting human checkpoint: deploy to Vercel + Lighthouse audit."
-last_updated: "2026-03-08T15:04:55.539Z"
-last_activity: "2026-03-08 — Plan 08-02 checkpoint verification approved. Manual feature testing confirmed: settings dialog opens, currency parsing works, dashboard section displays progress bars with correct colors, budgets persist to localStorage. No regressions."
+status: executing
+stopped_at: "Completed 09-01 (Month-over-Month Dashboard). Ready for next phase or planning session."
+last_updated: "2026-03-08T15:47:00.000Z"
+last_activity: "2026-03-08 — Plan 09-01 execution complete. Month-over-month delta display implemented with 33 new tests. All 231 tests passing. No regressions. Ready for Phase 09 Plan 02 (if exists) or next phase."
 progress:
   total_phases: 5
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 35
+  total_plans: 17
+  completed_plans: 7
+  percent: 41
 ---
 
 # Project State
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 
 ## Current Position
 
-Phase: 08 of 5 (Budget Tracking) — IN PROGRESS
-Plan: 2 of 3 in current phase — COMPLETE (08-02: Budget Settings UI & Dashboard Integration)
-Status: Phase 08 Plan 02 completed. BudgetSettings dialog with VND currency parsing and BudgetProgressSection dashboard integration fully functional. Checkpoint:human-verify approved. All 204 tests passing (8 new + 196 existing). Ready for Plan 08-03.
-Last activity: 2026-03-08 — Plan 08-02 checkpoint verification approved. Manual feature testing confirmed: settings dialog opens, currency parsing works, dashboard section displays progress bars with correct colors, budgets persist to localStorage. No regressions.
+Phase: 09 of 5 (Month-over-Month Dashboard) — IN PROGRESS
+Plan: 1 of 1 in current phase — COMPLETE (09-01: Month-over-Month Deltas for Dashboard Stats)
+Status: Phase 09 Plan 01 completed. Month-over-month delta display implemented: stat cards show % change (↑12% vs tháng trước), suppress delta with "Chưa đủ dữ liệu" when < 5 transactions. All 231 tests passing (33 new + 198 existing). No regressions.
+Last activity: 2026-03-08 — Plan 09-01 execution complete. Parallel month queries, delta calculation, conditional UI display all tested and verified.
 
-Progress: [██████░░░░] 35% (6/17 plans completed)
+Progress: [██████░░░░] 35% (7/17 plans completed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 27 min
-- Total execution time: 1.75 hours
+- Total plans completed: 5
+- Average duration: 25 min
+- Total execution time: 2.08 hours
 
 **By Phase:**
 
@@ -45,10 +45,11 @@ Progress: [██████░░░░] 35% (6/17 plans completed)
 |-------|-------|-------|----------|
 | 07-transaction-categories | 3/3 COMPLETE | 45 min | 15 min |
 | 08-budget-tracking | 1/3 IN PROGRESS | ~1 hour | ~1 hour |
+| 09-month-over-month-dashboard | 1/1 COMPLETE | 22 min | 22 min |
 
 **Recent Trend:**
-- Latest plan: 08-01 (1 hour), 2 tasks, 5 files created
-- Trend: Budget infrastructure stable, 16 new tests, no regressions
+- Latest plan: 09-01 (22 min), 4 tasks, 33 new tests
+- Trend: Efficient execution, full TDD coverage, parallel query patterns, no regressions
 
 *Updated after each plan completion*
 
@@ -58,6 +59,7 @@ Progress: [██████░░░░] 35% (6/17 plans completed)
 | Phase 07 P02 | 23 min | 3 tasks | 4 created, 6 modified |
 | Phase 07 P03 | 10 min | 3 tasks | 3 files modified |
 | Phase 08 P01 | ~1 hour | 2 tasks | 5 files created |
+| Phase 09 P01 | 22 min | 4 tasks | 3 created, 5 modified, 33 tests |
 
 ## Accumulated Context
 
@@ -125,6 +127,10 @@ Recent decisions affecting current work:
 - [Phase 06-04]: VITE_ENABLE_MSW=false set in vercel.json env block — explicit opt-out of MSW at Vercel build time
 - [Phase 06-04]: main.tsx guards MSW with both import.meta.env.DEV AND VITE_ENABLE_MSW \!== 'false' — dual guard for production safety
 - [Phase 06-04]: npm ci used in vercel.json installCommand for reproducible installs
+- [Phase 09-01]: useQueries for parallel month fetching — superior to sequential useQuery calls; automatic loading state mgmt
+- [Phase 09-01]: Delta calculation from existing /dashboard/stats endpoint (no new API calls) — cost-effective, leverages existing data structure
+- [Phase 09-01]: Suppress delta with "Chưa đủ dữ liệu" when transactionCount < 5 — requirement DASH-V2-02, prevents misleading early-month trends
+- [Phase 09-01]: Color semantics for delta: income (↑green, ↓red), expense (↑red, ↓green) — intuitive semantic feedback for users
 
 ### Pending Todos
 
@@ -137,6 +143,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-04T13:38:24.487Z
-Stopped at: Completed 06-04 (Vercel Deployment Setup). Awaiting human checkpoint: deploy to Vercel + Lighthouse audit.
+Last session: 2026-03-08T15:47:00.000Z
+Stopped at: Completed 09-01 (Month-over-Month Dashboard). Plan fully executed, all tests passing (231).
 Resume file: None
