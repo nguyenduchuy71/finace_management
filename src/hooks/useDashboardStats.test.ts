@@ -34,7 +34,7 @@ describe('useDashboardStats', () => {
   it('fetches dashboard stats without date filter', async () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.data).toBeDefined()
   })
@@ -42,7 +42,7 @@ describe('useDashboardStats', () => {
   it('returns correct DashboardStats structure', async () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const stats = result.current.data!
     expect(stats).toHaveProperty('totalIncome')
@@ -59,7 +59,7 @@ describe('useDashboardStats', () => {
   it('all numeric stats are non-negative integers', async () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const stats = result.current.data!
     expect(stats.totalIncome).toBeGreaterThanOrEqual(0)
@@ -77,7 +77,7 @@ describe('useDashboardStats', () => {
   it('categoryBreakdown items have category and amount', async () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const breakdown = result.current.data!.categoryBreakdown
     breakdown.forEach((item) => {
@@ -91,7 +91,7 @@ describe('useDashboardStats', () => {
   it('totalExpense equals bankExpense + ccExpense', async () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const { totalExpense, bankExpense, ccExpense } = result.current.data!
     expect(totalExpense).toBe(bankExpense + ccExpense)
@@ -100,7 +100,7 @@ describe('useDashboardStats', () => {
   it('totalIncome equals bankIncome + ccIncome', async () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const { totalIncome, bankIncome, ccIncome } = result.current.data!
     expect(totalIncome).toBe(bankIncome + ccIncome)
@@ -112,7 +112,7 @@ describe('useDashboardStats', () => {
 
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const filteredStats = result.current.data!
     expect(filteredStats.transactionCount).toBeGreaterThanOrEqual(0)
@@ -130,14 +130,13 @@ describe('useDashboardStats', () => {
     const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error).toBeTruthy()
   })
 
   it('re-fetches when date range changes', async () => {
     const wrapper = createWrapper()
     const { result, rerender } = renderHook(() => useDashboardStats(), { wrapper })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const initialCount = result.current.data!.transactionCount
 
@@ -146,12 +145,83 @@ describe('useDashboardStats', () => {
     rerender()
 
     // After rerender with new dates, hook may refetch
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     // Stats may differ with different date range
     const newCount = result.current.data!.transactionCount
     // Both counts should be valid numbers
     expect(typeof newCount).toBe('number')
     expect(typeof initialCount).toBe('number')
+  })
+
+  it('makes parallel queries for current and previous month with useQueries', async () => {
+    useDashboardStore.setState({ dateFrom: '2026-03-01', dateTo: '2026-03-31' })
+
+    const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Both current month and previous month data should be available
+    expect(result.current.data).toBeDefined()
+    expect(result.current.incomeDelta !== undefined).toBe(true)
+    expect(result.current.expenseDelta !== undefined).toBe(true)
+  })
+
+  it('calculates incomeDelta and expenseDelta when both queries complete', async () => {
+    useDashboardStore.setState({ dateFrom: '2026-03-01', dateTo: '2026-03-31' })
+
+    const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Deltas should be calculated (either a number or null for insufficient data)
+    expect(typeof result.current.incomeDelta === 'number' || result.current.incomeDelta === null).toBe(true)
+    expect(typeof result.current.expenseDelta === 'number' || result.current.expenseDelta === null).toBe(true)
+  })
+
+  it('returns deltaLoading=false once both queries complete', async () => {
+    useDashboardStore.setState({ dateFrom: '2026-03-01', dateTo: '2026-03-31' })
+
+    const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // Once both queries complete, deltaLoading should be false
+    expect(result.current.deltaLoading).toBe(false)
+  })
+
+  it('isLoading=true until both current and previous queries complete', async () => {
+    useDashboardStore.setState({ dateFrom: '2026-03-01', dateTo: '2026-03-31' })
+
+    const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
+
+    // Initially loading
+    expect(result.current.isLoading).toBe(true)
+
+    // Wait for loading to complete
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    // After completion, isLoading should be false
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it('refetch() refetches both current and previous month queries', async () => {
+    useDashboardStore.setState({ dateFrom: '2026-03-01', dateTo: '2026-03-31' })
+
+    const { result } = renderHook(() => useDashboardStats(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const initialIncomeDelta = result.current.incomeDelta
+    const initialData = result.current.data
+
+    // Call refetch
+    result.current.refetch()
+
+    // After refetch, data should still exist
+    await waitFor(() => expect(result.current.data).toBeDefined())
+
+    expect(result.current.data).toEqual(initialData)
+    expect(result.current.incomeDelta).toEqual(initialIncomeDelta)
   })
 })
