@@ -1,15 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BudgetSettings } from './BudgetSettings'
 import { useBudgetStore } from '@/stores/budgetStore'
+import type { BudgetState } from '@/types/budget'
 
 describe('BudgetSettings Dialog Component', () => {
   beforeEach(() => {
     // Clear budgets before each test
     const store = useBudgetStore.getState()
-    store.budgets = {}
+    const emptyBudgets: BudgetState['budgets'] = {
+      'Ăn uống': 0,
+      'Mua sắm': 0,
+      'Di chuyển': 0,
+      'Giải trí': 0,
+      'Hóa đơn': 0,
+      'Khác': 0,
+    }
+    localStorage.setItem('finance-budgets', JSON.stringify(emptyBudgets))
+    Object.keys(emptyBudgets).forEach((cat) => {
+      store.budgets[cat as keyof BudgetState['budgets']] = 0
+    })
   })
 
   it('Test 1: Dialog opens with controlled open prop, renders 6 category inputs', async () => {
@@ -52,7 +63,7 @@ describe('BudgetSettings Dialog Component', () => {
 
     // Check that inputs have initial values
     const inputs = screen.getAllByRole('textbox')
-    expect(inputs.length).toBe(6)
+    expect(inputs).toHaveLength(6)
 
     // The first input (Ăn uống) should show formatted budget
     const firstInput = inputs[0] as HTMLInputElement
@@ -186,9 +197,9 @@ describe('BudgetSettings Dialog Component', () => {
 
     const inputs = screen.getAllByRole('textbox')
     // Second input is Mua sắm
-    expect(inputs[1].value).toContain('3')
+    expect((inputs[1] as HTMLInputElement).value).toContain('3')
     // Third input is Di chuyển
-    expect(inputs[2].value).toContain('2')
+    expect((inputs[2] as HTMLInputElement).value).toContain('2')
   })
 
   it('Test 8: Saving empty input (or "0") → setBudget(category, 0) called (clears budget for category if was set)', async () => {

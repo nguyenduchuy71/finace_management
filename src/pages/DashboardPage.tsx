@@ -6,6 +6,7 @@ import { StatCard } from '@/features/dashboard/StatCard'
 import { StatCardSkeleton } from '@/features/dashboard/StatCardSkeleton'
 import { SourceSubtotals } from '@/features/dashboard/SourceSubtotals'
 import { CategoryChartSkeleton } from '@/features/dashboard/CategoryChartSkeleton'
+import { BudgetProgressSection } from '@/features/dashboard/BudgetProgressSection'
 
 // Recharts is ~372KB — lazy-load CategoryChart so recharts chunk only loads on dashboard mount.
 // CategoryChartSkeleton (no recharts dependency) shows while the chunk is fetched.
@@ -85,6 +86,9 @@ export function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Budget Progress Section — appears after stat cards when budgets are set */}
+      {data && <BudgetProgressSection categoryBreakdown={data.categoryBreakdown} />}
     </div>
   )
 }
