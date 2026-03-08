@@ -3,10 +3,10 @@ import { getTransactions } from '@/services/accounts'
 import { useFilterParams } from '@/stores/filterStore'
 
 export function useTransactions() {
-  const { accountId, dateFrom, dateTo, searchQuery, txType } = useFilterParams()
+  const { accountId, dateFrom, dateTo, searchQuery, txType, category } = useFilterParams()
 
   return useInfiniteQuery({
-    queryKey: ['transactions', accountId, { dateFrom, dateTo, searchQuery, txType }],
+    queryKey: ['transactions', accountId, { dateFrom, dateTo, searchQuery, txType, category }],
     queryFn: ({ pageParam }) => {
       if (!accountId) return Promise.resolve({ data: [], nextCursor: null, total: 0 })
       return getTransactions(accountId, pageParam as string | undefined, 20, {
@@ -14,6 +14,7 @@ export function useTransactions() {
         dateFrom,
         dateTo,
         txType,
+        category,
       })
     },
     initialPageParam: undefined as string | undefined,

@@ -1,6 +1,7 @@
 import { apiClient } from './apiClient'
 import { BankAccountSchema, TransactionSchema } from '@/types/account'
 import { PaginatedResponseSchema } from '@/types/api'
+import type { Category } from '@/types/categories'
 
 const PaginatedTransactionSchema = PaginatedResponseSchema(TransactionSchema)
 const AccountsResponseSchema = PaginatedResponseSchema(BankAccountSchema)
@@ -15,6 +16,7 @@ export interface TransactionFilters {
   dateFrom?: string | null
   dateTo?: string | null
   txType?: 'all' | 'income' | 'expense'
+  category?: Category | 'all'
 }
 
 export async function getTransactions(
@@ -33,6 +35,7 @@ export async function getTransactions(
         ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
         ...(filters?.dateTo && { dateTo: filters.dateTo }),
         ...(filters?.txType && filters.txType !== 'all' && { txType: filters.txType }),
+        ...(filters?.category && filters.category !== 'all' && { category: filters.category }),
       },
     }
   )

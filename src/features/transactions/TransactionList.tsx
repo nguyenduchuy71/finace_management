@@ -9,9 +9,9 @@ import { AlertCircle } from 'lucide-react'
 export function TransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useTransactions()
-  const { searchQuery, dateFrom, dateTo, txType } = useFilterParams()
+  const { searchQuery, dateFrom, dateTo, txType, category } = useFilterParams()
 
-  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all')
+  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all' || category !== 'all')
 
   if (isLoading) return <TransactionListSkeleton count={7} />
 

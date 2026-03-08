@@ -19,6 +19,7 @@ afterEach(() => {
     dateTo: null,
     searchQuery: '',
     txType: 'all',
+    category: 'all',
   })
 })
 afterAll(() => server.close())
