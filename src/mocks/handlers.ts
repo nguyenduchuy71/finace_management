@@ -23,6 +23,7 @@ export const handlers = [
     const dateFrom = url.searchParams.get('dateFrom')
     const dateTo = url.searchParams.get('dateTo')
     const txType = url.searchParams.get('txType') ?? 'all'
+    const category = url.searchParams.get('category')
     const accountId = params.accountId as string
 
     let allTx = mockTransactions.filter((tx) => tx.accountId === accountId)
@@ -43,6 +44,11 @@ export const handlers = [
 
     // Apply transaction type filter
     if (txType !== 'all') allTx = allTx.filter((tx) => tx.type === txType)
+
+    // Apply category filter
+    if (category && category !== 'all') {
+      allTx = allTx.filter((tx) => tx.category === category)
+    }
 
     const startIndex = cursor
       ? allTx.findIndex((tx) => tx.id === cursor) + 1
@@ -78,6 +84,7 @@ export const handlers = [
     const dateFrom = url.searchParams.get('dateFrom')
     const dateTo = url.searchParams.get('dateTo')
     const txType = url.searchParams.get('txType') ?? 'all'
+    const category = url.searchParams.get('category')
     const cardId = params.cardId as string
 
     let allTx = mockCreditCardTransactions.filter((tx) => tx.cardId === cardId)
@@ -96,6 +103,11 @@ export const handlers = [
 
     // Credit card transactions are always expenses; txType 'expense' shows all, 'income' shows none
     if (txType === 'income') allTx = []
+
+    // Apply category filter
+    if (category && category !== 'all') {
+      allTx = allTx.filter((tx) => tx.category === category)
+    }
 
     const startIndex = cursor
       ? allTx.findIndex((tx) => tx.id === cursor) + 1
