@@ -76,7 +76,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   4. No attempt to read from infinite-scroll cache; dedicated service fetch
 **Plans**: 2 plans
 - [x] 10-01-PLAN.md — CSV utilities, export service, and tests (completed 2026-03-09)
-- [ ] 10-02-PLAN.md — ExportButton component and FilterBar integration (Wave 2)
+- [x] 10-02-PLAN.md — ExportButton component and FilterBar integration (completed 2026-03-09)
 
 ## Phase 11: Chatbot UX Polish
 **Goal**: Improve chat UI with conversation starters, cleaner design, and verified copy button.
@@ -103,5 +103,5 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 7. Transaction Categories | v1.1 | 3/3 | Complete | 2026-03-08 |
 | 8. Budget Tracking | v1.1 | 2/3 | In Progress | — |
 | 9. Month-over-Month Dashboard | v1.1 | 1/1 | Complete | 2026-03-08 |
-| 10. CSV Export | v1.1 | 1/2 | In Progress | 2026-03-09 |
+| 10. CSV Export | v1.1 | 2/2 | Complete | 2026-03-09 |
 | 11. Chatbot UX Polish | v1.1 | Complete    | 2026-03-09 | — |

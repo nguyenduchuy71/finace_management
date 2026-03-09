@@ -25,8 +25,8 @@
 
 ### CSV Export
 
-- [ ] **EXP-01**: A download button exports currently filtered transactions as a UTF-8 BOM CSV file (BOM ensures Vietnamese characters display correctly in Excel on Windows)
-- [ ] **EXP-02**: CSV columns: Ngày, Mô tả, Số tiền (VND), Loại, Tài khoản, Danh mục; uses a dedicated service fetch (not the infinite-scroll cache)
+- [x] **EXP-01**: A download button exports currently filtered transactions as a UTF-8 BOM CSV file (BOM ensures Vietnamese characters display correctly in Excel on Windows)
+- [x] **EXP-02**: CSV columns: Ngày, Mô tả, Số tiền (VND), Loại, Tài khoản, Danh mục; uses a dedicated service fetch (not the infinite-scroll cache)
 
 ### Chatbot UX Polish
 
@@ -68,7 +68,7 @@
 | CAT-03 | 7 | Transaction Categories | Pending (07-02 and 07-03) |
 | BUDGET-01, BUDGET-02, BUDGET-03 | 8 | Budget Tracking | Pending |
 | DASH-V2-01, DASH-V2-02 | 9 | Month-over-Month Dashboard | Pending |
-| EXP-01, EXP-02 | 10 | CSV Export | Pending |
+| EXP-01, EXP-02 | 10 | CSV Export | Complete |
 | CHAT-UX-01, CHAT-UX-02, CHAT-UX-03 | 11 | Chatbot UX Polish | Pending |
 
 **Coverage:**
