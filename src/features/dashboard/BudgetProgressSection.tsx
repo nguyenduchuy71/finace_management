@@ -1,6 +1,12 @@
+import { useState } from 'react'
+import { Settings2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { BudgetProgressBar } from '@/components/budget/BudgetProgressBar'
+import { BudgetSettings } from '@/components/budget/BudgetSettings'
 import { useBudgetStore } from '@/stores/budgetStore'
+import { useBudgetAlerts } from '@/hooks/useBudgetAlerts'
 import type { CategoryBreakdownItem } from '@/services/dashboard'
 import type { Category } from '@/types/categories'
 
@@ -10,6 +16,10 @@ interface BudgetProgressSectionProps {
 
 export function BudgetProgressSection({ categoryBreakdown }: BudgetProgressSectionProps) {
   const { budgets } = useBudgetStore()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  const { warningCount, overbudgetCount } = useBudgetAlerts(categoryBreakdown, budgets)
+  const alertCount = warningCount + overbudgetCount
 
   // Guard: if no budgets are set, return null (hide entire section)
   const hasBudgets = Object.values(budgets).some((b) => b > 0)
@@ -25,7 +35,39 @@ export function BudgetProgressSection({ categoryBreakdown }: BudgetProgressSecti
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">Tiến độ ngân sách</CardTitle>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-sm text-muted-foreground">Tiến độ ngân sách</CardTitle>
+            {alertCount > 0 && (
+              overbudgetCount > 0 ? (
+                <Badge
+                  data-testid="alert-badge"
+                  variant="destructive"
+                  className="text-xs"
+                >
+                  {alertCount}
+                </Badge>
+              ) : (
+                <span
+                  data-testid="alert-badge"
+                  data-variant="warning"
+                  className="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-200"
+                >
+                  {alertCount}
+                </span>
+              )
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="touch-target"
+            aria-label="Cài đặt ngân sách"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings2 className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {Object.keys(budgets).map((cat) => {
@@ -49,6 +91,8 @@ export function BudgetProgressSection({ categoryBreakdown }: BudgetProgressSecti
           )
         })}
       </CardContent>
+
+      <BudgetSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
     </Card>
   )
 }
