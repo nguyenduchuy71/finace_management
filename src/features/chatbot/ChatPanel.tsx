@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Settings, X, MessageCircle, Trash2, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/stores/chatStore'
@@ -11,6 +11,8 @@ export function ChatPanel() {
   const { isOpen, messages, isLoading, showSettings, toggleSettings, closeChat, toggleChat, clearMessages } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [prefillText, setPrefillText] = useState<string | undefined>()
+  const handlePrefillConsumed = useCallback(() => setPrefillText(undefined), [])
 
   // Keyboard shortcut: Ctrl+Shift+K (Win/Linux) or Cmd+Shift+K (Mac) toggles chat
   // Register OUTSIDE the early return so shortcut works when panel is closed
@@ -101,15 +103,7 @@ export function ChatPanel() {
           {!hasMessages && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-4">
               <MessageCircle className="h-8 w-8 opacity-40" />
-              <ConversationStarters onSelect={(text) => {
-                if (inputRef.current) {
-                  inputRef.current.value = text
-                  // Trigger change event so React state updates
-                  const event = new Event('change', { bubbles: true })
-                  inputRef.current.dispatchEvent(event)
-                  inputRef.current.focus()
-                }
-              }} />
+              <ConversationStarters onSelect={setPrefillText} />
               <p className="text-xs text-muted-foreground/60">Ctrl+Shift+K để mở/đóng</p>
             </div>
           )}
@@ -139,7 +133,7 @@ export function ChatPanel() {
         </div>
 
         {/* Input */}
-        <ChatInput inputRef={inputRef} />
+        <ChatInput inputRef={inputRef} prefillText={prefillText} onPrefillConsumed={handlePrefillConsumed} />
       </div>
     </>
   )

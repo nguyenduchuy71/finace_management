@@ -10,11 +10,9 @@ interface ChatMessageProps {
   message: ChatMessageType
 }
 
-const isTouchDevice = () => {
-  return (('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0) ||
-    (navigator.msMaxTouchPoints > 0))
-}
+const IS_TOUCH_DEVICE =
+  typeof window !== 'undefined' &&
+  ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const { deleteMessage, regenerateCallback, isLoading } = useChatStore()
@@ -60,7 +58,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     return (
       <div
         className="group flex justify-end mb-3"
-        onTouchStart={isTouchDevice() ? handleTouchStart : undefined}
+        onTouchStart={IS_TOUCH_DEVICE ? handleTouchStart : undefined}
       >
         <div className="flex flex-col items-end gap-1 max-w-[85%]">
           <div className="flex items-end gap-2">
@@ -74,7 +72,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
           {/* Delete button — visible on hover (desktop) or mobile tap-to-reveal */}
           <div className={`flex gap-1 transition-opacity duration-200 ${
-            isTouchDevice()
+            IS_TOUCH_DEVICE
               ? (showActions ? 'opacity-100' : 'opacity-0')
               : 'opacity-0 group-hover:opacity-100'
           }`}>
@@ -114,7 +112,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div
       className="group flex justify-start mb-3"
-      onTouchStart={isTouchDevice() ? handleTouchStart : undefined}
+      onTouchStart={IS_TOUCH_DEVICE ? handleTouchStart : undefined}
     >
       <div className="flex flex-col items-start gap-1 max-w-[90%]">
         <div className="flex items-start gap-2">
@@ -131,7 +129,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </div>
         {/* Action buttons — visible on hover (desktop) or mobile tap-to-reveal */}
         <div className={`flex gap-1 ml-8 transition-opacity duration-200 ${
-          isTouchDevice()
+          IS_TOUCH_DEVICE
             ? (showActions ? 'opacity-100' : 'opacity-0')
             : 'opacity-0 group-hover:opacity-100'
         }`}>

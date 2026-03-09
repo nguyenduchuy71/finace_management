@@ -1,13 +1,26 @@
-import { useState, useRef, type KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatApi } from './useChatApi'
 
-export function ChatInput({ inputRef }: { inputRef?: React.RefObject<HTMLTextAreaElement> } = {}) {
+export function ChatInput({ inputRef, prefillText, onPrefillConsumed }: {
+  inputRef?: React.RefObject<HTMLTextAreaElement>
+  prefillText?: string
+  onPrefillConsumed?: () => void
+} = {}) {
   const [text, setText] = useState('')
   const { sendMessage, isLoading } = useChatApi()
   const internalRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || internalRef
+
+  // Handle prefill from ConversationStarters
+  useEffect(() => {
+    if (prefillText) {
+      setText(prefillText)
+      onPrefillConsumed?.()
+      textareaRef.current?.focus()
+    }
+  }, [prefillText, onPrefillConsumed, textareaRef])
 
   function handleSend() {
     const trimmed = text.trim()
