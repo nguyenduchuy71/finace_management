@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { AlertCircle, Bot, User, Copy, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,11 +10,31 @@ interface ChatMessageProps {
   message: ChatMessageType
 }
 
+const isTouchDevice = () => {
+  return (('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0) ||
+    (navigator.msMaxTouchPoints > 0))
+}
+
 export function ChatMessage({ message }: ChatMessageProps) {
   const { deleteMessage, regenerateCallback, isLoading } = useChatStore()
+  const [showActions, setShowActions] = useState(false)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isUser = message.role === 'user'
   const isError = message.role === 'error'
   const isAssistant = message.role === 'assistant'
+
+  const handleTouchStart = () => {
+    setShowActions(true)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => setShowActions(false), 4000)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   function handleCopy() {
     navigator.clipboard.writeText(message.content).then(() => {
@@ -37,7 +58,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   if (isUser) {
     return (
-      <div className="group flex justify-end mb-3">
+      <div
+        className="group flex justify-end mb-3"
+        onTouchStart={isTouchDevice() ? handleTouchStart : undefined}
+      >
         <div className="flex flex-col items-end gap-1 max-w-[85%]">
           <div className="flex items-end gap-2">
             {/* body-sm with leading-relaxed for readable chat bubbles */}
@@ -48,8 +72,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <User className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
           </div>
-          {/* Delete button — visible on hover (desktop) or always (mobile touch) */}
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          {/* Delete button — visible on hover (desktop) or mobile tap-to-reveal */}
+          <div className={`flex gap-1 transition-opacity duration-200 ${
+            isTouchDevice()
+              ? (showActions ? 'opacity-100' : 'opacity-0')
+              : 'opacity-0 group-hover:opacity-100'
+          }`}>
             <Button
               variant="ghost"
               size="icon"
@@ -84,7 +112,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
   // Assistant message with markdown + action buttons
   return (
-    <div className="group flex justify-start mb-3">
+    <div
+      className="group flex justify-start mb-3"
+      onTouchStart={isTouchDevice() ? handleTouchStart : undefined}
+    >
       <div className="flex flex-col items-start gap-1 max-w-[90%]">
         <div className="flex items-start gap-2">
           <div className="shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center mt-0.5">
@@ -98,8 +129,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
             <ReactMarkdown>{message.content}</ReactMarkdown>
           </div>
         </div>
-        {/* Action buttons — visible on hover (desktop) or always (mobile touch) */}
-        <div className="flex gap-1 ml-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        {/* Action buttons — visible on hover (desktop) or mobile tap-to-reveal */}
+        <div className={`flex gap-1 ml-8 transition-opacity duration-200 ${
+          isTouchDevice()
+            ? (showActions ? 'opacity-100' : 'opacity-0')
+            : 'opacity-0 group-hover:opacity-100'
+        }`}>
           <Button
             variant="ghost"
             size="icon"
