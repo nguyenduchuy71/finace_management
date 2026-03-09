@@ -16,7 +16,7 @@
 
 - [ ] **BUDGET-01**: User can set a monthly spending budget per category (stored in localStorage via Zustand budgetStore)
 - [ ] **BUDGET-02**: Dashboard shows a spending progress bar per category (spent / budget, using existing categoryBreakdown data)
-- [ ] **BUDGET-03**: Progress bar renders warning state (yellow ≥80%, red ≥100%) to alert when approaching or exceeding budget
+- [x] **BUDGET-03**: Progress bar renders warning state (yellow ≥80%, red ≥100%) to alert when approaching or exceeding budget
 
 ### Month-over-Month Dashboard
 
