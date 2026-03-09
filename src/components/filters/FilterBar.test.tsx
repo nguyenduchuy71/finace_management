@@ -1,7 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { FilterBar } from './FilterBar'
 import { useFilterStore } from '@/stores/filterStore'
+
+// Mock ExportButton to isolate FilterBar tests from QueryClient dependencies
+vi.mock('./ExportButton', () => ({
+  ExportButton: () => <button data-testid="export-button">Xuất CSV</button>,
+}))
 
 // Reset store before each test
 beforeEach(() => {
@@ -71,5 +76,11 @@ describe('FilterBar', () => {
     // When category is not 'all', reset button should be visible
     const resetButtons = screen.queryAllByText(/Xóa bộ lọc/)
     expect(resetButtons.length).toBeGreaterThan(0)
+  })
+
+  it('renders ExportButton in the filter bar', () => {
+    render(<FilterBar />)
+    expect(screen.getByTestId('export-button')).toBeInTheDocument()
+    expect(screen.getByText('Xuất CSV')).toBeInTheDocument()
   })
 })

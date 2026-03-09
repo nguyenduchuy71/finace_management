@@ -3,6 +3,7 @@ import { SearchInput } from './SearchInput'
 import { DateRangePicker } from './DateRangePicker'
 import { TransactionTypeFilter } from './TransactionTypeFilter'
 import { CategoryFilter } from './CategoryFilter'
+import { ExportButton } from './ExportButton'
 import { Button } from '@/components/ui/button'
 import { useFilterStore } from '@/stores/filterStore'
 
@@ -33,6 +34,7 @@ export function FilterBar() {
           Xóa bộ lọc
         </Button>
       )}
+      <ExportButton />
     </div>
   )
 }
