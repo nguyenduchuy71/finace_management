@@ -87,7 +87,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. Each assistant message has copy-to-clipboard button (audit existing code first)
   3. Chat settings panel displays current model name clearly; layout is clean
   4. Chat UI passes mobile responsive audit; no horizontal overflow
-**Plans**: 1–2 plans
+**Plans**: 1 plan
+- [ ] 11-01-PLAN.md — UX enhancements: conversation starters, mobile tap-to-reveal, settings clarity (Wave 1)
 
 ## Progress
 
@@ -103,4 +104,4 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 8. Budget Tracking | v1.1 | 2/3 | In Progress | — |
 | 9. Month-over-Month Dashboard | v1.1 | 1/1 | Complete | 2026-03-08 |
 | 10. CSV Export | v1.1 | 1/2 | In Progress | 2026-03-09 |
-| 11. Chatbot UX Polish | v1.1 | 0/? | Pending | — |
+| 11. Chatbot UX Polish | v1.1 | 0/1 | Pending | — |
