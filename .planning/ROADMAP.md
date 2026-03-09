@@ -103,5 +103,5 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 7. Transaction Categories | v1.1 | 3/3 | Complete | 2026-03-08 |
 | 8. Budget Tracking | v1.1 | 2/3 | In Progress | — |
 | 9. Month-over-Month Dashboard | v1.1 | 1/1 | Complete | 2026-03-08 |
-| 10. CSV Export | v1.1 | 2/2 | Complete | 2026-03-09 |
+| 10. CSV Export | v1.1 | Complete    | 2026-03-09 | 2026-03-09 |
 | 11. Chatbot UX Polish | v1.1 | Complete    | 2026-03-09 | — |
