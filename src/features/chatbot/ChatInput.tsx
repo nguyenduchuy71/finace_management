@@ -3,10 +3,11 @@ import { Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatApi } from './useChatApi'
 
-export function ChatInput() {
+export function ChatInput({ inputRef }: { inputRef?: React.RefObject<HTMLTextAreaElement> } = {}) {
   const [text, setText] = useState('')
   const { sendMessage, isLoading } = useChatApi()
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const internalRef = useRef<HTMLTextAreaElement>(null)
+  const textareaRef = inputRef || internalRef
 
   function handleSend() {
     const trimmed = text.trim()
@@ -23,12 +24,16 @@ export function ChatInput() {
     }
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value)
+  }
+
   return (
     <div className="flex items-end gap-2 p-3 border-t border-border bg-background">
       <textarea
         ref={textareaRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Hỏi về giao dịch của bạn... (Enter để gửi)"
         disabled={isLoading}

@@ -111,7 +111,8 @@ describe('ChatPanel', () => {
       useChatStore.setState({ isOpen: true, messages: [] })
       render(<ChatPanel />)
 
-      expect(screen.getByText('Hỏi về giao dịch của bạn')).toBeInTheDocument()
+      // Check for ConversationStarters chips
+      expect(screen.getByText('Phân tích giao dịch của tôi')).toBeInTheDocument()
     })
 
     it('shows keyboard shortcut hint in empty state', () => {

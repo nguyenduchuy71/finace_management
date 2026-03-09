@@ -5,10 +5,12 @@ import { useChatStore } from '@/stores/chatStore'
 import { ChatMessage } from './ChatMessage'
 import { ChatInput } from './ChatInput'
 import { ChatSettings } from './ChatSettings'
+import { ConversationStarters } from './ConversationStarters'
 
 export function ChatPanel() {
   const { isOpen, messages, isLoading, showSettings, toggleSettings, closeChat, toggleChat, clearMessages } = useChatStore()
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   // Keyboard shortcut: Ctrl+Shift+K (Win/Linux) or Cmd+Shift+K (Mac) toggles chat
   // Register OUTSIDE the early return so shortcut works when panel is closed
@@ -97,11 +99,18 @@ export function ChatPanel() {
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto p-4 min-h-0">
           {!hasMessages && !isLoading && (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-              <MessageCircle className="h-8 w-8 mb-3 opacity-40" />
-              <p className="text-sm font-medium">Hỏi về giao dịch của bạn</p>
-              <p className="text-xs mt-1">Ví dụ: "Chi tiêu nhiều nhất tháng này là gì?"</p>
-              <p className="text-xs mt-2 text-muted-foreground/60">Ctrl+Shift+K để mở/đóng</p>
+            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground gap-4">
+              <MessageCircle className="h-8 w-8 opacity-40" />
+              <ConversationStarters onSelect={(text) => {
+                if (inputRef.current) {
+                  inputRef.current.value = text
+                  // Trigger change event so React state updates
+                  const event = new Event('change', { bubbles: true })
+                  inputRef.current.dispatchEvent(event)
+                  inputRef.current.focus()
+                }
+              }} />
+              <p className="text-xs text-muted-foreground/60">Ctrl+Shift+K để mở/đóng</p>
             </div>
           )}
           {messages.map((msg) => (
@@ -130,7 +139,7 @@ export function ChatPanel() {
         </div>
 
         {/* Input */}
-        <ChatInput />
+        <ChatInput inputRef={inputRef} />
       </div>
     </>
   )
