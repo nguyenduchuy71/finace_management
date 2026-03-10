@@ -1,18 +1,22 @@
 ---
 phase: 08-budget-tracking
-verified: 2026-03-08T22:05:00Z
+verified: 2026-03-09T21:35:00Z
 status: passed
-score: 8/8 must-haves verified
-re_verification: false
+score: 12/12 must-haves verified
+re_verification:
+  previous_status: passed
+  previous_score: 8/8
+  gaps_closed: []
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 8: Budget Tracking Verification Report
 
 **Phase Goal:** Users set monthly budgets per category and see progress on dashboard.
-
-**Verified:** 2026-03-08 22:05:00 UTC
-
-**Status:** PASSED - All must-haves verified, goal achieved
+**Verified:** 2026-03-09 21:35:00 UTC
+**Status:** PASSED
+**Re-verification:** Yes -- after plan 08-03 (budget alerts and settings wiring)
 
 ## Goal Achievement
 
@@ -20,120 +24,121 @@ re_verification: false
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | useBudgetStore.setBudget() persists monthly budget per category to localStorage | ✓ VERIFIED | budgetStore.ts line 24: `localStorage.setItem('finance-budgets', JSON.stringify(newBudgets))` + 8 tests passing including localStorage round-trip |
-| 2 | BudgetProgressBar renders colored progress bar when budget > 0, hidden when budget = 0 | ✓ VERIFIED | BudgetProgressBar.tsx line 13-14: guard `if (budget === 0) return null` + test "with budget=0 returns null" passing |
-| 3 | Progress bar colors: emerald (normal), yellow ≥80%, red ≥100% | ✓ VERIFIED | BudgetProgressBar.tsx lines 22-29: color logic with percent thresholds + 5 color-specific tests passing (80%, 90%, 100%, 0%, 50%) |
-| 4 | User can open BudgetSettings dialog, enter monthly budgets for all 6 categories in VND format, and save | ✓ VERIFIED | BudgetSettings.tsx implements Dialog with 6 category inputs, formatVND display, parseVND parsing + 8 integration tests passing |
-| 5 | Dashboard displays BudgetProgressSection below stat cards, showing progress bars only for categories with budgets > 0 | ✓ VERIFIED | DashboardPage.tsx line 91: `{data && <BudgetProgressSection categoryBreakdown={data.categoryBreakdown} />}` renders section after stat cards grid |
-| 6 | BudgetProgressSection calculates spent from categoryBreakdown and budgets from useBudgetStore, renders bars with conditional colors | ✓ VERIFIED | BudgetProgressSection.tsx lines 21-23: creates categoryMap from categoryBreakdown, lines 31-50 map over budgets and render BudgetProgressBar with spent/budget props |
-| 7 | Settings dialog validates input, parses VND currency format (thousand separators), persists to budgetStore | ✓ VERIFIED | BudgetSettings.tsx: parseVND utility (currency.ts line 38-45) extracts digits from "100.000" → 100000, test 4 validates this behavior |
-| 8 | Budget amounts are integers (VND, no decimals); store initializes from localStorage on first load | ✓ VERIFIED | BudgetSettings stores Record<Category, number> (integers), budgetStore.ts line 5-15: getInitialBudgets() loads from localStorage, test validates round-trip |
+| 1 | useBudgetStore.setBudget() persists monthly budget per category to localStorage | VERIFIED | budgetStore.ts localStorage persistence, 8/8 store tests passing |
+| 2 | BudgetProgressBar renders colored progress bar when budget > 0, hidden when budget = 0 | VERIFIED | BudgetProgressBar.tsx guard at line 14, 8/8 tests passing |
+| 3 | Progress bar colors: emerald (normal), yellow >=80%, red >=100% | VERIFIED | BudgetProgressBar.tsx color logic lines 22-29, threshold tests passing |
+| 4 | User can open BudgetSettings dialog, enter monthly budgets for all 6 categories in VND format, and save | VERIFIED | BudgetSettings.tsx with Dialog + 6 category inputs, 8/8 tests passing |
+| 5 | Dashboard displays BudgetProgressSection below stat cards | VERIFIED | DashboardPage.tsx line 96: conditional render with categoryBreakdown prop |
+| 6 | BudgetProgressSection calculates spent from categoryBreakdown and budgets from useBudgetStore | VERIFIED | BudgetProgressSection.tsx lines 31-33 categoryMap, lines 73-92 map over budgets |
+| 7 | Settings dialog validates input, parses VND currency format, persists to budgetStore | VERIFIED | parseVND in currency.ts, BudgetSettings test 4 validates thousand-separator parsing |
+| 8 | Budget amounts are integers (VND); store initializes from localStorage on first load | VERIFIED | budgetStore.ts getInitialBudgets() loads from localStorage, test validates round-trip |
+| 9 | Dashboard shows a settings gear button in the budget section header that opens BudgetSettings dialog | VERIFIED | BudgetProgressSection.tsx lines 61-69: Settings2 icon Button with onClick -> setSettingsOpen(true), line 95: BudgetSettings rendered with open/onOpenChange props |
+| 10 | When dashboard loads with budgets set, toast notifications fire for categories at warning (>=80%) or overbudget (>=100%) | VERIFIED | useBudgetAlerts.ts lines 67-79: useEffect fires toast.warning and toast.error per alert level, tests 6-7 confirm |
+| 11 | Toast fires at most once per dashboard mount per category (no spam on re-renders) | VERIFIED | useBudgetAlerts.ts line 65-68: useRef(false) hasFired flag guards against re-fire |
+| 12 | Budget section header shows alert count badge when any category is at warning or overbudget | VERIFIED | BudgetProgressSection.tsx lines 41-59: conditional Badge (destructive for overbudget) or yellow span (warning-only), test 3 validates count, test 5 validates variant |
 
-**Score:** 8/8 truths verified
+**Score:** 12/12 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| src/types/budget.ts | BudgetState interface type definitions | ✓ VERIFIED | Exists, exports BudgetState with budgets, setBudget, clearBudget, getBudget |
-| src/stores/budgetStore.ts | Zustand store with localStorage persistence | ✓ VERIFIED | Exists, implements getInitialBudgets(), setBudget/clearBudget/getBudget mutations, JSON persistence |
-| src/stores/budgetStore.test.ts | Unit tests for store (8 tests) | ✓ VERIFIED | 8/8 tests passing: setBudget, clearBudget, getBudget, localStorage round-trip, initialization |
-| src/components/budget/BudgetProgressBar.tsx | Conditional-color progress bar component | ✓ VERIFIED | Exists, implements color logic (emerald/yellow/red), guard (budget=0 returns null), formatVND display |
-| src/components/budget/BudgetProgressBar.test.tsx | Unit tests for component (8 tests) | ✓ VERIFIED | 8/8 tests passing: color thresholds, hidden state, percent capping, currency formatting |
-| src/components/budget/BudgetSettings.tsx | Dialog UI for budget input | ✓ VERIFIED | Exists, implements Dialog with 6 category inputs, parseVND parsing, handleSave persists to store |
-| src/components/budget/BudgetSettings.test.tsx | Integration tests for settings dialog (8 tests) | ✓ VERIFIED | 8/8 tests passing: dialog open/close, input parsing, persistence, re-opening shows saved values |
-| src/features/dashboard/BudgetProgressSection.tsx | Container component mapping categoryBreakdown + budgets to BudgetProgressBar rows | ✓ VERIFIED | Exists, hasBudgets guard, categoryMap lookup, renders Card with progress bars for budgeted categories |
-| src/pages/DashboardPage.tsx | MODIFIED: BudgetProgressSection integrated after stat cards | ✓ VERIFIED | Line 9: imports BudgetProgressSection, line 91: conditional render with categoryBreakdown prop |
-| src/utils/currency.ts | MODIFIED: parseVND utility added | ✓ VERIFIED | Exists with parseVND function, extracts digits from formatted input, returns integer VND amount |
-
-All artifacts exist and are substantive (not stubs).
+| src/types/budget.ts | BudgetState interface | VERIFIED | Exists, exports BudgetState |
+| src/stores/budgetStore.ts | Zustand store with localStorage | VERIFIED | Exists, 8/8 tests passing |
+| src/stores/budgetStore.test.ts | Unit tests for store | VERIFIED | 8 tests passing |
+| src/components/budget/BudgetProgressBar.tsx | Conditional-color progress bar | VERIFIED | Exists, color logic + guard |
+| src/components/budget/BudgetProgressBar.test.tsx | Unit tests | VERIFIED | 8 tests passing |
+| src/components/budget/BudgetSettings.tsx | Dialog UI for budget input | VERIFIED | Exists with 6 category inputs |
+| src/components/budget/BudgetSettings.test.tsx | Integration tests | VERIFIED | 8 tests passing |
+| src/features/dashboard/BudgetProgressSection.tsx | Container with settings button + alert badge | VERIFIED | Settings2 button, Badge, useBudgetAlerts hook, BudgetSettings dialog wired |
+| src/features/dashboard/BudgetProgressSection.test.tsx | Integration tests for settings + badge | VERIFIED | 5 tests passing |
+| src/hooks/useBudgetAlerts.ts | Hook: alert computation + toast firing | VERIFIED | Pure computeBudgetAlerts + useBudgetAlerts hook with useRef dedup |
+| src/hooks/useBudgetAlerts.test.ts | Unit tests for alert logic + toasts | VERIFIED | 9 tests passing |
+| src/pages/DashboardPage.tsx | BudgetProgressSection integrated | VERIFIED | Line 9 import, line 96 conditional render |
+| src/utils/currency.ts | parseVND utility | VERIFIED | Exists with parseVND function |
+| src/components/ui/badge.tsx | shadcn Badge component | VERIFIED | Exists, used by BudgetProgressSection |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|----|--------|---------|
-| useBudgetStore.setBudget() | localStorage 'finance-budgets' key | Zustand set() with JSON.stringify | ✓ WIRED | budgetStore.ts lines 21-26: set callback updates and persists |
-| BudgetSettings handleSave | useBudgetStore.setBudget() | Line 41: `setBudget(category, amount)` call | ✓ WIRED | BudgetSettings.tsx line 41 calls store mutation, test 3 verifies setBudget is invoked |
-| BudgetProgressSection | BudgetProgressBar | Lines 43-49: map over budgets, render BudgetProgressBar with props | ✓ WIRED | BudgetProgressSection.tsx renders component, test 2 imports correctly |
-| DashboardPage data.categoryBreakdown | BudgetProgressSection | Line 91: pass data.categoryBreakdown prop | ✓ WIRED | DashboardPage.tsx passes prop when data is loaded |
-| BudgetProgressBar spent/budget props | Tailwind color classes | Lines 22-29: percent calculation triggers isWarning/isOverBudget flags | ✓ WIRED | Component conditionally applies bg-emerald/yellow/red classes based on thresholds |
-
-All key links wired and functional.
+| useBudgetStore.setBudget() | localStorage | JSON.stringify in set callback | WIRED | budgetStore.ts persists on every setBudget call |
+| BudgetSettings handleSave | useBudgetStore.setBudget() | setBudget(category, amount) call | WIRED | Test 3 verifies setBudget is invoked |
+| BudgetProgressSection | BudgetProgressBar | map over budgets, render component with props | WIRED | Lines 73-92 in BudgetProgressSection.tsx |
+| DashboardPage data.categoryBreakdown | BudgetProgressSection | Prop passing on line 96 | WIRED | Conditional render when data is loaded |
+| BudgetProgressBar spent/budget | Tailwind color classes | Percent calc triggers color flags | WIRED | Conditional bg-emerald/yellow/red classes |
+| useBudgetAlerts | sonner toast | useEffect fires toast.warning/toast.error on mount | WIRED | Lines 67-79 with hasFired ref guard, tests 6-7 confirm |
+| BudgetProgressSection header | BudgetSettings dialog | useState open + Settings2 button onClick | WIRED | Line 19 state, line 66 onClick, line 95 dialog |
+| BudgetProgressSection header | useBudgetAlerts | alertCount drives badge visibility | WIRED | Line 21 hook call, lines 41-59 conditional badge render |
 
 ### Requirements Coverage
 
 | Requirement | Source Plan | Description | Status | Evidence |
-|-------------|------------|------------|--------|----------|
-| BUDGET-01 | 08-01, 08-02 | User can set a monthly spending budget per category (stored in localStorage via Zustand budgetStore) | ✓ SATISFIED | BudgetSettings.tsx dialog allows setting budgets per category, useBudgetStore persists to localStorage, test 1-8 validate behavior |
-| BUDGET-02 | 08-02 | Dashboard shows a spending progress bar per category (spent / budget, using existing categoryBreakdown data) | ✓ SATISFIED | BudgetProgressSection.tsx maps categoryBreakdown (spent) with budgetStore (budget) and renders BudgetProgressBar rows, DashboardPage.tsx integrates section |
-| BUDGET-03 | 08-01 | Progress bar renders warning state (yellow ≥80%, red ≥100%) to alert when approaching or exceeding budget | ✓ SATISFIED | BudgetProgressBar.tsx implements color thresholds: percent >= 100 → red, percent >= 80 && < 100 → yellow, test 3-6 verify colors at boundaries |
+|-------------|------------|-------------|--------|----------|
+| BUDGET-01 | 08-01, 08-02 | User can set a monthly spending budget per category (stored in localStorage via Zustand budgetStore) | SATISFIED | BudgetSettings dialog + useBudgetStore + localStorage persistence, 8+8 tests |
+| BUDGET-02 | 08-02 | Dashboard shows a spending progress bar per category (spent / budget) | SATISFIED | BudgetProgressSection maps categoryBreakdown + budgets to BudgetProgressBar rows, integrated in DashboardPage |
+| BUDGET-03 | 08-01, 08-03 | Progress bar renders warning state (yellow >=80%, red >=100%) + toast alerts | SATISFIED | BudgetProgressBar color thresholds + useBudgetAlerts toast notifications for warning/overbudget |
 
-All 3 phase requirements satisfied.
-
-### Roadmap Success Criteria
-
-| Criterion | Status | Evidence |
-|-----------|--------|----------|
-| 1. Settings page has budget input per category (currency format: đ X.XXX) | ✓ VERIFIED | BudgetSettings.tsx with 6 category inputs, formatVND display, parseVND parsing |
-| 2. Dashboard shows budget progress bars per category (spent / budget) below stat cards | ✓ VERIFIED | BudgetProgressSection.tsx renders below stat cards in DashboardPage.tsx (line 91), displays progress bars per category |
-| 3. Progress bar color changes: yellow ≥80%, red ≥100% | ✓ VERIFIED | BudgetProgressBar.tsx lines 22-29 with thresholds, tests verify colors at 80%, 100%, and overbudget |
-| 4. Budgets persist in localStorage; no backend required | ✓ VERIFIED | budgetStore.ts line 24 persists to 'finance-budgets' key, test validates JSON round-trip, no API calls made |
-
-All 4 ROADMAP success criteria achieved.
+All 3 phase requirements satisfied. No orphaned requirements.
 
 ### Test Coverage Summary
 
-| Test Suite | File | Count | Status | Notes |
-|-----------|------|-------|--------|-------|
-| Budget Store | src/stores/budgetStore.test.ts | 8 | ✓ 8/8 PASSING | setBudget, clearBudget, getBudget, localStorage round-trip, initialization |
-| BudgetProgressBar | src/components/budget/BudgetProgressBar.test.tsx | 8 | ✓ 8/8 PASSING | Color thresholds (0%, 50%, 80%, 90%, 100%, 120%), hidden state, currency formatting |
-| BudgetSettings | src/components/budget/BudgetSettings.test.tsx | 8 | ✓ 8/8 PASSING | Dialog open/close, input parsing with thousand separators, persistence, re-open, empty input |
-| Dashboard (existing) | src/pages/DashboardPage.test.tsx | 11 | ✓ 11/11 PASSING | No regressions, BudgetProgressSection renders when data available |
-| **Total** | | **35** | ✓ **35/35 PASSING** | Zero test failures, zero TypeScript errors |
+| Test Suite | File | Count | Status |
+|-----------|------|-------|--------|
+| Budget Store | src/stores/budgetStore.test.ts | 8 | 8/8 PASSING |
+| BudgetProgressBar | src/components/budget/BudgetProgressBar.test.tsx | 8 | 8/8 PASSING |
+| BudgetSettings | src/components/budget/BudgetSettings.test.tsx | 8 | 8/8 PASSING |
+| BudgetProgressSection | src/features/dashboard/BudgetProgressSection.test.tsx | 5 | 5/5 PASSING |
+| useBudgetAlerts | src/hooks/useBudgetAlerts.test.ts | 9 | 9/9 PASSING |
+| **Total** | | **38** | **38/38 PASSING** |
 
 ### Anti-Patterns Found
 
-Scanned all phase 8 files for TODO/FIXME/PLACEHOLDER/stubs:
+| File | Line | Pattern | Severity | Impact |
+|------|------|---------|----------|--------|
+| BudgetProgressBar.tsx | 14 | `return null` (guard) | INFO | Intentional -- hides bar when budget=0 |
+| BudgetProgressSection.tsx | 27 | `return null` (guard) | INFO | Intentional -- hides section when no budgets set |
+| BudgetProgressSection.tsx | 79 | `return null` (map) | INFO | Intentional -- skips budget=0 entries in loop |
 
-| File | Pattern | Line(s) | Severity | Assessment |
-|------|---------|---------|----------|------------|
-| BudgetProgressBar.tsx | `return null` (guard) | 14 | ℹ️ INFO | INTENTIONAL - Guard to hide bar when budget=0, documented in test and comments |
-| BudgetProgressSection.tsx | `return null` (guard) | 17 | ℹ️ INFO | INTENTIONAL - Guard to hide entire section when no budgets set, clean UX design |
-| BudgetProgressSection.tsx | `return null` (map) | 37 | ℹ️ INFO | INTENTIONAL - Secondary guard in map loop, double-protects against budget=0 entries |
+No TODO, FIXME, PLACEHOLDER, or stub patterns found in any phase 8 files.
 
-No blockers or anti-patterns found. All `return null` statements are documented, intentional guards that implement proper UX behavior (hiding components when not applicable).
+### Human Verification Suggested
 
-### Human Verification Checklist
+### 1. Settings Dialog Access
 
-Checkpoint verification (from 08-02-SUMMARY.md line 199-212) was completed:
+**Test:** Navigate to dashboard, set a budget, verify settings gear icon appears in budget section header. Click gear icon.
+**Expected:** BudgetSettings dialog opens with previously saved budget values.
+**Why human:** Visual layout and dialog interaction cannot be verified programmatically.
 
-- [x] Dashboard page loads without errors
-- [x] Budget progress section hidden initially (no budgets set)
-- [x] After setting budgets via devtools: "Tiến độ ngân sách" card appears below stat cards
-- [x] Progress bars display for each budgeted category with correct formatting
-- [x] Color coding applied correctly: emerald (normal), yellow (≥80%), red (≥100%)
-- [x] Budgets persist to localStorage and survive page refresh
-- [x] All 204 tests passing (no regressions)
-- [x] TypeScript compilation clean
+### 2. Toast Notifications
 
-Status: APPROVED (per 08-02-SUMMARY.md line 212)
+**Test:** Set a budget for a category, then create spending that exceeds 80% of budget. Refresh dashboard.
+**Expected:** Sonner toast appears with Vietnamese message indicating warning or overbudget status.
+**Why human:** Toast timing, positioning, and visual appearance require browser observation.
+
+### 3. Alert Badge Appearance
+
+**Test:** With overbudget categories, verify red badge appears next to section title. With only warning categories, verify yellow badge.
+**Expected:** Badge color matches severity level, count matches number of alerted categories.
+**Why human:** Color rendering and visual distinction between destructive/warning badges.
 
 ## Summary
 
 **All must-haves verified. Phase goal achieved.**
 
-Phase 8 budget tracking feature is complete and fully functional:
+Phase 8 budget tracking is fully complete across all 3 plans:
 
-1. **User can set budgets**: BudgetSettings dialog provides intuitive UI for setting monthly budgets per category with VND currency input and thousand-separator parsing
-2. **Dashboard shows progress**: BudgetProgressSection displays progress bars below stat cards, with spent amounts from API data matched against budgets from localStorage
-3. **Conditional warnings**: Color-coded progress bars warn users with yellow at 80% and red at 100%+ spending
-4. **Persistent storage**: Budgets stored in localStorage via Zustand, surviving page refreshes
+1. **Plan 08-01**: Budget store + progress bar component with color thresholds
+2. **Plan 08-02**: BudgetSettings dialog with VND currency input and persistence
+3. **Plan 08-03**: Budget alerts (toast notifications), settings gear button, and alert count badge
 
-**Test coverage:** 35 tests across all layers (store, components, integration) with 100% pass rate. No regressions in existing functionality. All ROADMAP success criteria and requirements (BUDGET-01, BUDGET-02, BUDGET-03) satisfied.
+The feature delivers: users can set monthly budgets per category via a settings dialog accessible from a gear icon in the dashboard, see spending progress bars with color-coded warnings (emerald/yellow/red), and receive toast notifications when approaching or exceeding budget limits. All data persists in localStorage with no backend required.
 
-**Code quality:** Clean implementation following established patterns (Zustand v5, shadcn Dialog, currency utilities), TypeScript strict mode compliant, no stubs or placeholders, intentional guards properly documented.
+**Test coverage:** 38 tests across 5 suites with 100% pass rate. No regressions. All ROADMAP success criteria and requirements (BUDGET-01, BUDGET-02, BUDGET-03) satisfied.
+
+**Commits verified:** 7e00acd (useBudgetAlerts hook), e3f4fca (settings button + alert badge wiring).
 
 ---
 
-_Verified: 2026-03-08 22:05:00 UTC_
+_Verified: 2026-03-09 21:35:00 UTC_
 _Verifier: Claude (gsd-verifier)_
