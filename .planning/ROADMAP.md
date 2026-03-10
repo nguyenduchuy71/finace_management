@@ -51,7 +51,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans**: 3 plans
 - [x] 08-01-PLAN.md — Budget store and progress bar component (completed 2026-03-08)
 - [x] 08-02-PLAN.md — Settings UI and dashboard integration (completed 2026-03-08)
-- [ ] 08-03-PLAN.md — Budget alerts and notifications (Wave 3)
+- [x] 08-03-PLAN.md — Budget alerts and notifications (completed 2026-03-08)
 
 ## Phase 9: Month-over-Month Dashboard
 **Goal**: Dashboard stat cards show spending delta vs previous month to highlight trends.
@@ -88,7 +88,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. Chat settings panel displays current model name clearly; layout is clean
   4. Chat UI passes mobile responsive audit; no horizontal overflow
 **Plans**: 1 plan
-- [ ] 11-01-PLAN.md — UX enhancements: conversation starters, mobile tap-to-reveal, settings clarity (Wave 1)
+- [x] 11-01-PLAN.md — UX enhancements: conversation starters, mobile tap-to-reveal, settings clarity (completed 2026-03-09)
 
 ## Progress
 
