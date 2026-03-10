@@ -25,13 +25,13 @@ export async function exportTransactions(
   if (accountOrCardId) {
     endpoint = `/accounts/${accountOrCardId}/transactions`
   } else if (filters?.cardId) {
-    endpoint = `/creditCards/${filters.cardId}/transactions`
+    endpoint = `/credit-cards/${filters.cardId}/transactions`
   } else {
     throw new Error('Either accountOrCardId or filters.cardId must be provided')
   }
 
   // Build params object conditionally, excluding undefined and 'all' values
-  const params: Record<string, any> = {}
+  const params: Record<string, string> = {}
 
   if (filters?.search) {
     params.search = filters.search

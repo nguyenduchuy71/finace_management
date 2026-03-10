@@ -20,11 +20,13 @@ interface TransactionRowProps {
 export function TransactionRow({ transaction: tx }: TransactionRowProps) {
   const isIncome = tx.type === 'income'
 
+  // Subscribe to overrides so the badge re-renders when user changes a category
+  const overrides = useCategoryOverrideStore((s) => s.overrides)
   const effectiveCategory = useMemo(() => {
     if (tx.type === 'income') return null // No category for income
     const serverCategory = (tx.category as Category) || classifyTransaction(tx.merchantName)
-    return useCategoryOverrideStore.getState().getEffectiveCategory(tx.id, serverCategory)
-  }, [tx.id, tx.category, tx.merchantName, tx.type])
+    return overrides.get(tx.id) ?? serverCategory
+  }, [tx.id, tx.category, tx.merchantName, tx.type, overrides])
 
   return (
     <div className="flex items-center justify-between section-padding-x py-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors duration-200 dark:border-slate-700 dark:bg-slate-900">

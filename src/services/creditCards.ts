@@ -27,6 +27,7 @@ export async function getCreditCardTransactions(
         ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
         ...(filters?.dateTo && { dateTo: filters.dateTo }),
         ...(filters?.txType && filters.txType !== 'all' && { txType: filters.txType }),
+        ...(filters?.category && filters.category !== 'all' && { category: filters.category }),
       },
     }
   )

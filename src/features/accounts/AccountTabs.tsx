@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFilterStore } from '@/stores/filterStore'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -14,7 +14,7 @@ export function AccountTabs({ onAccountChange }: AccountTabsProps) {
   const setAccountId = useFilterStore((s) => s.setAccountId)
   const { data, isLoading } = useAccounts()
 
-  const accounts: BankAccount[] = data?.data ?? []
+  const accounts: BankAccount[] = useMemo(() => data?.data ?? [], [data])
 
   // Initialize to first account when accounts load and no account is selected
   useEffect(() => {

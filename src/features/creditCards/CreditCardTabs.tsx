@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useFilterStore } from '@/stores/filterStore'
 import { useCreditCards } from '@/hooks/useCreditCards'
@@ -10,7 +10,7 @@ export function CreditCardTabs() {
   const setCardId = useFilterStore((s) => s.setCardId)
   const { data, isLoading } = useCreditCards()
 
-  const cards: CreditCard[] = data?.data ?? []
+  const cards: CreditCard[] = useMemo(() => data?.data ?? [], [data])
 
   // Initialize to first card when cards load and no card is selected
   useEffect(() => {

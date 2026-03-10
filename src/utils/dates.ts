@@ -46,7 +46,7 @@ export function calculateMonthDelta(currentAmount: number, previousAmount: numbe
  */
 export function getPreviousMonthDateRange(
   dateFrom: string | null,
-  dateTo: string | null
+  _dateTo: string | null
 ): { prevFrom: string; prevTo: string } {
   // Use dateFrom as reference, or today in Vietnam timezone
   const referenceDate = dateFrom ? new TZDate(dateFrom, VN_TZ) : new TZDate(new Date().toISOString(), VN_TZ)

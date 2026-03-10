@@ -138,7 +138,7 @@ export function useChatApi() {
     } else {
       setRegenerateCallback(null)
     }
-  }, [messages])
+  }, [messages, sendMessage, setRegenerateCallback])
 
   return {
     sendMessage,

@@ -23,7 +23,8 @@ export function ExportButton() {
   const handleExport = async () => {
     setIsExporting(true)
     try {
-      const accountOrCardId = accountId ?? cardId
+      // Pass accountId directly; pass null for CC tab so exports.ts routes to /credit-cards/
+      const accountOrCardId = accountId ?? null
       const exportFilters = cardId && !accountId
         ? { ...filters, cardId }
         : filters

@@ -15,7 +15,16 @@
       "Bash(npm run:*)",
       "Bash(npm test:*)",
       "Bash(pkill:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Skill(gsd:progress)",
+      "Skill(gsd:complete-milestone)",
+      "Skill(gsd:new-milestone)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(do:*)",
+      "Bash(ls:*)",
+      "Bash(for f in .planning/phases/*/*-VERIFICATION.md)",
+      "Read(//d/Vibe Coding/finace_management/**)",
+      "Bash(done)"
     ]
   }
 }

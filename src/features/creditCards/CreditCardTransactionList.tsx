@@ -19,9 +19,12 @@ export function CreditCardTransactionList() {
 
   const { data: cardsData } = useCreditCards()
   // useCreditCards uses useQuery (not useInfiniteQuery) — data is PaginatedResponse<CreditCard> directly
-  const card = cardsData?.data.find((c) => c.id === cardId) ?? null
+  const card = cardsData?.data?.find((c) => c.id === cardId) ?? null
 
-  const allTransactions = data?.pages.flatMap((page) => page.data) ?? []
+  const allTransactions = useMemo(
+    () => data?.pages.flatMap((page) => page.data) ?? [],
+    [data]
+  )
 
   const now = useMemo(() => new Date().toISOString(), [])
   const currentCycle = useMemo(

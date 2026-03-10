@@ -1,0 +1,103 @@
+V1.1 MILESTONE INTEGRATION CHECK - CRITICAL FINDINGS
+
+Date: 2026-03-09
+Phases: 7, 8, 9, 10, 11
+
+STATUS: CRITICAL ISSUE - Fixture Category Mismatch Blocks Filtering
+
+ISSUE SUMMARY:
+Fixture transactions use English category names (food, transport, shopping)
+App implementation expects Vietnamese names (Ăn uống, Di chuyển, Mua sắm)
+Result: Category filtering flow broken end-to-end
+
+AFFECTED FILE:
+src/mocks/fixtures/transactions.ts (lines 12, 24, 36, 48, 60, 72, 84, 96, etc.)
+
+CURRENT (WRONG):
+  { merchantName: 'Circle K', category: 'food' }
+  { merchantName: 'Grab', category: 'transport' }
+  { merchantName: 'Shopee', category: 'shopping' }
+
+EXPECTED (VIETNAMESE):
+  { merchantName: 'Circle K', category: classifyTransaction('Circle K') } → 'Ăn uống'
+  { merchantName: 'Grab', category: classifyTransaction('Grab') } → 'Di chuyển'
+  { merchantName: 'Shopee', category: classifyTransaction('Shopee') } → 'Mua sắm'
+
+IMPACT CHAIN:
+1. User selects 'Ăn uống' in CategoryFilter ✓
+2. filterStore.category = 'Ăn uống' ✓
+3. useTransactions refetch with category param ✓
+4. HTTP: GET /api/accounts/:id/transactions?category=Ăn%20uống ✓
+5. MSW handler filters: tx.category === 'Ăn uống' ✓
+6. Fixtures have 'food' → EMPTY RESULT ✗
+
+AFFECTED REQUIREMENTS:
+- CAT-03: Filter by category
+- EXP-01: Export with category filter (if button implemented)
+- BUDGET-02: Budget bars might use wrong category format
+
+WHY TESTS PASS:
+Unit tests mock responses directly, bypassing fixture-to-Vietnamese flow
+Tests call setCategory('food') instead of 'Ăn uống'
+Tests mask the real bug
+
+CROSS-PHASE WIRING STATUS:
+
+Phase 7 → 8: WIRED (depends on category consistency)
+  - Category type exported/imported ✓
+  - CATEGORY_TAXONOMY used by budget UI ✓
+  - Filtering infrastructure correct ✓
+  - BLOCKED: Fixture data type mismatch ✗
+
+Phase 7 → 9: NO DEPENDENCY
+  - Dashboard month-over-month is independent ✓
+
+Phase 7 → 10: WIRED (service layer only)
+  - Export service correctly accepts category filter ✓
+  - CSV formatter supports category overrides ✓
+  - MISSING: ExportButton UI component ✗
+
+Phase 8 → 9: NO DEPENDENCY
+  - Budget and delta features are independent ✓
+
+Phase 10: SERVICE ONLY
+  - exportTransactions service ✓
+  - formatTransactionForCSV utility ✓
+  - downloadCSV utility ✓
+  - MISSING: UI button to trigger export ✗
+
+Phase 11: STANDALONE
+  - ConversationStarters ✓
+  - ChatPanel integration ✓
+  - ChatMessage tap-to-reveal ✓
+  - Copy button ✓
+  - NO upstream dependencies ✓
+
+E2E FLOW STATUS:
+
+Flow 1: Category Override → ✓ WORKS (localStorage persistence)
+Flow 2: Filter by Category → ✗ BROKEN (fixture data type mismatch)
+Flow 3: Set Budget & View Progress → ✓ WORKS (assuming category consistency)
+Flow 4: Month-over-Month Dashboard → ✓ WORKS (independent)
+Flow 5: Export with Category Filter → ✗ BROKEN (2 issues: fixture mismatch + missing UI)
+Flow 6: Chat with Starters → ✓ WORKS (independent)
+
+TEST STATUS:
+Total: 263 passing (23 test files, 0 regressions)
+Known Issue: Tests use English category names, mask fixture bug
+
+CRITICAL FIX REQUIRED:
+Update 70 transactions in src/mocks/fixtures/transactions.ts
+Replace: category: 'food' / 'transport' / 'shopping' / 'grocery' / 'electronics'
+With: category: classifyTransaction(merchantName)
+
+EFFORT: 30 minutes
+VERIFICATION: Select category filter, verify transactions appear
+
+OTHER MISSING COMPONENTS:
+- ExportButton.tsx (Phase 10 Plan 02, not in v1.1 scope)
+- Verify categoryBreakdown category format (10 minutes)
+
+CONCLUSION:
+v1.1 is 90% complete. One data integrity issue must be fixed.
+All service integrations are correct. Issue is pure data consistency.

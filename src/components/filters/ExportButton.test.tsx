@@ -188,7 +188,7 @@ describe('ExportButton', () => {
 
     await waitFor(() => {
       expect(mockExportTransactions).toHaveBeenCalledWith(
-        'tcb-visa-001',
+        null,
         expect.objectContaining({ cardId: 'tcb-visa-001' })
       )
     })

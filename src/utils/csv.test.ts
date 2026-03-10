@@ -2,12 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   formatTransactionForCSV,
   downloadCSV,
-  type CSVTransactionRow,
 } from './csv'
 import type { Transaction } from '@/types/account'
 import type { CreditCardTransaction } from '@/types/creditCard'
-import * as currencyUtils from './currency'
-import * as dateUtils from './dates'
 
 // Mock the utility functions for deterministic output
 vi.mock('./currency', () => ({
@@ -160,8 +157,8 @@ describe('CSV Utilities', () => {
 
     it('prepends UTF-8 BOM to CSV string', () => {
       const createElementSpy = vi.spyOn(document, 'createElement')
-      const appendChildSpy = vi.spyOn(document.body, 'appendChild')
-      const removeChildSpy = vi.spyOn(document.body, 'removeChild')
+      vi.spyOn(document.body, 'appendChild')
+      vi.spyOn(document.body, 'removeChild')
       vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:http://localhost/test')
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
 
@@ -175,17 +172,13 @@ describe('CSV Utilities', () => {
     })
 
     it('creates Blob with correct MIME type', () => {
-      const blobSpy = vi.spyOn(global, 'Blob' as any)
       const appendChildSpy = vi.spyOn(document.body, 'appendChild')
-      const removeChildSpy = vi.spyOn(document.body, 'removeChild')
+      vi.spyOn(document.body, 'removeChild')
       vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:http://localhost/test')
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
 
       downloadCSV('test', 'test.csv')
 
-      // The Blob should be created with text/csv;charset=utf-8
-      const blobCalls = (global.Blob as any as typeof Blob).constructor.mock?.calls || []
-      // Just verify the function runs without error
       expect(appendChildSpy).toHaveBeenCalled()
     })
 
