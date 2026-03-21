@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useChatApi } from './useChatApi'
 
 export function ChatInput({ inputRef, prefillText, onPrefillConsumed }: {
-  inputRef?: React.RefObject<HTMLTextAreaElement>
+  inputRef?: React.RefObject<HTMLTextAreaElement | null>
   prefillText?: string
   onPrefillConsumed?: () => void
 } = {}) {
