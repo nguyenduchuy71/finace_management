@@ -1,73 +1,96 @@
-# React + TypeScript + Vite
+# FinanceManager
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A personal finance dashboard for managing bank accounts and credit card transactions in one unified interface. Built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- View and manage multiple bank accounts and credit cards
+- Filter transactions by date range, category, type, and keyword search
+- Dashboard with income/expense stats and month-over-month comparison
+- Category-based budget tracking with alerts
+- Billing cycle grouping for credit card transactions
+- CSV export
+- AI-powered chatbot (via Claude API)
+- Light/dark theme
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React 19** + **TypeScript 5** + **Vite 7**
+- **TanStack React Query 5** — data fetching & caching
+- **Zustand 5** — state management
+- **Zod 4** — schema validation
+- **Tailwind CSS 4** + **shadcn/ui** — styling
+- **Recharts** — charts
+- **MSW 2** — mock API for development
+- **Vitest** — unit testing
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- npm
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Clone the repository
+git clone https://github.com/nguyenduchuy71/finace_management.git
+cd finace_management
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# .env.local
+VITE_API_ENDPOINT=http://localhost:3000/api
+VITE_ENABLE_MSW=true   # Uses mock API in development — no backend required
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Run Development Server
+
+```bash
+npm run dev
+# App available at http://localhost:5173
+```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server with HMR |
+| `npm run build` | Type-check and build for production |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run tests in watch mode |
+| `npm run test:ui` | Run tests with interactive UI |
+| `npm run test:coverage` | Generate coverage report |
+
+## Project Structure
+
+```
+src/
+├── pages/          # Route-level page components
+├── features/       # Feature modules (accounts, transactions, creditCards, dashboard, chatbot)
+├── components/     # Reusable UI components
+├── hooks/          # Custom React hooks
+├── services/       # API client and service functions
+├── stores/         # Zustand state stores
+├── types/          # TypeScript interfaces and Zod schemas
+├── utils/          # Utility functions (currency, dates, categories, CSV)
+└── mocks/          # MSW mock handlers and fixtures
+```
+
+## Deployment
+
+Configured for deployment on [Vercel](https://vercel.com). The `VITE_ENABLE_MSW` flag is automatically set to `false` in production.
+
+```bash
+npm run build   # Output: dist/
 ```
