@@ -24,7 +24,7 @@ jobs:
         run: |
           git fetch origin ${{ github.base_ref }}
           DIFF=$(git diff origin/${{ github.base_ref }}...HEAD -- \
-            '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' \
+            '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md' '*.sh' '*.yaml' '*.yml' \
             ':!package-lock.json' ':!*.min.js' \
             | head -c 20000)
           echo "diff<<EOF" >> $GITHUB_OUTPUT
@@ -35,16 +35,21 @@ jobs:
         id: claude
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_DIFF: ${{ steps.diff.outputs.diff }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          DIFF='${{ steps.diff.outputs.diff }}'
+          if [ -z "$PR_DIFF" ]; then
+            echo "review=Không có thay đổi code để review." >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
           RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
             -H "x-api-key: $ANTHROPIC_API_KEY" \
             -H "anthropic-version: 2023-06-01" \
             -H "content-type: application/json" \
             -d "$(jq -n \
-              --arg diff "$DIFF" \
-              --arg title "${{ github.event.pull_request.title }}" \
+              --arg diff "$PR_DIFF" \
+              --arg title "$PR_TITLE" \
               '{
                 model: "claude-haiku-4-5-20251001",
                 max_tokens: 1024,
