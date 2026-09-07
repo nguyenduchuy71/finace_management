@@ -1,4 +1,6 @@
+# ---------------------------------------------------------------------------
 # Logs
+# ---------------------------------------------------------------------------
 logs
 *.log
 npm-debug.log*
@@ -7,18 +9,64 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# ---------------------------------------------------------------------------
+# Dependencies & build output
+# Vercel chạy `npm ci` rồi `tsc -b && vite build` -> không cần commit 2 thứ này.
+# LƯU Ý: package-lock.json PHẢI được commit, `npm ci` bắt buộc có nó.
+# ---------------------------------------------------------------------------
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# ---------------------------------------------------------------------------
+# Secrets
+# `.env*` chặn tất cả, 2 dòng phủ định bên dưới mở lại các file an toàn.
+# THỨ TỰ QUAN TRỌNG: git lấy rule KHỚP CUỐI CÙNG, nên phủ định phải nằm SAU `.env*`.
+#   .env.example — chỉ có placeholder, cần cho onboarding
+#   .env.test    — key demo mặc định của `supabase start`, giống nhau trên mọi máy
+# .env.local (key thật) vẫn bị chặn.
+# ---------------------------------------------------------------------------
+.env*
+!.env.example
+!.env.test
+
+# ---------------------------------------------------------------------------
+# Supabase
+# migrations/, seed.sql, config.toml, functions/ PHẢI commit — là source of truth
+# của schema. Chỉ bỏ state tạm của CLI.
+# ---------------------------------------------------------------------------
+supabase/.temp/
+supabase/.branches/
+
+# ---------------------------------------------------------------------------
+# Editor / OS
+# ---------------------------------------------------------------------------
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# ---------------------------------------------------------------------------
+# Tài liệu kế hoạch — chỉ dùng cục bộ, không phải code của app
+# ---------------------------------------------------------------------------
+plans/
+
+# ---------------------------------------------------------------------------
+# Công cụ dev cục bộ — không liên quan tới app khi deploy
+# .claude/skills, agents, settings.local.json vẫn được commit (đã tracked từ trước,
+# không chứa secret). Chỉ bỏ state chạy máy và bộ nhớ agent.
+# ---------------------------------------------------------------------------
+.claude/session-state/
+.claude/agent-memory-local/
+coverage/
+.vitest-cache/
+*.tsbuildinfo
+.vscode/*
+supabase/seeds/*

@@ -1,0 +1,75 @@
+name: CI
+
+# Vercel đã bật Git Integration (xem `git.deploymentEnabled` trong vercel.json)
+# nên Vercel TỰ deploy khi push. Workflow này CHỈ kiểm tra chất lượng code —
+# cố tình KHÔNG deploy để tránh deploy 2 lần và tốn build minutes.
+#
+# Vai trò: chặn code không compile / test vỡ trước khi merge vào main.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Push liên tiếp vào cùng 1 PR -> huỷ run cũ, chỉ chạy run mới nhất
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint · Test · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # `npm ci` cần package-lock.json — giống hệt installCommand của Vercel
+      - name: Install dependencies
+        run: npm ci
+
+      # Non-blocking: hiện còn 20 lỗi lint CÓ SẴN (chủ yếu `any` trong file test cũ
+      # và react-refresh trong component shadcn). Bật `continue-on-error` để CI không
+      # đỏ ngay từ ngày đầu. Sau khi dọn hết, xoá dòng continue-on-error để thành gate thật.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      # Gate thật: unit test không cần Docker, chạy nhanh
+      - name: Unit tests
+        run: npm test -- --run
+
+      # Gate thật: chạy ĐÚNG lệnh build của Vercel (tsc -b && vite build).
+      # tsconfig.app.json include cả `src` nên bước này type-check luôn file test —
+      # lỗi type trong test cũng làm Vercel build fail, phải bắt ở đây.
+      - name: Build
+        run: npm run build
+        env:
+          # Lấy từ GitHub thay vì hardcode:
+          #   - vars.VITE_SUPABASE_URL      -> Settings > Secrets and variables > Actions > Variables
+          #   - secrets.VITE_SUPABASE_ANON_KEY -> ... > Secrets
+          #
+          # Anon key vốn nằm trong bundle JS của browser nên KHÔNG phải bí mật thật,
+          # nhưng để ở Secrets thì giá trị bị che trong log và xoay vòng key không
+          # phải sửa file này. URL để ở Variables cho dễ đọc khi debug CI.
+          #
+          # `||` fallback: fork PR không đọc được secrets của repo gốc, thiếu fallback
+          # thì build fail ở fork vì lý do không liên quan tới code.
+          #
+          # ⚠️ Đã kiểm chứng: build VẪN PASS kể cả khi 2 biến này rỗng (supabase.ts
+          # không được đánh giá lúc build). Nên build xanh KHÔNG đảm bảo app chạy được —
+          # quên set biến trên Vercel thì deploy thành công nhưng app trắng màn hình.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'http://127.0.0.1:54321' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'build-time-placeholder' }}

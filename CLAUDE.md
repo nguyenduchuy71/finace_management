@@ -2,7 +2,7 @@
 
 ## Overview
 
-Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions. Uses Mock Service Worker (MSW) for development — no backend required.
+Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions. Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`.
 
 ---
 
@@ -10,9 +10,11 @@ Personal finance dashboard (React + TypeScript + Vite) for managing bank account
 
 ```bash
 npm install
-cp .env.example .env.local   # VITE_ENABLE_MSW=true
+supabase start               # Postgres + Auth local (cần Docker)
+cp .env.example .env.local   # điền VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
 npm run dev                  # http://localhost:5173
 ```
+Đăng nhập local bằng test user trong `supabase/seed.sql`: `test@local.dev` / `testpassword123`
 
 ## Scripts
 
@@ -22,18 +24,23 @@ npm run dev                  # http://localhost:5173
 | `npm run build` | `tsc -b && vite build` |
 | `npm run preview` | Preview production build |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest watch mode |
-| `npm run test:ui` | Interactive test UI |
-| `npm run test:coverage` | Coverage report |
+| `npm test` | Unit tests (không cần Docker) |
+| `npm run test:integration` | Integration tests (cần `supabase start`) |
+| `npm run test:all` | Cả hai |
+| `npm run test:coverage` | Coverage (unit) |
 
 ---
 
 ## Environment Variables
 
 ```bash
-VITE_API_ENDPOINT=http://localhost:3000/api
-VITE_ENABLE_MSW=true       # false in production (Vercel overrides automatically)
+VITE_SUPABASE_URL=http://127.0.0.1:54321      # `supabase status` cho local
+VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
+Anon key nằm trong bundle JS của browser — **RLS ở DB là lớp bảo vệ duy nhất**.
+Production: set 2 biến này trong Vercel dashboard (không hardcode vào `vercel.json`).
+
+Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER_ID`.
 
 ---
 
@@ -43,11 +50,10 @@ VITE_ENABLE_MSW=true       # false in production (Vercel overrides automatically
 - **TanStack React Query 5** — data fetching & caching
 - **Zustand 5** — state management
 - **Zod 4** — schema validation at service boundary
-- **Axios** — HTTP client
 - **React Router DOM 7** — routing
 - **Tailwind CSS 4** + **shadcn/radix-ui** — styling & UI
 - **Recharts** — charts (lazy-loaded, ~372KB chunk)
-- **MSW 2** — mock API
+- **Supabase** — Postgres, Auth, RLS, Edge Functions (`@supabase/supabase-js`)
 - **Sonner** — toast notifications
 - **@anthropic-ai/sdk** — chatbot feature
 - **@date-fns/tz** — Vietnam timezone (UTC+7)
@@ -78,54 +84,74 @@ src/
 │   ├── transactions/    # TransactionList, TransactionRow, Skeleton, EmptyState
 │   ├── creditCards/     # CreditCardTabs, BillingCycleGroup, BillingCycleInfoCard
 │   ├── dashboard/       # StatCard, CategoryChart, DashboardDatePicker, BudgetProgressSection
-│   └── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
+│   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
+│   └── auth/            # AuthProvider, LoginPage, ProtectedRoute
 ├── components/
 │   ├── layout/          # AppShell, AppHeader
 │   ├── filters/         # FilterBar, SearchInput, DateRangePicker, CategoryFilter, ExportButton
 │   ├── budget/          # BudgetProgressBar, BudgetSettings
 │   └── ui/              # shadcn components
-├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useDashboardStats, useBudgetAlerts, useDebounced
-├── services/            # apiClient (axios), accounts, creditCards, dashboard, exports
+├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useDashboardStats, useBudgetAlerts, useDebounced, useAuth
+├── lib/supabase.ts      # Supabase client singleton
+├── services/            # supabase-js: accounts, creditCards, dashboard, exports
+│                        #   mappers (snake_case→camelCase + Zod), transactionQuery (filter/keyset)
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, budget.ts, categories.ts
 ├── utils/               # dates, currency, categories, csv, billingCycle
-├── mocks/               # browser.ts, server.ts, handlers.ts, fixtures/
+├── test/                # fixtures/, integration-setup.ts
 └── lib/utils.ts         # cn() = clsx + twMerge
 ```
 
 ---
 
-## API Endpoints (Mock Handlers — `src/mocks/handlers.ts`)
+## Database Schema (Supabase)
 
-### Bank Accounts
 ```
-GET /api/accounts
-  → PaginatedResponse<BankAccount>
+transactions
+  id uuid PK | user_id → auth.users NOT NULL | bank_name text | amount bigint (VND, dương=thu, âm=chi)
+  currency text | transaction_date timestamptz | description text | raw_text text
+  source_type 'bank'|'credit_card' | account_ref text (4 ký tự cuối, resolve FK)
+  account_id → accounts | card_id → credit_cards   (nullable — xem cảnh báo bên dưới)
+  merchant_name text | category text | status 'pending'|'posted' | created_at timestamptz
 
-GET /api/accounts/:accountId/transactions
-  Query: cursor?, limit=20, search?, dateFrom?, dateTo?, txType?, category?
-  → PaginatedResponse<Transaction>
-```
-
-### Credit Cards
-```
-GET /api/credit-cards
-  → PaginatedResponse<CreditCard>
-
-GET /api/credit-cards/:cardId/transactions
-  Query: (same as bank transactions)
-  → PaginatedResponse<CreditCardTransaction>
-  Note: txType='income' always returns empty (CC = expenses only)
+accounts       id, user_id, bank_name, account_name, account_number, account_type,
+               currency, balance bigint, last_updated
+credit_cards   id, user_id, bank_name, card_name, card_number, card_type, currency,
+               credit_limit, current_balance, statement_date, payment_due_date, last_updated
+unparsed_messages  SMS không khớp parser nào (chỉ service_role đọc được)
 ```
 
-### Dashboard
-```
-GET /api/dashboard/stats
-  Query: dateFrom?, dateTo?
-  → DashboardStats { totalIncome, totalExpense, bankIncome, bankExpense, ccIncome, ccExpense, categoryBreakdown[], transactionCount }
-```
+**RPC:** `get_dashboard_stats(p_date_from, p_date_to)` → JSON khớp `DashboardStatsSchema`.
+Dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**.
 
----
+**RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
+`transactions.user_id` là **NOT NULL** — row user_id null sẽ vô hình với mọi policy
+(`auth.uid() = null` → NULL) và không cách nào xoá từ client.
+
+**Truy vấn giao dịch:** dùng `TX_COLUMNS` (`src/services/transactionQuery.ts`), **không dùng
+`select('*')`** — `*` kéo cả `raw_text` (nguyên văn SMS: số dư, tên người chuyển) về browser
+dù không mapper nào đọc. `countOption(cursor)` chỉ đếm ở trang đầu, vì `totalForPage()`
+vứt bỏ count từ trang 2 trở đi.
+
+⚠️ **`account_number`/`card_number` phải kết thúc bằng đúng `account_ref` mà parser bắt được**
+(vd LPBank → `****x265`). Sai format thì edge function không resolve được FK, và hậu quả
+KHÔNG hiển nhiên: giao dịch đó **không hiện trong danh sách** (mọi query lọc theo
+`account_id`/`card_id`) nhưng **vẫn được dashboard đếm** → tổng thu/chi lệch với danh sách.
+Dùng `getUnlinkedCount()` (`src/services/accounts.ts`) để phát hiện.
+
+## Edge Function (`supabase/functions/parse-transaction/`)
+
+iOS Shortcut POST `{ "text": "<nội dung notification>" }` + header `x-shortcut-secret`.
+11 parser: LPBank (app + SMS), SHB, HDBank, MSB, VPBank, WOORIVN, UOB, Sacombank, MoMo, BIDV.
+
+**Giới hạn `text` 2000 ký tự (`MAX_TEXT_LENGTH`) — không được bỏ.** Regex parser chạy đồng bộ
+và có độ phức tạp phi tuyến với input dài (đo thật: 203KB = 8.665ms trước khi neo regex SHB).
+Thông báo ngân hàng thật < 500 ký tự. Khi viết parser mới: **không dùng `.*?` / `.+?` không neo**,
+dùng `[^\n]{0,N}?` để chặn backtracking.
+
+Secret so sánh bằng hash SHA-256 + XOR toàn bộ (constant-time), không dùng `!==`.
+Response **không** trả `raw_text` về client.
+Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /app denoland/deno:2.1.4 test --allow-all parsers.test.ts`
 
 ## State Management (`src/stores/`)
 
@@ -218,20 +244,33 @@ formatCycleDateRange(startISO, endISO)            → { startDisplay, endDisplay
 
 ---
 
-## Mock Data Fixtures (`src/mocks/fixtures/`)
+## Testing
 
-- **accounts.ts** — 2 bank accounts (Vietcombank checking, Techcombank savings)
-- **transactions.ts** — 38 bank transactions (Dec 2025 – Feb 2026)
-- **creditCards.ts** — 2 credit cards + 32 CC transactions (Techcombank Visa, VPBank Mastercard)
+| Loại | File | Cần Docker |
+|---|---|---|
+| Unit | `src/**/*.test.{ts,tsx}` | Không |
+| Integration | `src/**/*.integration.test.ts` | Có (`supabase start`) |
+| Parser (Deno) | `supabase/functions/parse-transaction/parsers.test.ts` | Có |
+
+Component test mock ở tầng service (`vi.mock('@/services/...')`), không chạm DB.
+Integration test chạy trên Supabase local với `supabase/seed.sql` — số liệu cố định,
+kỳ vọng ghi ở cuối file seed. `src/test/integration-setup.ts` chặn không cho trỏ vào
+production (bảo vệ khỏi `db reset` xoá data thật).
 
 ---
 
 ## Key Architecture Decisions
 
-1. **MSW Deferred Render:** `ReactDOM.createRoot` called inside `enableMocking().then()` — mock API must be ready before React renders.
-2. **Cursor-based Pagination:** `useInfiniteQuery` uses transaction ID as cursor (not page numbers) for stability with active filters.
+1. **Supabase trực tiếp từ client:** không có backend riêng; `src/services/*` gọi supabase-js.
+   **Mọi truy cập DATA phải qua service layer** — component không được `.from()` trực tiếp.
+   Ngoại lệ duy nhất: `supabase.auth.*` (login/logout/session) dùng thẳng trong
+   `features/auth/` và `AppHeader` (nút đăng xuất) — auth không phải data.
+2. **Keyset Pagination:** cursor = base64 của `(transaction_date, id)` — ổn định hơn offset
+   khi có row mới chèn vào giữa lúc scroll. Xem `src/services/transactionQuery.ts`.
 3. **Filter Params in QueryKey:** TanStack Query auto-refetches when any filter changes — all filter values are part of queryKey.
-4. **Zod at Service Boundary:** All API responses validated with Zod in service layer; components receive typed data only.
+4. **Zod at Service Boundary:** mọi response validate bằng Zod trong service layer.
+   `mappers.ts` đổi snake_case→camelCase và chuẩn hoá timestamptz về ISO `Z`
+   (PostgREST trả `+00:00`, Zod `.datetime()` chỉ nhận `Z`).
 5. **Dashboard Store Separate:** `dashboardStore` is independent from `filterStore` — allows different date ranges simultaneously.
 6. **Recharts Lazy-Loaded:** CategoryChart uses `React.lazy()` to split the 372KB recharts chunk.
 7. **Vietnam Timezone:** All date display via `@date-fns/tz` (UTC+7) to avoid midnight UTC edge cases.
@@ -243,5 +282,5 @@ formatCycleDateRange(startISO, endISO)            → { startDisplay, endDisplay
 
 - Install: `npm ci`
 - Build: `npm run build` → `dist/`
-- Env override: `VITE_ENABLE_MSW=false`
+- Env: set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` trong Vercel dashboard
 - Region: `sfo1`
