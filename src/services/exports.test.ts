@@ -1,127 +1,51 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { exportTransactions } from './exports'
-import { apiClient } from './apiClient'
-import type { Transaction } from '@/types/account'
-import type { TransactionFilters } from './accounts'
+import { supabase } from '@/lib/supabase'
 
-vi.mock('./apiClient', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
-}))
+// Chỉ test phần logic thuần của exports (chọn cột account_id vs card_id,
+// validate tham số). Hành vi query thật đã được phủ bởi
+// services.integration.test.ts chạy trên Supabase local.
+vi.mock('@/lib/supabase', () => {
+  const builder = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    limit: vi.fn(() => builder),
+    or: vi.fn(() => builder),
+    gte: vi.fn(() => builder),
+    lte: vi.fn(() => builder),
+    gt: vi.fn(() => builder),
+    lt: vi.fn(() => builder),
+    then: (resolve: (v: unknown) => unknown) =>
+      resolve({ data: [], error: null, count: 0 }),
+  }
+  return { supabase: { from: vi.fn(() => builder) } }
+})
 
-const mockTransaction: Transaction = {
-  id: 'tx-1',
-  accountId: 'acc-1',
-  amount: -150000,
-  description: 'Lunch',
-  merchantName: 'Restaurant',
-  category: 'Ăn uống',
-  type: 'expense',
-  status: 'posted',
-  transactionDate: '2026-03-09T10:00:00Z',
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const builderOf = () => (supabase.from as any)('transactions')
 
-const mockPaginatedResponse = {
-  data: [mockTransaction],
-  nextCursor: null,
-  total: 1,
-}
+describe('exportTransactions', () => {
+  beforeEach(() => vi.clearAllMocks())
 
-describe('Export Service', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('calls apiClient.get with correct bank account endpoint', async () => {
-    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
-      data: mockPaginatedResponse,
-    })
-
+  it('lọc theo account_id khi truyền accountId', async () => {
     await exportTransactions('acc-1')
-
-    expect(getSpy).toHaveBeenCalledWith('/accounts/acc-1/transactions', {
-      params: {},
-    })
+    expect(builderOf().eq).toHaveBeenCalledWith('account_id', 'acc-1')
   })
 
-  it('passes dateFrom, dateTo, txType, category, search in params', async () => {
-    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
-      data: mockPaginatedResponse,
-    })
-
-    const filters: TransactionFilters = {
-      dateFrom: '2026-01-01',
-      dateTo: '2026-03-31',
-      txType: 'expense',
-      category: 'Ăn uống',
-      search: 'restaurant',
-    }
-
-    await exportTransactions('acc-1', filters)
-
-    expect(getSpy).toHaveBeenCalledWith('/accounts/acc-1/transactions', {
-      params: {
-        dateFrom: '2026-01-01',
-        dateTo: '2026-03-31',
-        txType: 'expense',
-        category: 'Ăn uống',
-        search: 'restaurant',
-      },
-    })
+  it('lọc theo card_id khi chỉ có cardId', async () => {
+    await exportTransactions(null, { cardId: 'card-1' })
+    expect(builderOf().eq).toHaveBeenCalledWith('card_id', 'card-1')
   })
 
-  it('does NOT include pagination params (no cursor, no limit)', async () => {
-    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
-      data: mockPaginatedResponse,
-    })
-
-    await exportTransactions('acc-1', { search: 'test' })
-
-    const callParams = getSpy.mock.calls[0][1]?.params
-    expect(callParams).not.toHaveProperty('cursor')
-    expect(callParams).not.toHaveProperty('limit')
+  it('báo lỗi khi thiếu cả accountId lẫn cardId', async () => {
+    await expect(exportTransactions(null, {})).rejects.toThrow(
+      'Either accountOrCardId or filters.cardId must be provided'
+    )
   })
 
-  it('returns parsed PaginatedResponse', async () => {
-    vi.spyOn(apiClient, 'get').mockResolvedValue({
-      data: mockPaginatedResponse,
-    })
-
-    const result = await exportTransactions('acc-1')
-
-    expect(result.data).toEqual([mockTransaction])
-    expect(result.total).toBe(1)
-  })
-
-  it('validates response via Zod schema', async () => {
-    const invalidResponse = {
-      data: [{ id: 'tx-1', accountId: 'acc-1' }],
-      nextCursor: null,
-      total: 1,
-    }
-
-    vi.spyOn(apiClient, 'get').mockResolvedValue({
-      data: invalidResponse,
-    })
-
-    await expect(exportTransactions('acc-1')).rejects.toThrow()
-  })
-
-  it('omits undefined or "all" filter values', async () => {
-    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue({
-      data: mockPaginatedResponse,
-    })
-
-    const filters: TransactionFilters = {
-      txType: 'all',
-      category: 'all',
-    }
-
-    await exportTransactions('acc-1', filters)
-
-    const callParams = getSpy.mock.calls[0][1]?.params
-    expect(callParams).not.toHaveProperty('txType')
-    expect(callParams).not.toHaveProperty('category')
+  it('không phân trang — trả nextCursor null', async () => {
+    const res = await exportTransactions('acc-1')
+    expect(res.nextCursor).toBeNull()
   })
 })

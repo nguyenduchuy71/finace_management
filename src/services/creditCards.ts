@@ -1,14 +1,25 @@
-import { apiClient } from './apiClient'
-import { CreditCardSchema, CreditCardTransactionSchema } from '@/types/creditCard'
-import { PaginatedResponseSchema } from '@/types/api'
-import type { TransactionFilters } from './accounts'
-
-const PaginatedCreditCardSchema = PaginatedResponseSchema(CreditCardSchema)
-const PaginatedCreditCardTransactionSchema = PaginatedResponseSchema(CreditCardTransactionSchema)
+import { supabase } from '@/lib/supabase'
+import {
+  mapCreditCard, mapCreditCardTransaction, toApiError, encodeCursor,
+  type CreditCardRow, type TransactionRow,
+} from './mappers'
+import {
+  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS,
+  type TransactionFilters,
+} from './transactionQuery'
 
 export async function getCreditCards() {
-  const response = await apiClient.get('/credit-cards')
-  return PaginatedCreditCardSchema.parse(response.data)
+  const { data, error, count } = await supabase
+    .from('credit_cards')
+    .select('*', { count: 'exact' })
+    .order('bank_name')
+
+  if (error) throw toApiError(error)
+  return {
+    data: ((data ?? []) as CreditCardRow[]).map(mapCreditCard),
+    nextCursor: null,
+    total: count ?? 0,
+  }
 }
 
 export async function getCreditCardTransactions(
@@ -17,19 +28,23 @@ export async function getCreditCardTransactions(
   limit = 20,
   filters?: TransactionFilters
 ) {
-  const response = await apiClient.get(
-    `/credit-cards/${cardId}/transactions`,
-    {
-      params: {
-        ...(cursor && { cursor }),
-        limit,
-        ...(filters?.search && { search: filters.search }),
-        ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
-        ...(filters?.dateTo && { dateTo: filters.dateTo }),
-        ...(filters?.txType && filters.txType !== 'all' && { txType: filters.txType }),
-        ...(filters?.category && filters.category !== 'all' && { category: filters.category }),
-      },
-    }
-  )
-  return PaginatedCreditCardTransactionSchema.parse(response.data)
+  // Thẻ tín dụng chỉ có chi tiêu -> txType='income' luôn rỗng (giữ hành vi cũ của mock)
+  if (filters?.txType === 'income') {
+    return { data: [], nextCursor: null, total: 0 }
+  }
+
+  const base = supabase
+    .from('transactions')
+    .select(TX_COLUMNS, countOption(cursor))
+    .eq('card_id', cardId)
+
+  const { data, error, count } = await applyTransactionFilters(base, cursor, limit, filters)
+  if (error) throw toApiError(error)
+
+  const { rows, hasMore } = paginate((data ?? []) as TransactionRow[], limit)
+  return {
+    data: rows.map(mapCreditCardTransaction),
+    nextCursor: hasMore ? encodeCursor(rows[rows.length - 1]) : null,
+    total: totalForPage(count, cursor),
+  }
 }

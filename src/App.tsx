@@ -2,11 +2,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { AppShell } from '@/components/layout/AppShell'
+import { AuthProvider } from '@/features/auth/AuthProvider'
+import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
+import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,       // 5 min — finance data is not real-time
@@ -20,16 +23,21 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppShell />}>
-            <Route index element={<Navigate to="/accounts" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/accounts" element={<BankAccountsPage />} />
-            <Route path="/credit-cards" element={<CreditCardsPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppShell />}>
+                <Route index element={<Navigate to="/accounts" replace />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/accounts" element={<BankAccountsPage />} />
+                <Route path="/credit-cards" element={<CreditCardsPage />} />
+              </Route>
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
       <Toaster />
     </QueryClientProvider>
   )

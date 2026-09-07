@@ -33,7 +33,7 @@ describe('StatCard Component - Delta Badge Display', () => {
 
   // Test 4: Positive delta colored green for income
   it('colors positive delta green for income variant', () => {
-    const { container } = render(
+    render(
       <StatCard variant="income" amount={12000000} transactionCount={10} delta={12} />
     )
 
@@ -43,7 +43,7 @@ describe('StatCard Component - Delta Badge Display', () => {
 
   // Test 5: Negative delta colored red for income
   it('colors negative delta red for income variant', () => {
-    const { container } = render(
+    render(
       <StatCard variant="income" amount={5000000} transactionCount={10} delta={-8} />
     )
 
@@ -53,7 +53,7 @@ describe('StatCard Component - Delta Badge Display', () => {
 
   // Test 6: Positive delta colored red for expense
   it('colors positive delta red for expense variant (increase is bad)', () => {
-    const { container } = render(
+    render(
       <StatCard variant="expense" amount={6000000} transactionCount={10} delta={12} />
     )
 
@@ -63,7 +63,7 @@ describe('StatCard Component - Delta Badge Display', () => {
 
   // Test 7: Negative delta colored green for expense
   it('colors negative delta green for expense variant (decrease is good)', () => {
-    const { container } = render(
+    render(
       <StatCard variant="expense" amount={3000000} transactionCount={10} delta={-8} />
     )
 

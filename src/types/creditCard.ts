@@ -5,7 +5,9 @@ export const CreditCardSchema = z.object({
   bankName: z.string(),
   cardName: z.string(),
   cardNumber: z.string(),         // masked: "****5678"
-  cardType: z.enum(['visa', 'mastercard', 'jcb']),
+  // amex: BIN 34xx/37xx, chỉ 15 số. Phải khớp constraint card_type ở DB
+  // (xem migration 20260907153000_add_amex_card_type.sql).
+  cardType: z.enum(['visa', 'mastercard', 'jcb', 'amex']),
   currency: z.literal('VND'),
   creditLimit: z.number().int(),
   currentBalance: z.number().int(),

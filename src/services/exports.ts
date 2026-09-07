@@ -1,59 +1,73 @@
-import { apiClient } from './apiClient'
-import { TransactionSchema } from '@/types/account'
-import { CreditCardTransactionSchema } from '@/types/creditCard'
-import { PaginatedResponseSchema } from '@/types/api'
-import type { TransactionFilters } from './accounts'
+import { supabase } from '@/lib/supabase'
+import {
+  mapTransaction, mapCreditCardTransaction, toApiError, encodeCursor,
+  type TransactionRow,
+} from './mappers'
+import { applyTransactionFilters, paginate, countOption, TX_COLUMNS, type TransactionFilters } from './transactionQuery'
 
-const PaginatedTransactionSchema = PaginatedResponseSchema(TransactionSchema)
-const PaginatedCreditCardSchema = PaginatedResponseSchema(CreditCardTransactionSchema)
+// PostgREST chặn cứng ở `max_rows` (1000, xem supabase/config.toml) nên 1 request
+// KHÔNG BAO GIỜ lấy được hơn 1000 row. Phải lật trang để xuất đủ.
+const PAGE_SIZE = 500
+
+// Trần an toàn: chặn vòng lặp vô hạn nếu cursor lỗi. 100 trang = 50k giao dịch,
+// thừa sức cho app tài chính cá nhân.
+const MAX_PAGES = 100
 
 /**
- * Fetch all transactions for a bank account or credit card with applied filters.
- * No pagination (no cursor, no limit) — exports fetch complete dataset.
+ * Lấy TOÀN BỘ giao dịch (đã áp filter) của 1 tài khoản hoặc 1 thẻ để xuất CSV.
  *
- * @param accountOrCardId Account ID (for bank transactions) or null (use cardId from filters)
- * @param filters Optional filters (dateFrom, dateTo, txType, category, search, cardId)
- * @returns Paginated response with all matching transactions
+ * Tự lật trang bằng keyset cho tới hết — trước đây chỉ lấy 1 request và bị
+ * PostgREST cắt im lặng ở 1000 row (user nhận file CSV THIẾU mà không hề biết).
+ *
+ * @param accountOrCardId Account ID, hoặc null thì dùng filters.cardId
+ * @param filters Bộ lọc đang áp ở UI
  */
 export async function exportTransactions(
   accountOrCardId: string | null,
   filters?: TransactionFilters & { cardId?: string }
 ) {
-  // Determine endpoint based on whether accountId or cardId is provided
-  let endpoint: string
-
-  if (accountOrCardId) {
-    endpoint = `/accounts/${accountOrCardId}/transactions`
-  } else if (filters?.cardId) {
-    endpoint = `/credit-cards/${filters.cardId}/transactions`
-  } else {
+  const isBank = Boolean(accountOrCardId)
+  if (!isBank && !filters?.cardId) {
     throw new Error('Either accountOrCardId or filters.cardId must be provided')
   }
 
-  // Build params object conditionally, excluding undefined and 'all' values
-  const params: Record<string, string> = {}
+  const column = isBank ? 'account_id' : 'card_id'
+  const value = isBank ? accountOrCardId! : filters!.cardId!
 
-  if (filters?.search) {
-    params.search = filters.search
-  }
-  if (filters?.dateFrom) {
-    params.dateFrom = filters.dateFrom
-  }
-  if (filters?.dateTo) {
-    params.dateTo = filters.dateTo
-  }
-  if (filters?.txType && filters.txType !== 'all') {
-    params.txType = filters.txType
-  }
-  if (filters?.category && filters.category !== 'all') {
-    params.category = filters.category
+  const allRows: TransactionRow[] = []
+  let cursor: string | undefined
+  let total = 0
+
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const base = supabase
+      .from('transactions')
+      .select(TX_COLUMNS, countOption(cursor))
+      .eq(column, value)
+
+    // Dùng chung logic filter với list view để kết quả export khớp đúng
+    // những gì user đang nhìn thấy trên màn hình.
+    const { data, error, count } = await applyTransactionFilters(
+      base,
+      cursor,
+      PAGE_SIZE,
+      filters
+    )
+    if (error) throw toApiError(error)
+
+    // CHỈ lấy count ở trang ĐẦU: từ trang 2 trở đi query có thêm điều kiện keyset
+    // nên `count` chỉ còn là số row CÒN LẠI, không phải tổng thật.
+    if (page === 0) total = count ?? 0
+
+    const { rows, hasMore } = paginate((data ?? []) as TransactionRow[], PAGE_SIZE)
+    allRows.push(...rows)
+
+    if (!hasMore || rows.length === 0) break
+    cursor = encodeCursor(rows[rows.length - 1])
   }
 
-  // Fetch transactions without pagination
-  const response = await apiClient.get(endpoint, { params })
-
-  // Parse based on endpoint type
-  const schema = accountOrCardId ? PaginatedTransactionSchema : PaginatedCreditCardSchema
-
-  return schema.parse(response.data)
+  return {
+    data: isBank ? allRows.map(mapTransaction) : allRows.map(mapCreditCardTransaction),
+    nextCursor: null,
+    total,
+  }
 }

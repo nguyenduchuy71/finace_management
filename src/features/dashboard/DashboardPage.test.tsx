@@ -1,11 +1,17 @@
-import { describe, it, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { server } from '@/mocks/server'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { DashboardPage } from '@/pages/DashboardPage'
-import { http, HttpResponse } from 'msw'
+import * as dashboardService from '@/services/dashboard'
+import type { DashboardStats } from '@/services/dashboard'
+
+// Mock ở tầng service — query thật đã phủ ở services.integration.test.ts
+vi.mock('@/services/dashboard', async (orig) => ({
+  ...(await orig<typeof import('@/services/dashboard')>()),
+  getDashboardStats: vi.fn(),
+}))
 
 // Mock recharts to avoid canvas rendering issues in jsdom
 vi.mock('recharts', () => ({
@@ -25,13 +31,29 @@ vi.mock('recharts', () => ({
   Legend: () => createElement('div', { 'data-testid': 'legend' }),
 }))
 
-// MSW server lifecycle
-beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
+const STATS: DashboardStats = {
+  totalIncome: 19827000,
+  totalExpense: 7718430,
+  bankIncome: 14827000,
+  bankExpense: 150430,
+  ccIncome: 5000000,
+  ccExpense: 7568000,
+  categoryBreakdown: [
+    { category: 'Ăn uống', amount: 2157000 },
+    { category: 'Mua sắm', amount: 500000 },
+    { category: 'Khác', amount: 5061430 },
+  ],
+  transactionCount: 8,
+}
+
+beforeEach(() => {
+  vi.mocked(dashboardService.getDashboardStats).mockResolvedValue(STATS)
+})
+
 afterEach(() => {
-  server.resetHandlers()
+  vi.clearAllMocks()
   useDashboardStore.setState({ dateFrom: null, dateTo: null })
 })
-afterAll(() => server.close())
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -63,29 +85,13 @@ describe('DashboardPage', () => {
   })
 
   describe('loading state', () => {
-    it('renders skeleton cards while loading', async () => {
-      // Use a slow handler to ensure loading state is visible
-      server.use(
-        http.get('/api/dashboard/stats', async () => {
-          await new Promise((resolve) => setTimeout(resolve, 50))
-          return HttpResponse.json({
-            totalIncome: 0,
-            totalExpense: 0,
-            bankIncome: 0,
-            bankExpense: 0,
-            ccIncome: 0,
-            ccExpense: 0,
-            categoryBreakdown: [],
-            transactionCount: 0,
-          })
-        })
-      )
+    it('renders skeleton cards while loading', () => {
+      // Promise không bao giờ resolve -> giữ nguyên trạng thái loading
+      vi.mocked(dashboardService.getDashboardStats).mockReturnValue(new Promise(() => {}))
 
-      renderDashboardPage()
-      // During loading, skeleton cards should be visible
-      // Check for a skeleton-style element or loading indicators
-      const body = document.body
-      expect(body).toBeTruthy()
+      const { container } = renderDashboardPage()
+      expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
+      expect(screen.queryByText('Tổng thu')).not.toBeInTheDocument()
     })
   })
 
@@ -107,20 +113,13 @@ describe('DashboardPage', () => {
     })
 
     it('shows formatted VND amounts', async () => {
-      server.use(
-        http.get('/api/dashboard/stats', () => {
-          return HttpResponse.json({
-            totalIncome: 10_000_000,
-            totalExpense: 5_000_000,
-            bankIncome: 10_000_000,
-            bankExpense: 3_000_000,
-            ccIncome: 0,
-            ccExpense: 2_000_000,
-            categoryBreakdown: [{ category: 'food', amount: 2_000_000 }],
-            transactionCount: 15,
-          })
-        })
-      )
+      vi.mocked(dashboardService.getDashboardStats).mockResolvedValue({
+        totalIncome: 10_000_000, totalExpense: 5_000_000,
+        bankIncome: 10_000_000, bankExpense: 3_000_000,
+        ccIncome: 0, ccExpense: 2_000_000,
+        categoryBreakdown: [{ category: 'Ăn uống', amount: 2_000_000 }],
+        transactionCount: 15,
+      })
 
       renderDashboardPage()
 
@@ -137,20 +136,10 @@ describe('DashboardPage', () => {
     })
 
     it('shows zero state message when no transactions', async () => {
-      server.use(
-        http.get('/api/dashboard/stats', () => {
-          return HttpResponse.json({
-            totalIncome: 0,
-            totalExpense: 0,
-            bankIncome: 0,
-            bankExpense: 0,
-            ccIncome: 0,
-            ccExpense: 0,
-            categoryBreakdown: [],
-            transactionCount: 0,
-          })
-        })
-      )
+      vi.mocked(dashboardService.getDashboardStats).mockResolvedValue({
+        totalIncome: 0, totalExpense: 0, bankIncome: 0, bankExpense: 0,
+        ccIncome: 0, ccExpense: 0, categoryBreakdown: [], transactionCount: 0,
+      })
 
       renderDashboardPage()
 
@@ -172,11 +161,9 @@ describe('DashboardPage', () => {
 
   describe('error state', () => {
     it('shows retry button when API fails', async () => {
-      server.use(
-        http.get('/api/dashboard/stats', () => {
-          return HttpResponse.error()
-        })
-      )
+      vi.mocked(dashboardService.getDashboardStats).mockRejectedValue({
+        code: 'NETWORK_ERROR', message: 'Không thể tải dữ liệu',
+      })
 
       renderDashboardPage()
 
@@ -187,11 +174,9 @@ describe('DashboardPage', () => {
     })
 
     it('shows error message in stat cards', async () => {
-      server.use(
-        http.get('/api/dashboard/stats', () => {
-          return HttpResponse.error()
-        })
-      )
+      vi.mocked(dashboardService.getDashboardStats).mockRejectedValue({
+        code: 'NETWORK_ERROR', message: 'Không thể tải dữ liệu',
+      })
 
       renderDashboardPage()
 
@@ -206,25 +191,14 @@ describe('DashboardPage', () => {
     it('passes date range from store to API', async () => {
       const capturedCalls: Array<{ dateFrom: string | null; dateTo: string | null }> = []
 
-      server.use(
-        http.get('/api/dashboard/stats', ({ request }) => {
-          const url = new URL(request.url)
-          const dateFrom = url.searchParams.get('dateFrom')
-          const dateTo = url.searchParams.get('dateTo')
-          capturedCalls.push({ dateFrom, dateTo })
-
-          return HttpResponse.json({
-            totalIncome: 5_000_000,
-            totalExpense: 2_000_000,
-            bankIncome: 5_000_000,
-            bankExpense: 2_000_000,
-            ccIncome: 0,
-            ccExpense: 0,
-            categoryBreakdown: [],
-            transactionCount: 5,
-          })
-        })
-      )
+      vi.mocked(dashboardService.getDashboardStats).mockImplementation(async (f) => {
+        capturedCalls.push({ dateFrom: f?.dateFrom ?? null, dateTo: f?.dateTo ?? null })
+        return {
+          totalIncome: 5_000_000, totalExpense: 2_000_000,
+          bankIncome: 5_000_000, bankExpense: 2_000_000,
+          ccIncome: 0, ccExpense: 0, categoryBreakdown: [], transactionCount: 5,
+        }
+      })
 
       useDashboardStore.setState({ dateFrom: '2026-01-01', dateTo: '2026-01-31' })
       renderDashboardPage()

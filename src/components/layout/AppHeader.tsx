@@ -1,10 +1,21 @@
-import { Sun, Moon, Wallet } from 'lucide-react'
+import { Sun, Moon, Wallet, LogOut } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useThemeStore } from '@/stores/themeStore'
+import { supabase } from '@/lib/supabase'
+import { queryClient } from '@/App'
 
 export function AppHeader() {
   const { theme, toggleTheme } = useThemeStore()
+
+  async function handleLogout() {
+    // Clear TRƯỚC khi signOut: signOut() kích hoạt onAuthStateChange -> ProtectedRoute
+    // điều hướng sang /login, các query đang bay có thể lỗi vì mất session.
+    // Clear trước thì query bị huỷ, không còn gì để lỗi.
+    // BẮT BUỘC có bước này: không clear thì user tiếp theo vẫn thấy data user trước.
+    queryClient.clear()
+    await supabase.auth.signOut()
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -56,7 +67,8 @@ export function AppHeader() {
           </NavLink>
         </nav>
 
-        {/* Theme Toggle */}
+        {/* Theme Toggle + Logout */}
+        <div className="flex items-center gap-1 shrink-0">
         <Button
           variant="ghost"
           size="icon"
@@ -70,6 +82,16 @@ export function AppHeader() {
             <Moon className="h-5 w-5" />
           )}
         </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleLogout}
+          aria-label="Đăng xuất"
+          className="touch-target shrink-0 transition-colors duration-200"
+        >
+          <LogOut className="h-5 w-5" />
+        </Button>
+        </div>
       </div>
     </header>
   )

@@ -30,10 +30,34 @@ export default defineConfig({
     // esbuild is Vite's default — fast and effective tree-shaking; terser not installed
   },
   test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test-setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
-    exclude: ['node_modules', 'dist'],
+    // Tách 2 project: `unit` chạy không cần docker (mặc định của `npm test`),
+    // `integration` cần `supabase start` nên chậm hơn nhiều.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./src/test-setup.ts'],
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: ['node_modules', 'dist', 'src/**/*.integration.test.{ts,tsx}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'integration',
+          environment: 'jsdom',
+          globals: true,
+          setupFiles: ['./src/test-setup.ts', './src/test/integration-setup.ts'],
+          include: ['src/**/*.integration.test.{ts,tsx}'],
+          exclude: ['node_modules', 'dist'],
+          testTimeout: 30_000,
+          // Test integration dùng chung 1 DB -> chạy tuần tự tránh đụng state
+          fileParallelism: false,
+        },
+      },
+    ],
   },
 })

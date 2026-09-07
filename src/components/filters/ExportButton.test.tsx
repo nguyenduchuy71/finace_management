@@ -101,12 +101,14 @@ beforeEach(() => {
         accountId: 'vcb-checking-001',
         amount: -50000,
         type: 'expense',
+        status: 'posted',
         description: 'Pho bo',
         transactionDate: '2026-03-01T10:00:00Z',
         category: 'Ăn uống',
       },
     ],
-    meta: { nextCursor: null, total: 1 },
+    nextCursor: null,
+    total: 1,
   })
 })
 

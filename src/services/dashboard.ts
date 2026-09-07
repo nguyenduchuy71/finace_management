@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { apiClient } from './apiClient'
+import { supabase } from '@/lib/supabase'
+import { toApiError } from './mappers'
 
 export const CategoryBreakdownItemSchema = z.object({
   category: z.string(),
@@ -26,11 +27,13 @@ export interface DashboardFilters {
 }
 
 export async function getDashboardStats(filters?: DashboardFilters): Promise<DashboardStats> {
-  const response = await apiClient.get('/dashboard/stats', {
-    params: {
-      ...(filters?.dateFrom && { dateFrom: filters.dateFrom }),
-      ...(filters?.dateTo && { dateTo: filters.dateTo }),
-    },
+  // Aggregate ở DB (RPC) thay vì kéo hết row về client.
+  // RPC dùng `security invoker` nên tôn trọng RLS của user đang đăng nhập.
+  const { data, error } = await supabase.rpc('get_dashboard_stats', {
+    p_date_from: filters?.dateFrom ?? null,
+    p_date_to: filters?.dateTo ?? null,
   })
-  return DashboardStatsSchema.parse(response.data)
+
+  if (error) throw toApiError(error)
+  return DashboardStatsSchema.parse(data)
 }

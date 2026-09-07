@@ -3,7 +3,9 @@ import { useFilterStore } from './filterStore'
 
 // Default state to reset to before each test
 const DEFAULT_STATE = {
-  accountId: 'vcb-checking-001',
+  // null: AccountTabs tự chọn tài khoản đầu tiên sau khi load từ Supabase
+  // (trước đây hardcode id của mock data)
+  accountId: null,
   cardId: null,
   dateFrom: null,
   dateTo: null,
@@ -19,9 +21,9 @@ describe('filterStore', () => {
   })
 
   describe('initial state', () => {
-    it('has correct default accountId', () => {
+    it('mặc định accountId là null (chờ AccountTabs chọn)', () => {
       const state = useFilterStore.getState()
-      expect(state.accountId).toBe('vcb-checking-001')
+      expect(state.accountId).toBeNull()
     })
 
     it('has null cardId by default', () => {
@@ -144,7 +146,7 @@ describe('filterStore', () => {
       useFilterStore.getState().resetFilters()
 
       const state = useFilterStore.getState()
-      expect(state.accountId).toBe('vcb-checking-001')
+      expect(state.accountId).toBeNull()
       expect(state.cardId).toBeNull()
       expect(state.dateFrom).toBeNull()
       expect(state.dateTo).toBeNull()
@@ -156,7 +158,7 @@ describe('filterStore', () => {
       useFilterStore.getState().resetFilters()
       useFilterStore.getState().resetFilters()
       const state = useFilterStore.getState()
-      expect(state.accountId).toBe('vcb-checking-001')
+      expect(state.accountId).toBeNull()
       expect(state.searchQuery).toBe('')
     })
   })

@@ -21,7 +21,7 @@ interface FilterState {
 }
 
 const defaultState = {
-  accountId: 'vcb-checking-001',  // default to first account for POC render
+  accountId: null,   // AccountTabs tự chọn tài khoản đầu tiên sau khi load từ Supabase
   cardId: null,
   dateFrom: null,
   dateTo: null,
