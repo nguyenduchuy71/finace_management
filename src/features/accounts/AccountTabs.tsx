@@ -43,7 +43,11 @@ export function AccountTabs({ onAccountChange }: AccountTabsProps) {
 
   return (
     <Tabs value={accountId ?? accounts[0].id} onValueChange={handleChange}>
-      <TabsList className="h-auto flex-wrap">
+      {/* h-auto PHẢI đi kèm flex-wrap: TabsList mặc định khoá `h-9`, nên khi
+          các trigger wrap xuống hàng 2 thì container vẫn cao 36px và nội dung
+          bên dưới bị đè lên. `[&>*]:flex-none` chặn trigger co giãn theo
+          flex-1 mặc định — nếu không, mỗi hàng wrap sẽ có bề rộng lệch nhau. */}
+      <TabsList className="h-auto flex-wrap [&>*]:h-auto [&>*]:flex-none">
         {accounts.map((account) => (
           <TabsTrigger
             key={account.id}

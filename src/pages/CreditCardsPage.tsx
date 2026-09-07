@@ -1,4 +1,4 @@
-import { CreditCardTabs } from '@/features/creditCards/CreditCardTabs'
+import { CreditCardSelector } from '@/features/creditCards/CreditCardSelector'
 import { CreditCardTransactionList } from '@/features/creditCards/CreditCardTransactionList'
 import { BillingCycleInfoCard } from '@/features/creditCards/BillingCycleInfoCard'
 import { FilterBar } from '@/components/filters/FilterBar'
@@ -20,8 +20,10 @@ export function CreditCardsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Thẻ tín dụng</h1>
       </div>
 
-      {/* Card switcher — sets cardId in Zustand filter store */}
-      <CreditCardTabs />
+      {/* Card switcher — sets cardId in Zustand filter store.
+          Combobox có tìm kiếm thay cho Tabs: 41 thẻ vượt xa ngưỡng ~15 mục
+          mà tabs còn dùng được, và TabsList khoá chiều cao khiến layout vỡ. */}
+      <CreditCardSelector />
 
       {/* Billing cycle info — shows current cycle dates and urgency badge */}
       {card && <BillingCycleInfoCard card={card} />}
