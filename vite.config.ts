@@ -42,6 +42,17 @@ export default defineConfig({
           setupFiles: ['./src/test-setup.ts'],
           include: ['src/**/*.test.{ts,tsx}'],
           exclude: ['node_modules', 'dist', 'src/**/*.integration.test.{ts,tsx}'],
+          // Giá trị giả BẮT BUỘC phải có: `src/lib/supabase.ts` throw ngay lúc
+          // import nếu thiếu 2 biến này, nên mọi test import service (dù đã
+          // vi.mock service đó) đều chết ở khâu nạp module.
+          //
+          // Máy dev có .env nên không lộ; CI không có -> đỏ. Đặt ở đây để unit
+          // test KHÔNG phụ thuộc file .env bên ngoài (chạy giống nhau ở mọi nơi).
+          // URL không có thật và unit test không gọi mạng — service đều bị mock.
+          env: {
+            VITE_SUPABASE_URL: 'http://127.0.0.1:54321',
+            VITE_SUPABASE_ANON_KEY: 'unit-test-anon-key',
+          },
         },
       },
       {
