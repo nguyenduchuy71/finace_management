@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow'
 import { useState } from 'react'
 import { Eye, EyeOff, Save, X, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,14 @@ const MODEL_OPTIONS = [
 ] as const
 
 export function ChatSettings() {
-  const { apiConfig, setApiConfig, toggleSettings, clearMessages } = useChatStore()
+  const { apiConfig, setApiConfig, toggleSettings, clearMessages } = useChatStore(
+    useShallow((s) => ({
+      apiConfig: s.apiConfig,
+      setApiConfig: s.setApiConfig,
+      toggleSettings: s.toggleSettings,
+      clearMessages: s.clearMessages,
+    }))
+  )
 
   const [apiKey, setApiKey] = useState(apiConfig?.apiKey ?? '')
   const [model, setModel] = useState(apiConfig?.model ?? 'claude-3-5-sonnet-20241022')

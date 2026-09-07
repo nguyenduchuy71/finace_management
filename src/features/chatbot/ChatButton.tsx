@@ -1,9 +1,12 @@
+import { useShallow } from 'zustand/react/shallow'
 import { MessageCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useChatStore } from '@/stores/chatStore'
 
 export function ChatButton() {
-  const { isOpen, toggleChat } = useChatStore()
+  const { isOpen, toggleChat } = useChatStore(
+    useShallow((s) => ({ isOpen: s.isOpen, toggleChat: s.toggleChat }))
+  )
 
   return (
     <Button

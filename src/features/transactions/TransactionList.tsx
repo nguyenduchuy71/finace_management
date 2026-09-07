@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useFilterParams } from '@/stores/filterStore'
 import { TransactionRow } from './TransactionRow'
@@ -13,6 +14,15 @@ export function TransactionList() {
 
   const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all' || category !== 'all')
 
+  // useMemo: flatMap trong thân render chạy lại mỗi lần re-render (đổi filter,
+  // debounce search...) trên toàn bộ tập đã tải. CreditCardTransactionList đã làm
+  // đúng như vậy; file này trước đây là chỗ lệch chuẩn.
+  // PHẢI đặt TRƯỚC mọi early return: hook gọi có điều kiện là vi phạm Rules of Hooks.
+  const allTransactions = useMemo(
+    () => data?.pages.flatMap((page) => page.data) ?? [],
+    [data]
+  )
+
   if (isLoading) return <TransactionListSkeleton count={7} />
 
   if (isError) {
@@ -26,8 +36,6 @@ export function TransactionList() {
       </div>
     )
   }
-
-  const allTransactions = data?.pages.flatMap((page) => page.data) ?? []
 
   if (allTransactions.length === 0) {
     return <TransactionEmptyState hasFilters={hasActiveFilters} />

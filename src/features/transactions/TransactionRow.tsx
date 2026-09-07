@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { formatVND } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/dates'
@@ -17,16 +17,19 @@ interface TransactionRowProps {
   transaction: Transaction
 }
 
-export function TransactionRow({ transaction: tx }: TransactionRowProps) {
+function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
   const isIncome = tx.type === 'income'
 
-  // Subscribe to overrides so the badge re-renders when user changes a category
-  const overrides = useCategoryOverrideStore((s) => s.overrides)
+  // Chỉ subscribe override CỦA RIÊNG dòng này (giá trị nguyên thuỷ), thay vì cả
+  // Map: đổi category 1 giao dịch sẽ thay reference của Map -> mọi dòng re-render
+  // và dựng lại Popover với toàn bộ taxonomy. Selector trả string|undefined nên
+  // Zustand so sánh bằng Object.is, dòng khác không bị đụng tới.
+  const override = useCategoryOverrideStore((s) => s.overrides.get(tx.id))
   const effectiveCategory = useMemo(() => {
     if (tx.type === 'income') return null // No category for income
     const serverCategory = (tx.category as Category) || classifyTransaction(tx.merchantName)
-    return overrides.get(tx.id) ?? serverCategory
-  }, [tx.id, tx.category, tx.merchantName, tx.type, overrides])
+    return override ?? serverCategory
+  }, [tx.category, tx.merchantName, tx.type, override])
 
   return (
     <div className="flex items-center justify-between section-padding-x py-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors duration-200 dark:border-slate-700 dark:bg-slate-900">
@@ -93,3 +96,11 @@ export function TransactionRow({ transaction: tx }: TransactionRowProps) {
     </div>
   )
 }
+
+/**
+ * memo: danh sách render tới hàng trăm dòng và cha re-render mỗi lần đổi filter
+ * hay tải thêm trang. Không có memo thì mỗi dòng dựng lại Popover kèm toàn bộ
+ * CATEGORY_TAXONOMY. `transaction` là object ổn định từ React Query cache nên
+ * so sánh nông mặc định là đủ.
+ */
+export const TransactionRow = memo(TransactionRowImpl)

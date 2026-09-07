@@ -10,7 +10,7 @@ describe('ChatMessage - Mobile Tap-to-Reveal', () => {
     id: '1',
     role: 'assistant',
     content: 'Test response',
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
   }
 
   beforeEach(() => {
@@ -34,7 +34,7 @@ describe('ChatMessage - Mobile Tap-to-Reveal', () => {
       id: '2',
       role: 'user',
       content: 'User question',
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     }
 
     render(<ChatMessage message={userMessage} />)
@@ -86,7 +86,7 @@ describe('ChatMessage - Mobile Tap-to-Reveal', () => {
       id: '3',
       role: 'error',
       content: 'An error occurred',
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     }
 
     const { container } = render(<ChatMessage message={errorMessage} />)
@@ -101,7 +101,7 @@ describe('ChatMessage - Mobile Tap-to-Reveal', () => {
       id: '4',
       role: 'assistant',
       content: '# Heading\n\nParagraph with **bold** text.',
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     }
 
     render(<ChatMessage message={markdownMessage} />)
@@ -113,7 +113,7 @@ describe('ChatMessage - Mobile Tap-to-Reveal', () => {
       id: '5',
       role: 'user',
       content: 'Test user message',
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     }
     const { container } = render(<ChatMessage message={userMessage} />)
     const messageGroup = container.querySelector('[class*="justify-end"]')

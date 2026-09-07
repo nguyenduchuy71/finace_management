@@ -2,14 +2,31 @@
   "buildCommand": "tsc -b && vite build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
-  "env": {
-    "VITE_ENABLE_MSW": "false"
-  },
-  "regions": ["sfo1"],
+  "regions": [
+    "sfo1"
+  ],
   "git": {
     "deploymentEnabled": {
       "main": true,
       "preview": true
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+        },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        }
+      ]
+    }
+  ]
 }

@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useChatStore } from '@/stores/chatStore'
 import { useFilterStore } from '@/stores/filterStore'
@@ -17,6 +17,9 @@ async function loadAnthropicSDK() {
 }
 
 export function useChatApi() {
+  // useShallow + danh sách field cụ thể: gọi useChatStore() trần sẽ subscribe
+  // TOÀN BỘ store, nên mỗi lần setRegenerateCallback ghi vào store là hook này
+  // re-render -> góp phần tạo vòng lặp vô hạn (xem comment ở visibleTransactions).
   const {
     apiConfig,
     messages,
@@ -24,7 +27,16 @@ export function useChatApi() {
     setLoading,
     isLoading,
     setRegenerateCallback,
-  } = useChatStore()
+  } = useChatStore(
+    useShallow((s) => ({
+      apiConfig: s.apiConfig,
+      messages: s.messages,
+      addMessage: s.addMessage,
+      setLoading: s.setLoading,
+      isLoading: s.isLoading,
+      setRegenerateCallback: s.setRegenerateCallback,
+    }))
+  )
 
   const { searchQuery, dateFrom, dateTo, txType, accountId } = useFilterStore(
     useShallow((s) => ({
@@ -38,7 +50,15 @@ export function useChatApi() {
 
   // Get current visible transactions for context
   const { data: transactionPages } = useTransactions()
-  const visibleTransactions = transactionPages?.pages.flatMap((p) => p.data) ?? []
+  // useMemo BẮT BUỘC: flatMap trong thân render trả array mới mỗi lần render ->
+  // sendMessage (useCallback nhận nó làm dep) đổi identity mỗi render ->
+  // useEffect đăng ký regenerate chạy lại -> setRegenerateCallback ghi store ->
+  // re-render -> lặp vô hạn ("Maximum update depth exceeded"), vỡ ngay khi mở
+  // chat panel. Đã tái hiện bằng renderHook trước khi sửa.
+  const visibleTransactions = useMemo(
+    () => transactionPages?.pages.flatMap((p) => p.data) ?? [],
+    [transactionPages]
+  )
 
   const sendMessage = useCallback(
     async (userText: string) => {

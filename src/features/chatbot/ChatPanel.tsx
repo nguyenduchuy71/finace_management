@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Settings, X, MessageCircle, Trash2, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +9,18 @@ import { ChatSettings } from './ChatSettings'
 import { ConversationStarters } from './ConversationStarters'
 
 export function ChatPanel() {
-  const { isOpen, messages, isLoading, showSettings, toggleSettings, closeChat, toggleChat, clearMessages } = useChatStore()
+  const { isOpen, messages, isLoading, showSettings, toggleSettings, closeChat, toggleChat, clearMessages } = useChatStore(
+    useShallow((s) => ({
+      isOpen: s.isOpen,
+      messages: s.messages,
+      isLoading: s.isLoading,
+      showSettings: s.showSettings,
+      toggleSettings: s.toggleSettings,
+      closeChat: s.closeChat,
+      toggleChat: s.toggleChat,
+      clearMessages: s.clearMessages,
+    }))
+  )
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [prefillText, setPrefillText] = useState<string | undefined>()

@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow'
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { AlertCircle, Bot, User, Copy, RefreshCw, Trash2 } from 'lucide-react'
@@ -15,7 +16,16 @@ const IS_TOUCH_DEVICE =
   ('ontouchstart' in window || navigator.maxTouchPoints > 0)
 
 export function ChatMessage({ message }: ChatMessageProps) {
-  const { deleteMessage, regenerateCallback, isLoading } = useChatStore()
+  // useShallow: ChatMessage render 1 lần cho MỖI tin nhắn. Subscribe cả store
+  // khiến mọi bong bóng chat re-parse ReactMarkdown mỗi khi `messages` đổi
+  // (tức là mỗi lần có tin nhắn mới) — 50 tin là 50 lần parse thừa.
+  const { deleteMessage, regenerateCallback, isLoading } = useChatStore(
+    useShallow((s) => ({
+      deleteMessage: s.deleteMessage,
+      regenerateCallback: s.regenerateCallback,
+      isLoading: s.isLoading,
+    }))
+  )
   const [showActions, setShowActions] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isUser = message.role === 'user'
