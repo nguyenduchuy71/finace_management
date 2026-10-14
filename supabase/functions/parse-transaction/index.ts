@@ -4,8 +4,10 @@
 // resolve thẻ/tài khoản, và insert vào bảng `transactions`.
 //
 // Deploy: supabase functions deploy parse-transaction
-// Gọi từ Shortcuts: POST { "text": "<nội dung notification>" }
-//   header bắt buộc: x-shortcut-secret
+// Gọi từ Shortcuts: POST { "text": "<nội dung notification>", "source": "<tên bank>" }
+//   header bắt buộc: x-shortcut-secret. `source` tuỳ chọn — xem docs/ios-shortcut-setup.md
+//
+// Luồng: OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages
 
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -31,6 +33,10 @@ const DEFAULT_USER_ID = Deno.env.get('DEFAULT_USER_ID')
 
 /** Thông báo ngân hàng thật < 500 ký tự. Xem lý do ở chỗ dùng bên dưới. */
 const MAX_TEXT_LENGTH = 2000
+const MAX_SOURCE_LENGTH = 50
+
+/** Shortcut gửi lại / automation chạy 2 lần trong khoảng này -> coi là trùng. */
+const DEDUP_WINDOW_MS = 10 * 60_000
 
 /**
  * So sánh secret theo thời gian hằng định.
@@ -105,6 +111,45 @@ async function resolveRefs(
   return isBank ? { account_id: data.id } : { card_id: data.id }
 }
 
+/**
+ * Cùng nguyên văn thông báo đã ghi trong DEDUP_WINDOW_MS -> trùng.
+ *
+ * Chỉ bắt được lần gửi LẶP của cùng 1 thông báo. Cùng giao dịch về qua 2 kênh
+ * (SMS + app) có text khác nhau nên KHÔNG bắt được — mỗi bank chỉ bật 1 kênh.
+ * Không dùng unique constraint vì MoMo không có giờ trong text: 2 ly cà phê cùng
+ * quán cách nhau 1 tiếng là 2 giao dịch thật có text y hệt nhau.
+ */
+async function isDuplicate(text: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('raw_text', text)
+    .gte('created_at', new Date(Date.now() - DEDUP_WINDOW_MS).toISOString())
+    .limit(1)
+  return (data?.length ?? 0) > 0
+}
+
+/** Ghi giao dịch + resolve FK. Trả response cho Shortcut. */
+async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Response> {
+  const refs = await resolveRefs(parsed, userId)
+  const { error } = await supabase
+    .from('transactions')
+    .insert({ ...parsed, ...refs, user_id: userId })
+  if (error) throw error
+
+  // KHÔNG vọng `raw_text` về response: nó chứa nguyên văn thông báo
+  // (số TK, số dư, tên người chuyển). Chỉ trả field cần cho Shortcut debug.
+  const inserted = { ...parsed, ...refs } as Record<string, unknown>
+  delete inserted.raw_text
+  return json({ inserted }, 201)
+}
+
+/** Lưu tin không ghi được thành giao dịch — nguồn mẫu để viết regex parser mới. */
+async function saveUnparsed(text: string, source: string | null, reason: string) {
+  await supabase.from('unparsed_messages').insert({ raw_text: text, source, reason })
+}
+
 serve(async (req) => {
   try {
     if (!SHORTCUT_SECRET || !DEFAULT_USER_ID) {
@@ -114,10 +159,17 @@ serve(async (req) => {
       return json({ error: 'unauthorized' }, 401)
     }
 
-    const { text } = await req.json()
-    if (!text || typeof text !== 'string') {
+    const body = await req.json()
+    const text = typeof body?.text === 'string' ? body.text.trim() : ''
+    if (!text) {
       return json({ error: 'missing text' }, 400)
     }
+    // Tên bank do automation gắn cứng (mỗi app 1 automation). Chỉ lưu kèm
+    // unparsed_messages để biết tin lạ đến từ app nào khi viết parser mới —
+    // bank_name của giao dịch do parser tự đặt, không lấy từ đây.
+    const source = typeof body?.source === 'string' && body.source.trim()
+      ? body.source.trim().slice(0, MAX_SOURCE_LENGTH)
+      : null
 
     // Chặn payload dài TRƯỚC khi chạy parser.
     //
@@ -137,6 +189,10 @@ serve(async (req) => {
       return json({ skipped: 'otp_or_security' }, 200)
     }
 
+    if (await isDuplicate(text, DEFAULT_USER_ID)) {
+      return json({ skipped: 'duplicate' }, 200)
+    }
+
     for (const parser of parsers) {
       const parsed = parser(text)
       if (!parsed) continue
@@ -144,27 +200,16 @@ serve(async (req) => {
       // Regex có thể khớp nhưng cho ra dữ liệu vô nghĩa (NaN amount, ngày không hợp lệ).
       // Chặn ở đây để không ghi rác vào DB — trả 422 thay vì để Postgres báo 500.
       if (!Number.isFinite(parsed.amount) || Number.isNaN(Date.parse(parsed.transaction_date))) {
-        await supabase.from('unparsed_messages').insert({ raw_text: text })
+        await saveUnparsed(text, source, 'invalid_parse')
         return json({ skipped: 'invalid_parse', bank: parsed.bank_name }, 422)
       }
-
-      const refs = await resolveRefs(parsed, DEFAULT_USER_ID)
-      const { error } = await supabase
-        .from('transactions')
-        .insert({ ...parsed, ...refs, user_id: DEFAULT_USER_ID })
-      if (error) throw error
-
-      // KHÔNG vọng `raw_text` về response: nó chứa nguyên văn thông báo
-      // (số TK, số dư, tên người chuyển). Chỉ trả field cần cho Shortcut debug.
-      const inserted = { ...parsed, ...refs } as Record<string, unknown>
-      delete inserted.raw_text
-      return json({ inserted }, 201)
+      return await insertTx(parsed, DEFAULT_USER_ID)
     }
 
     // Không khớp bank nào -> lưu lại để bổ sung parser sau.
-    // Đây là NGUỒN DỮ LIỆU để viết parser cho 10 bank còn thiếu: query bảng này
+    // Đây là NGUỒN DỮ LIỆU để viết parser cho bank còn thiếu: query bảng này
     // lấy raw_text thật rồi thêm test case vào parsers.test.ts.
-    await supabase.from('unparsed_messages').insert({ raw_text: text })
+    await saveUnparsed(text, source, 'no_match')
     return json({ skipped: 'no_match' }, 200)
   } catch (e) {
     return json({ error: String(e) }, 500)

@@ -49,7 +49,7 @@ fi
 FILTER="resolved=eq.false"
 [[ "${1:-}" == "--all" ]] && FILTER=""
 
-curl -sf "$URL/rest/v1/unparsed_messages?select=id,raw_text,received_at,resolved&${FILTER}&order=received_at.desc&limit=50" \
+curl -sf "$URL/rest/v1/unparsed_messages?select=id,raw_text,received_at,resolved,source,reason&${FILTER}&order=received_at.desc&limit=50" \
   -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
 | python3 -c '
 import json, sys
@@ -67,7 +67,8 @@ print(f"{len(rows)} thông báo chưa parse được:\n")
 for r in rows:
     flag = " [resolved]" if r.get("resolved") else ""
     rid, ts = r["id"], r["received_at"][:19]
-    print(f"--- id={rid}  {ts}{flag}")
+    meta = f"  source={r.get('source') or '?'}  reason={r.get('reason') or '?'}"
+    print(f"--- id={rid}  {ts}{meta}{flag}")
     print(r["raw_text"])
     print()
 print("Copy nguyên văn phần trên vào parsers.test.ts rồi viết parser.")
