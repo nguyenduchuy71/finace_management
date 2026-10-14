@@ -258,7 +258,6 @@ export const parsers: Parser[] = [
 //
 // CHƯA CÓ parser: OCB, Eximbank, VIB, ACB, HSBC, KBank, Cake, Vietinbank,
 //                 BaoVietBank, ShinhanBank  (17/41 thẻ)
-//
 // KHÔNG viết regex theo phỏng đoán — sai định dạng thì hoặc không khớp, hoặc
 // tệ hơn là bóc sai SỐ TIỀN mà không ai biết. Quy trình đúng:
 //
@@ -270,6 +269,6 @@ export const parsers: Parser[] = [
 //   5. Viết parser cho tới khi test xanh
 //
 // Lưu ý OCB: từ 31/03/2025 OCB ĐÃ NGỪNG gửi SMS cho giao dịch thẻ tín dụng,
-// chuyển sang push notification trong app OCB OMNI. Phải bắt qua Shortcut đọc
-// notification, không phải SMS.
+// chuyển sang push notification trong app OCB OMNI. Phải bắt bằng trigger
+// Notification của Shortcuts (iOS 27+), không phải SMS. Xem docs/ios-shortcut-setup.md
 // ---------------------------------------------------------------------------
