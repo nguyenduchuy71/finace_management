@@ -118,7 +118,7 @@ accounts       id, user_id, bank_name, account_name, account_number, account_typ
                currency, balance bigint, last_updated
 credit_cards   id, user_id, bank_name, card_name, card_number, card_type, currency,
                credit_limit, current_balance, statement_date, payment_due_date, last_updated
-unparsed_messages  SMS không khớp parser nào (chỉ service_role đọc được)
+unparsed_messages  tin không ghi được (source, reason) — chỉ service_role đọc được
 ```
 
 **RPC:** `get_dashboard_stats(p_date_from, p_date_to)` → JSON khớp `DashboardStatsSchema`.
@@ -141,7 +141,10 @@ Dùng `getUnlinkedCount()` (`src/services/accounts.ts`) để phát hiện.
 
 ## Edge Function (`supabase/functions/parse-transaction/`)
 
-iOS Shortcut POST `{ "text": "<nội dung notification>" }` + header `x-shortcut-secret`.
+iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>" }` + header
+`x-shortcut-secret`. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
+Luồng: OTP → chống trùng (cùng `raw_text` trong 10 phút) → 11 regex parser → `unparsed_messages`
+(kèm `source`, `reason`). Bank chưa có parser: lấy mẫu thật từ `unparsed_messages` rồi viết regex.
 11 parser: LPBank (app + SMS), SHB, HDBank, MSB, VPBank, WOORIVN, UOB, Sacombank, MoMo, BIDV.
 
 **Giới hạn `text` 2000 ký tự (`MAX_TEXT_LENGTH`) — không được bỏ.** Regex parser chạy đồng bộ
