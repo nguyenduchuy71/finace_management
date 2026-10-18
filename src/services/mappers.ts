@@ -20,6 +20,7 @@ export interface TransactionRow {
   card_id: string | null
   merchant_name: string | null
   category: string | null
+  mcc?: string | null
   status: 'pending' | 'posted'
 }
 
@@ -88,6 +89,7 @@ export function mapCreditCardTransaction(row: TransactionRow) {
     description: row.description ?? '',
     merchantName: row.merchant_name ?? row.description ?? '',
     category: row.category ?? undefined,
+    mcc: row.mcc ?? undefined,
     // Parser chỉ suy được purchase; tiền vào thẻ = thanh toán dư nợ.
     type: amount > 0 ? 'payment' : 'purchase',
     status: row.status,

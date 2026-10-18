@@ -4,6 +4,7 @@ import type { Transaction } from '@/types/account'
 import type { CreditCardTransaction } from '@/types/creditCard'
 import type { BankAccount } from '@/types/account'
 import type { CreditCard } from '@/types/creditCard'
+import { formatMcc } from './mcc'
 
 export interface CSVTransactionRow {
   'Ngày': string
@@ -12,6 +13,11 @@ export interface CSVTransactionRow {
   'Loại': string
   'Tài khoản': string
   'Danh mục': string
+  /**
+   * CHỈ có ở giao dịch thẻ (bỏ hẳn khỏi file xuất của tài khoản ngân hàng để khỏi thêm một cột
+   * luôn trống). Thẻ chưa phân loại thì để trống nhưng vẫn có cột, để các dòng cùng một file khớp tiêu đề.
+   */
+  'MCC'?: string
 }
 
 /**
@@ -64,6 +70,8 @@ export function formatTransactionForCSV(
     'Loại': typeLabel,
     'Tài khoản': neutralizeFormula(accountName),
     'Danh mục': neutralizeFormula(category),
+    // `cardId` chỉ có ở CreditCardTransaction: dùng nó để phân biệt giao dịch thẻ với giao dịch tài khoản.
+    ...('cardId' in tx ? { 'MCC': tx.mcc ? formatMcc(tx.mcc) : '' } : {}),
   }
 }
 
