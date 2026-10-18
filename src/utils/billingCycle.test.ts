@@ -45,6 +45,64 @@ describe('computeCurrentCycle', () => {
   })
 })
 
+describe('computeCurrentCycle — ngày sao kê 29-31 và tháng ngắn', () => {
+  // Trước khi kẹp ngày: Date.UTC(2026, 3, 31) tràn sang 1/5 nên chu kỳ sai / không chứa "bây giờ".
+  it('ngày sao kê 31 trong tháng 4 (30 ngày): chu kỳ kết thúc 30/04, không tràn sang 01/05', () => {
+    const c = computeCurrentCycle(31, '2026-04-15T05:00:00Z')
+    expect(c.startDisplay).toBe('01/04/2026')
+    expect(c.endDisplay).toBe('30/04/2026')
+  })
+
+  it('ngày 1/5 với ngày sao kê 31: chu kỳ mới bắt đầu 01/05 và chứa ngày hiện tại', () => {
+    const now = '2026-05-01T05:00:00Z'
+    const c = computeCurrentCycle(31, now)
+    expect(c.startDisplay).toBe('01/05/2026')
+    expect(c.endDisplay).toBe('31/05/2026')
+    expect(new Date(c.startISO).getTime()).toBeLessThanOrEqual(new Date(now).getTime())
+    expect(new Date(now).getTime()).toBeLessThan(new Date(c.endISO).getTime())
+  })
+
+  it('ngày sao kê 30 trong tháng 2: cắt vào ngày cuối tháng 2 (28/2/2026, 29/2/2028)', () => {
+    expect(computeCurrentCycle(30, '2026-02-10T05:00:00Z').endDisplay).toBe('28/02/2026')
+    expect(computeCurrentCycle(30, '2028-02-10T05:00:00Z').endDisplay).toBe('29/02/2028')
+  })
+
+  it('ngày cuối tháng ngắn vẫn thuộc chu kỳ đang chạy, ngày sau sang chu kỳ mới', () => {
+    const last = computeCurrentCycle(31, '2026-04-30T16:59:00Z') // 23:59 VN ngày 30/4
+    expect(last.endDisplay).toBe('30/04/2026')
+    const next = computeCurrentCycle(31, '2026-04-30T17:00:00Z') // đúng 00:00 VN ngày 1/5
+    expect(next.startDisplay).toBe('01/05/2026')
+  })
+
+  // Tính chất: với MỌI ngày trong 3 năm và MỌI ngày sao kê 1..31, chu kỳ phải chứa "bây giờ",
+  // kết thúc ở ngày sao kê đã kẹp theo độ dài tháng, và dài 28..31 ngày.
+  // Gom vi phạm vào mảng rồi kiểm MỘT lần: ~34 nghìn tổ hợp × nhiều expect() từng mất ~4s
+  // (sát timeout 5s, fail khi cả bộ test chạy song song).
+  it('mọi ngày × mọi ngày sao kê 1..31 (2026-2028): chu kỳ chứa now và kết thúc đúng ngày kẹp', () => {
+    const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+    const violations: string[] = []
+    for (let t = Date.UTC(2026, 0, 1, 5); t < Date.UTC(2029, 0, 1); t += 86_400_000) {
+      const now = new Date(t).toISOString()
+      for (let day = 1; day <= 31; day++) {
+        const c = computeCurrentCycle(day, now)
+        const start = new Date(c.startISO)
+        const end = new Date(c.endISO)
+        const problems: string[] = []
+        if (!(start.getTime() <= t && t < end.getTime())) problems.push('không chứa now')
+        if (end.getUTCDate() !== Math.min(day, daysInMonth(end.getUTCFullYear(), end.getUTCMonth()))) problems.push('ngày kết thúc sai')
+        if (start.getUTCDate() !== Math.min(day, daysInMonth(start.getUTCFullYear(), start.getUTCMonth()))) problems.push('ngày bắt đầu sai')
+        if (end.getUTCHours() !== 17 || start.getUTCHours() !== 17) problems.push('không cắt 17:00 UTC')
+        const lengthDays = (end.getTime() - start.getTime()) / 86_400_000
+        if (lengthDays < 28 || lengthDays > 31) problems.push(`dài ${lengthDays} ngày`)
+        if (problems.length) violations.push(`now=${now} day=${day}: ${problems.join(', ')}`)
+      }
+    }
+    expect(violations.slice(0, 5)).toEqual([])
+    expect(violations).toHaveLength(0)
+    // Cố ý quét đủ ~34 nghìn tổ hợp (~1,5s khi chạy riêng): timeout riêng vì tải song song làm chậm gấp nhiều lần.
+  }, 30_000)
+})
+
 describe('groupTransactionsByCycle', () => {
   it('pending transaction (no billingCycleStart) → assigned to currentCycle group', () => {
     const currentCycle = computeCurrentCycle(15, '2026-03-03T00:00:00Z')
