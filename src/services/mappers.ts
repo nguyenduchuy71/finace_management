@@ -39,7 +39,7 @@ export interface CreditCardRow {
   bank_name: string
   card_name: string
   card_number: string
-  card_type: 'visa' | 'mastercard' | 'jcb'
+  card_type: 'visa' | 'mastercard' | 'jcb' | 'amex'
   currency: string
   credit_limit: number | string
   current_balance: number | string
@@ -133,6 +133,7 @@ export function mapCreditCard(row: CreditCardRow) {
 const ERROR_MESSAGES: Record<string, string> = {
   '42501': 'Bạn không có quyền xem dữ liệu này.',
   '23505': 'Dữ liệu đã tồn tại.',
+  P0002: 'Không tìm thấy thẻ (đã bị xoá hoặc không thuộc về bạn).',
   '23502': 'Thiếu thông tin bắt buộc.',
   '22007': 'Giá trị ngày tháng không hợp lệ.',
   '22P02': 'Dữ liệu gửi lên không đúng định dạng.',

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
@@ -14,6 +14,7 @@ vi.mock('@/hooks/useCreditCards', () => ({
   useCreditCards: () => ({ data: { data: cards, nextCursor: null, total: 41 }, isLoading: false }),
 }))
 import { CreditCardSelector } from './CreditCardSelector'
+import { useFilterStore } from '@/stores/filterStore'
 
 const wrap = ({ children }: { children: React.ReactNode }) =>
   React.createElement(QueryClientProvider, { client: new QueryClient() }, children)
@@ -86,5 +87,21 @@ describe('CreditCardSelector', () => {
     await u.click(screen.getByRole('combobox'))
     await u.type(screen.getByLabelText('Tìm thẻ'), 'zzzz')
     expect(screen.getByText('Không tìm thấy thẻ nào.')).toBeInTheDocument()
+  })
+})
+
+describe('CreditCardSelector — thẻ đang chọn không còn tồn tại', () => {
+  // Thẻ bị xoá ở tab/thiết bị khác: cardId trỏ vào thẻ đã mất, selector từng hiện
+  // "Chọn thẻ…" mãi mãi và nút Sửa/Xoá của trang biến mất.
+  it('tự chọn lại thẻ đầu tiên khi cardId trỏ vào thẻ đã mất', async () => {
+    useFilterStore.setState({ cardId: 'da-bi-xoa' })
+    render(<CreditCardSelector />, { wrapper: wrap })
+    await waitFor(() => expect(useFilterStore.getState().cardId).toBe('c0'))
+  })
+
+  it('giữ nguyên lựa chọn khi thẻ vẫn còn', () => {
+    useFilterStore.setState({ cardId: 'c5' })
+    render(<CreditCardSelector />, { wrapper: wrap })
+    expect(useFilterStore.getState().cardId).toBe('c5')
   })
 })
