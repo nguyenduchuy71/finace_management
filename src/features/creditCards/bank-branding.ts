@@ -70,3 +70,21 @@ export const CARD_TYPE_LABEL: Record<string, string> = {
   jcb: 'JCB',
   amex: 'Amex',
 }
+
+/** Tên ngân hàng app đã biết — làm gợi ý khi nhập thẻ. */
+export const KNOWN_BANK_NAMES: string[] = Object.keys(BANKS)
+
+/**
+ * Chuẩn hoá tên ngân hàng người dùng gõ về đúng chữ hoa/thường của tên đã biết
+ * ("vpbank" -> "VPBank").
+ *
+ * Edge function resolve thẻ bằng `.eq('bank_name', ...)` — khớp CHÍNH XÁC, phân biệt
+ * hoa thường. "vpbank" thì mọi giao dịch của thẻ đó lưu với card_id null: ẩn khỏi
+ * danh sách nhưng dashboard vẫn đếm. Tên chưa biết được giữ nguyên (thẻ của ngân hàng
+ * chưa có parser vẫn hợp lệ).
+ */
+export function canonicalBankName(input: string): string {
+  const trimmed = input.trim()
+  const lower = trimmed.toLowerCase()
+  return KNOWN_BANK_NAMES.find((n) => n.toLowerCase() === lower) ?? trimmed
+}

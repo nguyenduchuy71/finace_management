@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getBankBrand } from './bank-branding'
+import { getBankBrand, canonicalBankName, KNOWN_BANK_NAMES } from './bank-branding'
 
 // 19 ngân hàng thực tế có trong DB (select distinct bank_name from credit_cards)
 const BANKS_IN_DB = [
@@ -36,5 +36,26 @@ describe('getBankBrand', () => {
     for (const bank of BANKS_IN_DB) {
       expect(getBankBrand(bank).className).toContain('dark:')
     }
+  })
+})
+
+describe('canonicalBankName', () => {
+  // Edge function so khớp bank_name bằng .eq() chính xác, phân biệt hoa thường.
+  it.each([['vpbank', 'VPBank'], ['VPBANK', 'VPBank'], ['  shb ', 'SHB'], ['sacombank', 'Sacombank'], ['WooriVN', 'WOORIVN']])(
+    'chuẩn hoá %j -> %j', (input, want) => {
+      expect(canonicalBankName(input)).toBe(want)
+    }
+  )
+
+  it('giữ nguyên (chỉ trim) tên ngân hàng chưa biết', () => {
+    expect(canonicalBankName('  Some New Bank ')).toBe('Some New Bank')
+  })
+
+  it('không đoán mờ: "VPBank Mobifone" không bị đổi thành "VPBank"', () => {
+    expect(canonicalBankName('VPBank Mobifone')).toBe('VPBank Mobifone')
+  })
+
+  it('mọi tên đã biết tự ánh xạ về chính nó', () => {
+    for (const n of KNOWN_BANK_NAMES) expect(canonicalBankName(n)).toBe(n)
   })
 })

@@ -41,9 +41,11 @@ export function CreditCardSelector() {
   const cards: CreditCard[] = useMemo(() => data?.data ?? [], [data])
 
   // Chọn sẵn thẻ đầu tiên khi tải xong — không có thẻ nào được chọn thì
-  // danh sách giao dịch bên dưới sẽ trống mà không rõ lý do.
+  // danh sách giao dịch bên dưới sẽ trống mà không rõ lý do. Cũng áp dụng khi cardId
+  // trỏ vào thẻ đã biến mất (xoá ở tab/thiết bị khác, hoặc vừa xoá thẻ đang chọn):
+  // nếu không, selector hiện "Chọn thẻ…" và nút Sửa/Xoá biến mất mà không tự hồi phục.
   useEffect(() => {
-    if (cards.length > 0 && !cardId) setCardId(cards[0].id)
+    if (cards.length > 0 && !cards.some((c) => c.id === cardId)) setCardId(cards[0].id)
   }, [cards, cardId, setCardId])
 
   const selected = cards.find((c) => c.id === cardId) ?? null
