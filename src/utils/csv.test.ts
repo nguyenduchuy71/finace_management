@@ -73,6 +73,25 @@ describe('CSV Utilities', () => {
       expect(result['Tài khoản']).toBe('TCB Visa')
     })
 
+    it('MCC: giao dịch thẻ đã phân loại hiện "mã · nhãn"; chưa phân loại vẫn có cột nhưng để trống', () => {
+      const base: CreditCardTransaction = {
+        id: 'cc-2', cardId: 'card-1', amount: -50000, description: 'Grab', merchantName: 'Grab',
+        type: 'purchase', status: 'posted', transactionDate: '2026-03-08T10:00:00Z',
+      }
+      expect(formatTransactionForCSV({ ...base, mcc: '4121' })['MCC']).toBe('4121 · Taxi / xe công nghệ')
+      expect(formatTransactionForCSV({ ...base, mcc: '9999' })['MCC']).toBe('9999')
+      const unclassified = formatTransactionForCSV(base)
+      expect(unclassified).toHaveProperty('MCC', '')
+    })
+
+    it('MCC: file xuất của tài khoản ngân hàng KHÔNG có cột MCC (tránh một cột luôn trống)', () => {
+      const tx: Transaction = {
+        id: 'tx-9', accountId: 'acc-1', amount: -1000, description: 'x', merchantName: 'x',
+        type: 'expense', status: 'posted', transactionDate: '2026-03-09T10:00:00Z',
+      }
+      expect(formatTransactionForCSV(tx)).not.toHaveProperty('MCC')
+    })
+
     it('handles missing account/card gracefully', () => {
       const tx: Transaction = {
         id: 'tx-1',
