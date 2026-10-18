@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
@@ -35,13 +35,21 @@ function renderDialog(card: CreditCard | null = null) {
   return { onOpenChange }
 }
 
-async function fillValid(u: ReturnType<typeof userEvent.setup>) {
-  await u.type(screen.getByLabelText('Ngân hàng'), 'LPBank')
-  await u.type(screen.getByLabelText('Tên thẻ'), 'LPBank Visa')
-  await u.type(screen.getByLabelText('Số thẻ'), '****x265')
-  await u.type(screen.getByLabelText('Ngày sao kê (1-31)'), '5')
-  await u.type(screen.getByLabelText('Ngày đến hạn (1-31)'), '25')
-  await u.type(screen.getByLabelText('Hạn mức (đ)'), '50.000.000')
+/**
+ * Điền ô bằng một sự kiện change thay vì gõ từng phím: gõ ~40 ký tự bằng userEvent mất ~0,4s
+ * khi chạy riêng nhưng chậm gấp chục lần khi cả bộ test chạy song song, đủ để vượt timeout 5s.
+ * Chỉ test nào kiểm hành vi GÕ PHÍM mới dùng u.type.
+ */
+const setField = (label: string, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } })
+
+function fillValid() {
+  setField('Ngân hàng', 'LPBank')
+  setField('Tên thẻ', 'LPBank Visa')
+  setField('Số thẻ', '****x265')
+  setField('Ngày sao kê (1-31)', '5')
+  setField('Ngày đến hạn (1-31)', '25')
+  setField('Hạn mức (đ)', '50.000.000')
 }
 
 beforeEach(() => {
@@ -61,9 +69,8 @@ describe('CardFormDialog — thêm thẻ', () => {
   it('số thẻ sai định dạng bị chặn, không gọi service', async () => {
     const u = userEvent.setup()
     renderDialog()
-    await fillValid(u)
-    await u.clear(screen.getByLabelText('Số thẻ'))
-    await u.type(screen.getByLabelText('Số thẻ'), '5678')
+    fillValid()
+    setField('Số thẻ', '5678')
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     expect(await screen.findByText(/Nhập dạng \*\*\*\*x265/)).toBeInTheDocument()
@@ -74,7 +81,7 @@ describe('CardFormDialog — thêm thẻ', () => {
     const u = userEvent.setup()
     vi.mocked(createCreditCard).mockResolvedValue({ ...existing, id: 'new-card' })
     const { onOpenChange } = renderDialog()
-    await fillValid(u)
+    fillValid()
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
@@ -90,9 +97,8 @@ describe('CardFormDialog — thêm thẻ', () => {
     const u = userEvent.setup()
     vi.mocked(createCreditCard).mockResolvedValue(existing)
     const { onOpenChange } = renderDialog()
-    await fillValid(u)
-    await u.clear(screen.getByLabelText('Ngân hàng'))
-    await u.type(screen.getByLabelText('Ngân hàng'), 'lpbank')
+    fillValid()
+    setField('Ngân hàng', 'lpbank')
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
@@ -103,9 +109,8 @@ describe('CardFormDialog — thêm thẻ', () => {
     const u = userEvent.setup()
     vi.mocked(createCreditCard).mockResolvedValue(existing)
     const { onOpenChange } = renderDialog()
-    await fillValid(u)
-    await u.clear(screen.getByLabelText('Ngân hàng'))
-    await u.type(screen.getByLabelText('Ngân hàng'), 'Some New Bank')
+    fillValid()
+    setField('Ngân hàng', 'Some New Bank')
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
@@ -115,9 +120,8 @@ describe('CardFormDialog — thêm thẻ', () => {
   it('hạn mức sai nhóm nghìn bị chặn thay vì lưu sai số', async () => {
     const u = userEvent.setup()
     renderDialog()
-    await fillValid(u)
-    await u.clear(screen.getByLabelText('Hạn mức (đ)'))
-    await u.type(screen.getByLabelText('Hạn mức (đ)'), '1.5')
+    fillValid()
+    setField('Hạn mức (đ)', '1.5')
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     expect(await screen.findByText(/Hạn mức sai định dạng/)).toBeInTheDocument()
@@ -146,7 +150,7 @@ describe('CardFormDialog — thêm thẻ', () => {
     let resolveCreate!: (c: CreditCard) => void
     vi.mocked(createCreditCard).mockReturnValue(new Promise((r) => { resolveCreate = r }))
     const { onOpenChange } = renderDialog()
-    await fillValid(u)
+    fillValid()
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
     expect(await screen.findByRole('button', { name: 'Đang lưu…' })).toBeDisabled()
 
@@ -161,7 +165,7 @@ describe('CardFormDialog — thêm thẻ', () => {
     const u = userEvent.setup()
     vi.mocked(createCreditCard).mockRejectedValue({ code: '23505', message: 'Dữ liệu đã tồn tại.' })
     const { onOpenChange } = renderDialog()
-    await fillValid(u)
+    fillValid()
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     expect(await screen.findByText(/Thẻ này đã tồn tại/)).toBeInTheDocument()
@@ -173,7 +177,7 @@ describe('CardFormDialog — thêm thẻ', () => {
     vi.mocked(createCreditCard).mockResolvedValue(existing)
     vi.mocked(getUnlinkedCount).mockResolvedValue(3)
     renderDialog()
-    await fillValid(u)
+    fillValid()
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     await waitFor(() => expect(toast.warning).toHaveBeenCalled())
@@ -184,7 +188,7 @@ describe('CardFormDialog — thêm thẻ', () => {
     const u = userEvent.setup()
     vi.mocked(createCreditCard).mockResolvedValue(existing)
     const { onOpenChange } = renderDialog()
-    await fillValid(u)
+    fillValid()
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
@@ -204,8 +208,7 @@ describe('CardFormDialog — sửa thẻ', () => {
     expect(screen.getByLabelText('Loại thẻ')).toHaveValue('mastercard')
     expect(screen.getByLabelText('Ngày sao kê (1-31)')).toHaveValue('9')
 
-    await u.clear(screen.getByLabelText('Tên thẻ'))
-    await u.type(screen.getByLabelText('Tên thẻ'), 'SHB Platinum')
+    setField('Tên thẻ', 'SHB Platinum')
     await u.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
@@ -232,8 +235,7 @@ describe('CardFormDialog — sửa thẻ', () => {
     vi.mocked(updateCreditCard).mockResolvedValue(existing)
     vi.mocked(getUnlinkedCount).mockResolvedValue(2)
     renderDialog(existing)
-    await u.clear(screen.getByLabelText('Số thẻ'))
-    await u.type(screen.getByLabelText('Số thẻ'), '****y999')
+    setField('Số thẻ', '****y999')
     await u.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
 
     await waitFor(() => expect(toast.warning).toHaveBeenCalled())
