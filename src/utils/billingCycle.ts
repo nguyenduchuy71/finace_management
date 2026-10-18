@@ -31,6 +31,24 @@ export interface BillingCycleGroupData {
 }
 
 /**
+ * Thời điểm cắt sao kê của tháng (y, m) tính theo UTC: 17:00 UTC của ngày `day` = 00:00 VN
+ * của ngày kế tiếp. `day` bị KẸP vào số ngày của tháng: thẻ sao kê ngày 31 thì tháng 4 cắt
+ * ngày 30, tháng 2 cắt ngày 28/29.
+ *
+ * Không kẹp thì `Date.UTC(2026, 3, 31)` tràn sang 1/5 và chu kỳ sai: ngày 1/5 trả về chu kỳ
+ * "02/05..31/05" — bắt đầu SAU thời điểm hiện tại — nên giao dịch của người dùng rơi ra ngoài
+ * mọi chu kỳ và tổng hoàn tiền tính sai.
+ */
+function effectiveStatementDay(y: number, m: number, day: number): number {
+  const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+  return Math.min(day, daysInMonth)
+}
+
+function statementCutoffUTC(y: number, m: number, day: number): Date {
+  return new Date(Date.UTC(y, m, effectiveStatementDay(y, m, day), 17, 0, 0))
+}
+
+/**
  * Compute the current billing cycle for a card given its statementDay and the current time.
  *
  * @param statementDay - Day of month when statement is cut (e.g. 15)
@@ -50,18 +68,21 @@ export function computeCurrentCycle(
   let startUTC: Date
   let endUTC: Date
 
-  if (vnDay <= statementDay) {
+  // So với ngày cắt ĐÃ KẸP của tháng này (không phải statementDay thô).
+  const thisCutoff = statementCutoffUTC(y, m, statementDay)
+
+  if (vnDay <= effectiveStatementDay(y, m, statementDay)) {
     // Cycle started last month
     const prevM = m === 0 ? 11 : m - 1
     const prevY = m === 0 ? y - 1 : y
-    startUTC = new Date(Date.UTC(prevY, prevM, statementDay, 17, 0, 0))
-    endUTC = new Date(Date.UTC(y, m, statementDay, 17, 0, 0))
+    startUTC = statementCutoffUTC(prevY, prevM, statementDay)
+    endUTC = thisCutoff
   } else {
     // Cycle started this month
     const nextM = m === 11 ? 0 : m + 1
     const nextY = m === 11 ? y + 1 : y
-    startUTC = new Date(Date.UTC(y, m, statementDay, 17, 0, 0))
-    endUTC = new Date(Date.UTC(nextY, nextM, statementDay, 17, 0, 0))
+    startUTC = thisCutoff
+    endUTC = statementCutoffUTC(nextY, nextM, statementDay)
   }
 
   // Step 2: Convert to VN timezone for display
