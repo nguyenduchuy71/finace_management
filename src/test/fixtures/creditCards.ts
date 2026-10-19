@@ -12,6 +12,7 @@ export const mockCreditCards: CreditCard[] = [
     currentBalance: 8_350_000,
     statementDate: 15,
     paymentDueDate: 5,
+    cashbackMonthlyCap: null,
     lastUpdated: '2026-02-28T01:00:00Z',
   },
   {
@@ -25,6 +26,7 @@ export const mockCreditCards: CreditCard[] = [
     currentBalance: 3_200_000,
     statementDate: 15,
     paymentDueDate: 5,
+    cashbackMonthlyCap: null,
     lastUpdated: '2026-02-28T01:00:00Z',
   },
 ]

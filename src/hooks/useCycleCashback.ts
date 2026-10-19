@@ -9,7 +9,11 @@ import { useCashbackRules } from './useCashbackRules'
  * Tính ở client khi đọc, không lưu: đổi rule hoặc đổi MCC thì kết quả cập nhật cho cả
  * giao dịch cũ, không có số liệu cũ nào bị lệch.
  */
-export function useCycleCashback(cardId: string, cycle: { startISO: string; endISO: string }) {
+export function useCycleCashback(
+  cardId: string,
+  cycle: { startISO: string; endISO: string },
+  cardCap: number | null = null
+) {
   const rules = useCashbackRules(cardId)
   const expenses = useQuery({
     queryKey: ['cardCycleExpenses', cardId, cycle.startISO, cycle.endISO],
@@ -17,8 +21,8 @@ export function useCycleCashback(cardId: string, cycle: { startISO: string; endI
   })
 
   const result = useMemo(
-    () => (rules.data && expenses.data ? computeCashback(rules.data, expenses.data) : null),
-    [rules.data, expenses.data]
+    () => (rules.data && expenses.data ? computeCashback(rules.data, expenses.data, cardCap) : null),
+    [rules.data, expenses.data, cardCap]
   )
 
   return {

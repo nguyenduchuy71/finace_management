@@ -37,7 +37,7 @@ const account = (accountName: string): BankAccount => ({
 })
 const card = (cardName: string): CreditCard => ({
   id: 'card-1', bankName: 'TCB', cardName, cardNumber: '****5678', cardType: 'visa', currency: 'VND',
-  creditLimit: 0, currentBalance: 0, statementDate: 15, paymentDueDate: 5, lastUpdated: '2026-01-01T00:00:00Z',
+  creditLimit: 0, currentBalance: 0, statementDate: 15, paymentDueDate: 5, cashbackMonthlyCap: null, lastUpdated: '2026-01-01T00:00:00Z',
 })
 
 describe('CSV Utilities', () => {

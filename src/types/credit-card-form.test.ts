@@ -98,7 +98,7 @@ describe('cardToFormInput', () => {
     const card = {
       id: 'c1', bankName: 'SHB', cardName: 'SHB Visa', cardNumber: '****x265',
       cardType: 'mastercard' as const, currency: 'VND' as const, creditLimit: 12000000,
-      currentBalance: 0, statementDate: 9, paymentDueDate: 29, lastUpdated: '2026-01-01T00:00:00Z',
+      currentBalance: 0, statementDate: 9, paymentDueDate: 29, cashbackMonthlyCap: null, lastUpdated: '2026-01-01T00:00:00Z',
     }
     const r = validateCardForm(cardToFormInput(card))
     expect(r.ok && r.values).toMatchObject({

@@ -25,6 +25,15 @@ export const CashbackRuleSchema = z.object({
 
 export type CashbackRule = z.infer<typeof CashbackRuleSchema>
 
+/** Giá trị gửi lên RPC save_cashback_rule: rule + TOÀN BỘ bậc thêm (RPC thay thế bậc cũ bằng danh sách này). */
+export interface CashbackRuleInput {
+  mcc: string | null
+  ratePercent: number
+  minCycleSpend: number
+  capPerCycle: number | null
+  tiers: CashbackTier[]
+}
+
 /** Kết quả tính hoàn tiền cho MỘT rule trong một chu kỳ. */
 export interface RuleCashback {
   ruleId: string

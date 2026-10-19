@@ -41,7 +41,7 @@ function RuleLine({ r }: { r: RuleCashback }) {
  * Luôn ghi "ước tính": mỗi ngân hàng làm tròn và hạch toán khác nhau.
  */
 export function CashbackSummary({ card, cycle }: CashbackSummaryProps) {
-  const { result, rules, isLoading, isError, refetch } = useCycleCashback(card.id, cycle)
+  const { result, rules, isLoading, isError, refetch } = useCycleCashback(card.id, cycle, card.cashbackMonthlyCap)
   const [editorOpen, setEditorOpen] = useState(false)
 
   // Chỉ liệt kê rule có phát sinh chi; rule chưa có giao dịch nào chỉ làm rối.
