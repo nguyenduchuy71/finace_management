@@ -1,5 +1,6 @@
 import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { z } from 'zod'
 import { CashbackRuleSchema } from '@/types/cashback'
 import type { CashbackRuleInput } from '@/types/cashback'
 import type { ApiError } from '@/types/api'
@@ -85,7 +86,7 @@ async function saveRule(cardId: string, ruleId: string | null, values: CashbackR
   const { data, error: readError } = await supabase
     .from('card_cashback_rules')
     .select(COLUMNS)
-    .eq('id', id as string)
+    .eq('id', z.uuid().parse(id)) // RPC trả về id rule; kiểm ở biên như mọi phản hồi khác
     .single()
   if (readError) throw fail(readError)
   return mapRule(data as unknown as CashbackRuleRow)
