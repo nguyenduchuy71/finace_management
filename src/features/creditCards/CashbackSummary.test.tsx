@@ -27,7 +27,7 @@ const card: CreditCard = {
 const cycle = { startISO: '2026-03-09T17:00:00.000Z', endISO: '2026-04-09T17:00:00.000Z' }
 
 const rule = (over: Partial<CashbackRule>): CashbackRule => ({
-  id: 'r1', cardId: 'card-1', mcc: null, ratePercent: 1, minCycleSpend: 0, capPerCycle: null, ...over,
+  id: 'r1', cardId: 'card-1', mcc: null, ratePercent: 1, minCycleSpend: 0, capPerCycle: null, tiers: [], ...over,
 })
 const tx = (amount: number, mcc?: string): CreditCardTransaction => ({
   id: `t${Math.random()}`, cardId: 'card-1', amount, description: 'x', merchantName: 'x',

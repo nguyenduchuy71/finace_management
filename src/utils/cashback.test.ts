@@ -4,7 +4,7 @@ import type { CashbackRule } from '@/types/cashback'
 
 let n = 0
 const rule = (over: Partial<CashbackRule> = {}): CashbackRule => ({
-  id: `r${++n}`, cardId: 'c1', mcc: null, ratePercent: 1, minCycleSpend: 0, capPerCycle: null, ...over,
+  id: `r${++n}`, cardId: 'c1', mcc: null, ratePercent: 1, minCycleSpend: 0, capPerCycle: null, tiers: [], ...over,
 })
 const spend = (amount: number, mcc?: string) => ({ amount: -amount, mcc })
 

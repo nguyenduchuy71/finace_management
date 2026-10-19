@@ -25,8 +25,8 @@ const card: CreditCard = {
   currency: 'VND', creditLimit: 0, currentBalance: 0, statementDate: 9, paymentDueDate: 29,
   lastUpdated: '2026-01-01T00:00:00Z',
 }
-const food: CashbackRule = { id: 'r-food', cardId: 'card-1', mcc: '5812', ratePercent: 5, minCycleSpend: 3_000_000, capPerCycle: 200_000 }
-const base: CashbackRule = { id: 'r-def', cardId: 'card-1', mcc: null, ratePercent: 0.5, minCycleSpend: 0, capPerCycle: null }
+const food: CashbackRule = { id: 'r-food', cardId: 'card-1', mcc: '5812', ratePercent: 5, minCycleSpend: 3_000_000, capPerCycle: 200_000, tiers: [] }
+const base: CashbackRule = { id: 'r-def', cardId: 'card-1', mcc: null, ratePercent: 0.5, minCycleSpend: 0, capPerCycle: null, tiers: [] }
 
 function renderEditor() {
   const onOpenChange = vi.fn()
