@@ -1,14 +1,17 @@
 import { useMemo } from 'react'
+import { useNow } from '@/hooks/useNow'
 import { computeCurrentCycle } from '@/utils/billingCycle'
 import { Badge } from '@/components/ui/badge'
 import type { CreditCard } from '@/types/creditCard'
+import { CashbackSummary } from './CashbackSummary'
 
 interface BillingCycleInfoCardProps {
   card: CreditCard
 }
 
 export function BillingCycleInfoCard({ card }: BillingCycleInfoCardProps) {
-  const now = useMemo(() => new Date().toISOString(), [])
+  // Tự cập nhật: tab mở qua mốc cắt sao kê thì chu kỳ và hoàn tiền ước tính phải sang kỳ mới.
+  const now = useNow()
   const cycle = useMemo(
     () => computeCurrentCycle(card.statementDate, now),
     [card.statementDate, now]
@@ -38,6 +41,8 @@ export function BillingCycleInfoCard({ card }: BillingCycleInfoCardProps) {
           <p className="font-medium">{cycle.statementDateDisplay}</p>
         </div>
       </div>
+
+      <CashbackSummary card={card} cycle={cycle} />
     </div>
   )
 }

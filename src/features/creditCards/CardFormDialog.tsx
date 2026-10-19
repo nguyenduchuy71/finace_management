@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { FormField } from '@/components/form/FormField'
+import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
 import { useCreateCreditCard, useUpdateCreditCard } from '@/hooks/useCreditCardMutations'
 import { useFilterStore } from '@/stores/filterStore'
@@ -31,19 +33,6 @@ const FIELD_ID: Record<keyof CardFormInput, string> = {
   creditLimit: 'card-limit',
 }
 
-function Field({ id, label, error, hint, children }: {
-  id: string; label: string; error?: string; hint?: string; children: React.ReactNode
-}) {
-  return (
-    <div className="space-y-1">
-      <label htmlFor={id} className="text-sm font-medium">{label}</label>
-      {children}
-      {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {error && <p id={`${id}-error`} role="alert" className="text-xs text-destructive">{error}</p>}
-    </div>
-  )
-}
-
 /**
  * Thân form nằm TRONG DialogContent: Radix huỷ nội dung khi đóng nên state tự reset
  * mỗi lần mở, không cần useEffect đồng bộ props -> state (tránh cascading render).
@@ -67,7 +56,7 @@ function CardFormBody({ card, onDone, setBusy }: {
     id: FIELD_ID[key],
     value: form[key],
     'aria-invalid': errors[key] ? true : undefined,
-    'aria-describedby': errors[key] ? `${FIELD_ID[key]}-error` : undefined,
+    'aria-describedby': describedBy(FIELD_ID[key], Boolean(errors[key])),
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
       setForm((f) => ({ ...f, [key]: e.target.value }))
       setErrors((prev) => ({ ...prev, [key]: undefined }))
@@ -114,7 +103,7 @@ function CardFormBody({ card, onDone, setBusy }: {
       </DialogHeader>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field
+        <FormField
           id="card-bank" label="Ngân hàng" error={errors.bankName}
           hint="Chọn tên trong gợi ý để giao dịch tự động gắn đúng thẻ"
         >
@@ -122,17 +111,17 @@ function CardFormBody({ card, onDone, setBusy }: {
           <datalist id="card-bank-options">
             {KNOWN_BANK_NAMES.map((n) => <option key={n} value={n} />)}
           </datalist>
-        </Field>
-        <Field id="card-name" label="Tên thẻ" error={errors.cardName}>
+        </FormField>
+        <FormField id="card-name" label="Tên thẻ" error={errors.cardName}>
           <Input {...fieldProps('cardName')} placeholder="VPBank Mobifone" />
-        </Field>
-        <Field
+        </FormField>
+        <FormField
           id="card-number" label="Số thẻ" error={errors.cardNumber}
           hint="4 dấu * + 4 ký tự cuối đúng như trong SMS, ví dụ ****x265"
         >
           <Input {...fieldProps('cardNumber')} placeholder="****x265" />
-        </Field>
-        <Field id="card-type" label="Loại thẻ" error={errors.cardType}>
+        </FormField>
+        <FormField id="card-type" label="Loại thẻ" error={errors.cardType}>
           <select
             {...fieldProps('cardType')}
             className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
@@ -141,19 +130,19 @@ function CardFormBody({ card, onDone, setBusy }: {
               <option key={value} value={value}>{label}</option>
             ))}
           </select>
-        </Field>
-        <Field id="card-statement" label="Ngày sao kê (1-31)" error={errors.statementDate}>
+        </FormField>
+        <FormField id="card-statement" label="Ngày sao kê (1-31)" error={errors.statementDate}>
           <Input {...fieldProps('statementDate')} inputMode="numeric" />
-        </Field>
-        <Field id="card-due" label="Ngày đến hạn (1-31)" error={errors.paymentDueDate}>
+        </FormField>
+        <FormField id="card-due" label="Ngày đến hạn (1-31)" error={errors.paymentDueDate}>
           <Input {...fieldProps('paymentDueDate')} inputMode="numeric" />
-        </Field>
-        <Field
+        </FormField>
+        <FormField
           id="card-limit" label="Hạn mức (đ)" error={errors.creditLimit}
           hint="Có thể để trống (tính là 0)"
         >
           <Input {...fieldProps('creditLimit')} inputMode="numeric" placeholder="50.000.000" />
-        </Field>
+        </FormField>
       </div>
 
       {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}

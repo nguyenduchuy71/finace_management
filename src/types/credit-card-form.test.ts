@@ -70,7 +70,8 @@ describe('validateCardForm', () => {
   })
 
   // Trước đây "1.5" / "1,5" âm thầm thành 15đ và "1.500.00" thành 150.000đ.
-  it.each(['1.5', '1,5', '1.500.00', '12.34', '1..000', '.000', '1.0000', '-5'])(
+  // Lẫn hai kiểu dấu tách ('1,000.000') từng được đọc thành 1.000.000đ.
+  it.each(['1.5', '1,5', '1.500.00', '12.34', '1..000', '.000', '1.0000', '-5', '1,000.000', '1.000,000', '1 000.000', '1.000 000', '10.000,000.000'])(
     'hạn mức sai nhóm nghìn %j bị từ chối thay vì đoán', (v) => {
       const r = validateCardForm({ ...valid, creditLimit: v })
       expect(r.ok).toBe(false)
