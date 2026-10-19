@@ -37,6 +37,7 @@ export async function exportTransactions(
   const allRows: TransactionRow[] = []
   let cursor: string | undefined
   let total = 0
+  let complete = false
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const base = supabase
@@ -61,8 +62,17 @@ export async function exportTransactions(
     const { rows, hasMore } = paginate((data ?? []) as TransactionRow[], PAGE_SIZE)
     allRows.push(...rows)
 
-    if (!hasMore || rows.length === 0) break
+    if (!hasMore || rows.length === 0) {
+      complete = true
+      break
+    }
     cursor = encodeCursor(rows[rows.length - 1])
+  }
+
+  // Hết trần trang mà vẫn còn dữ liệu: trả về mảng thiếu sẽ làm file CSV hay khoản hoàn tiền
+  // ước tính sai MÀ KHÔNG AI BIẾT. Báo lỗi rõ ràng thay vì cắt cụt im lặng.
+  if (!complete) {
+    throw new Error(`Quá nhiều giao dịch (vượt ${MAX_PAGES * PAGE_SIZE}) để xuất đầy đủ. Hãy thu hẹp bộ lọc.`)
   }
 
   return {

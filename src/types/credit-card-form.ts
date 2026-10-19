@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { CreditCard } from './creditCard'
+import { moneyAmountField } from './form-fields'
 
 /**
  * `card_number` phải là ĐÚNG MỘT định dạng mask: 4 dấu `*` + 4 ký tự cuối của thẻ.
@@ -30,15 +31,8 @@ export const CardFormSchema = z.object({
   cardType: z.enum(['visa', 'mastercard', 'jcb', 'amex']),
   statementDate: dayField('Ngày sao kê'),
   paymentDueDate: dayField('Ngày đến hạn'),
-  // Để trống = 0 (SMS ngân hàng không có hạn mức, DB mặc định 0). Chỉ nhận số thuần hoặc
-  // nhóm nghìn đúng chuẩn: "1.5" / "1,5" trước đây âm thầm thành 15đ.
-  creditLimit: z.string().trim()
-    .regex(
-      /^(\d+|\d{1,3}([.,\s]\d{3})+)?$/,
-      'Hạn mức sai định dạng, ví dụ 50.000.000 hoặc 50000000'
-    )
-    .transform((s) => Number(s.replace(/[.,\s]/g, '') || '0'))
-    .refine(Number.isSafeInteger, 'Hạn mức quá lớn'),
+  // Để trống = 0: SMS ngân hàng không có hạn mức, DB mặc định 0.
+  creditLimit: moneyAmountField('Hạn mức'),
 })
 
 export type CardFormInput = z.input<typeof CardFormSchema>
