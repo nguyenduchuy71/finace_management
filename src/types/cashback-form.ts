@@ -58,6 +58,8 @@ export const CashbackRuleFormSchema = z.object({
   })).max(MAX_TIERS, `Tối đa ${MAX_TIERS} bậc`),
 }).superRefine((v, ctx) => {
   // Liên dòng: tăng dần chặt và bậc đầu lớn hơn ngưỡng nền (RPC ở DB kiểm lại).
+  // Ô ngưỡng nền sai định dạng thì không có số để so: đừng báo thêm lỗi giả ở các dòng bậc.
+  if (typeof v.minCycleSpend !== 'number') return
   let prev = v.minCycleSpend
   v.tiers.forEach((tier, i) => {
     if (tier.minSpend <= prev) {

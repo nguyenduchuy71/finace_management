@@ -148,6 +148,12 @@ describe('validateCashbackForm — bậc thang', () => {
     expect(!r.ok && r.errors.tiers).toMatch(/Tối đa/)
   })
 
+  it('ô ngưỡng nền sai định dạng thì không báo thêm lỗi giả ở dòng bậc', () => {
+    const r = run({ minCycleSpend: '1.5', tiers: [row('1', '1')] })
+    expect(!r.ok && r.errors.minCycleSpend).toBeDefined()
+    expect(!r.ok && r.errors.tierRows).toBeUndefined()
+  })
+
   it('lỗi ở ô thường vẫn báo cùng lúc với lỗi bậc', () => {
     const r = run({ ratePercent: 'x', tiers: [row('', '1')] })
     expect(!r.ok && r.errors.ratePercent).toBeDefined()
