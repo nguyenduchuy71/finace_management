@@ -20,4 +20,11 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // shadcn/ui: mỗi file export component KÈM biến thể (`buttonVariants`, `badgeVariants`...) — đó là
+    // cấu trúc chuẩn của thư viện, file sinh bởi `shadcn add`. Tách ra làm lệch khỏi upstream và khó
+    // cập nhật; Fast Refresh chỉ ảnh hưởng lúc dev (mất state khi sửa file), không ảnh hưởng production.
+    files: ['src/components/ui/**/*.{ts,tsx}'],
+    rules: { 'react-refresh/only-export-components': 'off' },
+  },
 ])

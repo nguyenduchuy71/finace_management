@@ -35,37 +35,37 @@ describe('calculateMonthDelta', () => {
 
 describe('getPreviousMonthDateRange', () => {
   it('Jan 15 → Dec 1–31 of previous year', () => {
-    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-01-15', null)
+    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-01-15')
     expect(prevFrom).toBe('2025-12-01')
     expect(prevTo).toBe('2025-12-31')
   })
 
   it('Dec 15 → Nov 1–30 of same year', () => {
-    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-12-15', null)
+    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-12-15')
     expect(prevFrom).toBe('2026-11-01')
     expect(prevTo).toBe('2026-11-30')
   })
 
   it('Feb 15 → Jan 1–31', () => {
-    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-02-15', null)
+    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-02-15')
     expect(prevFrom).toBe('2026-01-01')
     expect(prevTo).toBe('2026-01-31')
   })
 
   it('March 15 → Feb 1–28 (non-leap year)', () => {
-    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-03-15', null)
+    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-03-15')
     expect(prevFrom).toBe('2026-02-01')
     expect(prevTo).toBe('2026-02-28')
   })
 
   it('March 15 → Feb 1–29 (leap year)', () => {
-    const { prevFrom, prevTo } = getPreviousMonthDateRange('2024-03-15', null)
+    const { prevFrom, prevTo } = getPreviousMonthDateRange('2024-03-15')
     expect(prevFrom).toBe('2024-02-01')
     expect(prevTo).toBe('2024-02-29')
   })
 
   it('handles month-end transition: May 31 → Apr 1–30', () => {
-    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-05-31', null)
+    const { prevFrom, prevTo } = getPreviousMonthDateRange('2026-05-31')
     expect(prevFrom).toBe('2026-04-01')
     expect(prevTo).toBe('2026-04-30')
   })

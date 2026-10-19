@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from '@/lib/query-client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { AppShell } from '@/components/layout/AppShell'
@@ -8,17 +9,6 @@ import { LoginPage } from '@/features/auth/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,       // 5 min — finance data is not real-time
-      gcTime: 1000 * 60 * 10,         // 10 min cache retention
-      retry: 2,                        // 2 retries before showing error state (locked decision)
-      refetchOnWindowFocus: false,     // Personal dashboard, not live feed
-    },
-  },
-})
 
 export function App() {
   return (

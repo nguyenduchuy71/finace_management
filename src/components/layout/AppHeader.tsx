@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useThemeStore } from '@/stores/themeStore'
 import { supabase } from '@/lib/supabase'
-import { queryClient } from '@/App'
+import { queryClient } from '@/lib/query-client'
 
 export function AppHeader() {
   const { theme, toggleTheme } = useThemeStore()

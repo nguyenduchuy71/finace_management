@@ -7,7 +7,7 @@ export function useDashboardStats() {
   const { dateFrom, dateTo } = useDashboardDateRange()
 
   // Calculate previous month date range
-  const { prevFrom, prevTo } = getPreviousMonthDateRange(dateFrom, dateTo)
+  const { prevFrom, prevTo } = getPreviousMonthDateRange(dateFrom)
 
   // Fetch both current and previous month stats in parallel using useQueries
   const [currentQuery, previousQuery] = useQueries({

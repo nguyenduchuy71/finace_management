@@ -23,6 +23,12 @@ Chi tiết tính năng: [credit-card-cashback.md](credit-card-cashback.md).
 - `BillingCycleInfoCard` tự cập nhật theo thời gian thay vì chốt lúc mount.
 - `exportTransactions` báo lỗi khi vượt 100 trang (50.000 dòng) thay vì trả mảng bị cắt cụt im lặng.
 
+### Dọn lint (ESLint từ 21 lỗi về 0)
+- `ChatInput`: điền sẵn từ gợi ý hội thoại dùng mẫu "điều chỉnh state trong lúc render" thay cho `setState` trong effect; thêm test cố định hành vi (trước đây chưa có test nào cho prefill).
+- `CreditCardTransactionList`: sửa dependency của `useMemo` và dùng `useNow()` như `BillingCycleInfoCard`, để hai khối cùng trang luôn hiện cùng một chu kỳ; thêm test.
+- `queryClient` chuyển sang `src/lib/query-client.ts`; `getPreviousMonthDateRange` bỏ tham số `dateTo` không dùng.
+- Test: thay `as any` bằng fixture có kiểu; bỏ trường `meta` cũ trong mock `exportTransactions`.
+
 ### Thay đổi hành vi cần biết
 - `TX_COLUMNS` có thêm `mcc` (dùng chung cho danh sách tài khoản, danh sách thẻ và export).
 - Form thẻ bắt buộc `card_number` dạng `****xxxx` và chuẩn hoá hoa/thường tên ngân hàng đã biết.

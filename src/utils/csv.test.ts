@@ -3,8 +3,8 @@ import {
   formatTransactionForCSV,
   downloadCSV,
 } from './csv'
-import type { Transaction } from '@/types/account'
-import type { CreditCardTransaction } from '@/types/creditCard'
+import type { BankAccount, Transaction } from '@/types/account'
+import type { CreditCard, CreditCardTransaction } from '@/types/creditCard'
 
 // Mock the utility functions for deterministic output
 vi.mock('./currency', () => ({
@@ -30,6 +30,16 @@ vi.mock('./dates', () => ({
   }),
 }))
 
+// Fixture có kiểu đầy đủ (thay cho `{ accountName } as any`): chỉ trường test quan tâm mới khác nhau.
+const account = (accountName: string): BankAccount => ({
+  id: 'acc-1', bankName: 'VCB', accountName, accountNumber: '****1234', accountType: 'checking',
+  currency: 'VND', balance: 0, lastUpdated: '2026-01-01T00:00:00Z',
+})
+const card = (cardName: string): CreditCard => ({
+  id: 'card-1', bankName: 'TCB', cardName, cardNumber: '****5678', cardType: 'visa', currency: 'VND',
+  creditLimit: 0, currentBalance: 0, statementDate: 15, paymentDueDate: 5, lastUpdated: '2026-01-01T00:00:00Z',
+})
+
 describe('CSV Utilities', () => {
   describe('formatTransactionForCSV', () => {
     it('transforms Transaction object to Vietnamese CSV row', () => {
@@ -45,7 +55,7 @@ describe('CSV Utilities', () => {
         transactionDate: '2026-03-09T10:00:00Z',
       }
 
-      const result = formatTransactionForCSV(tx, { accountName: 'VCB Checking' } as any)
+      const result = formatTransactionForCSV(tx, account('VCB Checking'))
 
       expect(result['Ngày']).toBe('09/03/2026')
       expect(result['Mô tả']).toBe('Lunch')
@@ -68,7 +78,7 @@ describe('CSV Utilities', () => {
         transactionDate: '2026-03-08T10:00:00Z',
       }
 
-      const result = formatTransactionForCSV(ccTx, { cardName: 'TCB Visa' } as any)
+      const result = formatTransactionForCSV(ccTx, card('TCB Visa'))
 
       expect(result['Tài khoản']).toBe('TCB Visa')
     })
@@ -123,7 +133,7 @@ describe('CSV Utilities', () => {
         transactionDate: '2026-03-09T10:00:00Z',
       }
 
-      const result = formatTransactionForCSV(tx, { accountName: 'VCB Checking' } as any)
+      const result = formatTransactionForCSV(tx, account('VCB Checking'))
 
       expect(result['Loại']).toBe('Thu nhập')
     })
@@ -142,7 +152,7 @@ describe('CSV Utilities', () => {
       }
 
       const overrides = new Map([['tx-1', 'Ghi đè']])
-      const result = formatTransactionForCSV(tx, { accountName: 'VCB' } as any, overrides)
+      const result = formatTransactionForCSV(tx, account('VCB'), overrides)
 
       expect(result['Danh mục']).toBe('Ghi đè')
     })
@@ -159,7 +169,7 @@ describe('CSV Utilities', () => {
         transactionDate: '2026-03-09T10:00:00Z',
       }
 
-      const result = formatTransactionForCSV(tx, { accountName: 'VCB' } as any)
+      const result = formatTransactionForCSV(tx, account('VCB'))
 
       expect(result['Danh mục']).toBe('Khác')
     })
