@@ -6,6 +6,8 @@ export interface TransactionFilters {
   search?: string
   dateFrom?: string | null
   dateTo?: string | null
+  /** Cận trên LOẠI TRỪ (`transaction_date < dateBefore`); dateTo là cận trên bao gồm. */
+  dateBefore?: string | null
   txType?: 'all' | 'income' | 'expense'
   category?: Category | 'all'
 }
@@ -46,6 +48,7 @@ export function applyTransactionFilters<T extends PostgrestFilterBuilder<any, an
   }
   if (filters?.dateFrom) q = q.gte('transaction_date', filters.dateFrom) as T
   if (filters?.dateTo) q = q.lte('transaction_date', filters.dateTo) as T
+  if (filters?.dateBefore) q = q.lt('transaction_date', filters.dateBefore) as T
   if (filters?.txType === 'income') q = q.gt('amount', 0) as T
   if (filters?.txType === 'expense') q = q.lt('amount', 0) as T
   if (filters?.category && filters.category !== 'all') {
