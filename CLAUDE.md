@@ -129,11 +129,14 @@ transactions
 accounts       id, user_id, bank_name, account_name, account_number, account_type,
                currency, balance bigint, last_updated
 credit_cards   id, user_id (default auth.uid()), bank_name, card_name, card_number, card_type, currency,
-               credit_limit, current_balance, statement_date (1..31), payment_due_date, last_updated
+               credit_limit, current_balance, statement_date (1..31), payment_due_date, last_updated,
+               cashback_monthly_cap bigint|NULL (>0; trần hoàn tiền cả thẻ mỗi kỳ, NULL = không giới hạn)
                unique (user_id, bank_name, card_number)
 card_cashback_rules  id, user_id, card_id → credit_cards (cascade), mcc text|NULL (NULL = rule mặc định),
                rate_percent numeric(5,2) 0..100, min_cycle_spend bigint, cap_per_cycle bigint|NULL (>0)
-               unique nulls not distinct (card_id, mcc)
+               unique nulls not distinct (card_id, mcc)   -- rate_percent + min_cycle_spend = BẬC NỀN
+card_cashback_rule_tiers  id, user_id, rule_id → card_cashback_rules (cascade), min_spend bigint (>0),
+               rate_percent numeric(5,2) 0..100, unique (rule_id, min_spend) — bậc THÊM, tối đa 5/rule
 unparsed_messages  tin không ghi được (source, reason) — chỉ service_role đọc được
 
 transactions.mcc  text|NULL, 4 chữ số — USER gán tay (SMS ngân hàng VN không có MCC)
@@ -143,11 +146,14 @@ transactions.mcc  text|NULL, 4 chữ số — USER gán tay (SMS ngân hàng VN 
 `delete_credit_card(p_card_id)` → số giao dịch đã xoá: xoá thẻ **kèm toàn bộ giao dịch** nguyên tử (khoá dòng
 thẻ trước), lỗi `P0002` nếu thẻ không tồn tại / của người khác. **Xoá thẻ luôn qua RPC này**, không `delete`
 trần: FK `transactions.card_id` là `on delete set null` nên giao dịch thành mồ côi (xem cảnh báo bên dưới).
-Cả hai RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**.
+`save_cashback_rule(p_card_id, p_rule_id, p_mcc, p_rate, p_min, p_cap, p_tiers jsonb)` → id rule: lưu rule **và thay toàn bộ bậc**
+trong một transaction (bậc tăng dần chặt, bậc đầu > `p_min`, ≤ 5 bậc, sai → `22023`; rule lạ → `P0002`). **Ghi rule hoàn tiền luôn
+qua RPC này**; vì nó thay toàn bộ bậc nên mọi lời gọi phải gửi đủ danh sách bậc hiện có.
+Cả ba RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**.
 
 **RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
 `transactions` insert/update kiểm thêm `card_id`/`account_id` **thuộc chính user**; `card_cashback_rules`
-insert/update kiểm thẻ thuộc user. Chỉ kiểm `user_id` là chưa đủ: FK vẫn chấp nhận trỏ sang thẻ của
+insert/update kiểm thẻ thuộc user; `card_cashback_rule_tiers` kiểm rule thuộc user. Chỉ kiểm `user_id` là chưa đủ: FK vẫn chấp nhận trỏ sang thẻ của
 người khác, và khi họ xoá thẻ thì giao dịch bị `set null` thành mồ côi.
 `transactions.user_id` là **NOT NULL** — row user_id null sẽ vô hình với mọi policy
 (`auth.uid() = null` → NULL) và không cách nào xoá từ client.
@@ -210,8 +216,9 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 | `useCreateCreditCard()` / `useUpdateCreditCard(card)` / `useDeleteCreditCard()` | Mutations; invalidate thẻ, giao dịch thẻ, dashboard, rule, chi tiêu chu kỳ |
 | `useCardTransactionCount(cardId)` | Đếm giao dịch của thẻ (luôn lấy mới) cho dialog xoá |
 | `useUpdateTransactionMcc()` | Gán/bỏ MCC, optimistic ở mọi trang cache, hoàn tác đúng giao dịch khi lỗi |
-| `useCashbackRules(cardId)` / `useSaveCashbackRule` / `useDeleteCashbackRule` | Rule hoàn tiền của thẻ |
-| `useCycleCashback(cardId, cycle)` | `{ result, rules, isLoading, isError, refetch }` — rule + chi tiêu chu kỳ → `computeCashback` |
+| `useCashbackRules(cardId)` / `useSaveCashbackRule` / `useDeleteCashbackRule` | Rule hoàn tiền của thẻ (kèm bậc thang) |
+| `useSetCardCashbackCap(cardId)` | Đặt/bỏ trần hoàn tiền cả thẻ; invalidate `['creditCards']` |
+| `useCycleCashback(cardId, cycle, cardCap)` | `{ result, rules, isLoading, isError, refetch }` — rule + chi tiêu chu kỳ + trần thẻ → `computeCashback` |
 | `useNow(intervalMs = 60000)` | Thời điểm hiện tại (ISO) tự cập nhật — để chu kỳ sao kê sang kỳ mới khi tab mở qua mốc cắt |
 | `useDashboardStats()` | Current + previous month stats (month-over-month delta) |
 | `useBudgetAlerts(breakdown, budgets)` | `{ alerts, warningCount, overbudgetCount }` — fires Sonner toasts |
@@ -232,8 +239,9 @@ CreditCard { id, bankName, cardName, cardNumber, cardType, currency, creditLimit
 CreditCardTransaction { id, cardId, amount, description, merchantName, category?, mcc?, type, status, transactionDate, billingCycleStart?, billingCycleEnd? }
 
 // cashback.ts
-CashbackRule { id, cardId, mcc: string | null, ratePercent, minCycleSpend, capPerCycle: number | null }
-CashbackResult { total, byRule: RuleCashback[], unmatchedSpend }
+CashbackRule { id, cardId, mcc: string | null, ratePercent, minCycleSpend, capPerCycle: number | null, tiers: { minSpend, ratePercent }[] }
+CashbackResult { total, uncappedTotal, cardCap, cardCapped, byRule: RuleCashback[], unmatchedSpend }
+// CreditCard cũng có cashbackMonthlyCap: number | null
 
 // categories.ts
 type Category = 'Ăn uống' | 'Mua sắm' | 'Di chuyển' | 'Giải trí' | 'Hóa đơn' | 'Khác'
@@ -293,10 +301,11 @@ getMccLabel(code) / formatMcc(code)   // "5411 · Siêu thị"
 
 ### Cashback (`cashback.ts`)
 ```typescript
-computeCashback(rules, txs)       → { total, byRule, unmatchedSpend }
+computeCashback(rules, txs, cardCap = null) → { total, uncappedTotal, cardCap, cardCapped, byRule, unmatchedSpend }
 ```
-Chỉ tính giao dịch chi; mỗi giao dịch vào 1 rule (MCC trùng → rule mặc định → unmatched); ngưỡng và trần áp **riêng từng rule**;
-làm tròn xuống trên tổng rule bằng **điểm cơ bản nguyên** (số thực sai 1đ: 0,57% × 1.000.000 → 5.699). Luôn hiển thị là "ước tính".
+Chỉ tính giao dịch chi; mỗi giao dịch vào 1 rule (MCC trùng → rule mặc định → unmatched); ngưỡng, bậc thang và trần áp **riêng từng rule**:
+lấy **bậc cao nhất có `minSpend ≤ chi`** (bậc nền + `tiers`, tự sắp xếp) và áp % của bậc đó cho **cả khoản chi** (không lũy tiến → có
+"vách đá": 9.999.999đ ≠ 10.000.000đ). Trần rule cắt trước, **trần cả thẻ cắt sau** khi cộng các rule. Làm tròn xuống trên tổng rule bằng **điểm cơ bản nguyên** (số thực sai 1đ: 0,57% × 1.000.000 → 5.699). Luôn hiển thị là "ước tính".
 
 ---
 
@@ -326,7 +335,7 @@ Cổng 54321/54322 phải trống (các stack Supabase của dự án khác dùn
 - Sau khi thêm test, **phá code có chủ đích** (mutation thủ công) để chắc test thật sự bắt được lỗi; khôi phục bằng đúng đường dẫn
   (một lần khôi phục nhầm đường dẫn đã để sót một file thừa).
 
-**RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql` chạy trên Postgres 17 tạm
+**RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql` và `card-cashback-tiers-rls.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
 
 ---

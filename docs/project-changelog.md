@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-10-19 — Hoàn tiền: bậc thang theo mức chi và trần tổng cho cả thẻ
+
+Chi tiết: [credit-card-cashback.md](credit-card-cashback.md).
+
+### Thêm
+- **Bậc thang** cho mỗi rule hoàn tiền (tối đa 5 bậc thêm): chi đạt bậc nào thì % của bậc đó áp cho cả
+  khoản chi (không lũy tiến). `rate_percent` + `min_cycle_spend` hiện có là bậc nền nên rule cũ giữ nguyên.
+- **Trần hoàn tiền cả thẻ** (`credit_cards.cashback_monthly_cap`), cắt sau trần của từng rule.
+- RPC `save_cashback_rule`: lưu rule và toàn bộ bậc trong một transaction (không còn rule nửa vời).
+- UI: danh sách bậc trong form rule, ô trần cả thẻ trong hộp thoại rule, khối "Hoàn tiền ước tính kỳ này"
+  hiện % của bậc đang áp, "Còn X nữa để lên bậc Y%" và huy hiệu "Đã chạm trần thẻ".
+- `supabase/tests/card-cashback-tiers-rls.sql`: ca chéo 2 user cho bảng bậc, RPC và trần thẻ.
+
+### Thay đổi hành vi / cần biết khi deploy
+- Migration `20261019100000` cần áp **cùng** migration `20261018140000` nếu cả hai chưa lên production.
+- Ghi rule hoàn tiền từ client giờ đi qua RPC (`createCashbackRule` / `updateCashbackRule(cardId, ruleId, …)`);
+  RPC thay thế **toàn bộ** bậc, nên mọi lời gọi phải gửi đủ danh sách bậc.
+- `CashbackRule` có thêm `tiers`, `CreditCard` có thêm `cashbackMonthlyCap`, `computeCashback` nhận thêm
+  `cardCap`; kết quả có thêm `uncappedTotal`, `cardCapped`, và mỗi rule có `appliedRatePercent`, `tierIndex`, `nextTier`.
+- Vách đá là hành vi đúng: nền `≥5tr → 0,5%`, bậc `≥10tr → 1%` thì chi 9.999.999đ hoàn 49.999đ, chi 10.000.000đ hoàn 100.000đ.
+
 ## 2026-10-19 — Quản lý thẻ, MCC và hoàn tiền ước tính
 
 Chi tiết tính năng: [credit-card-cashback.md](credit-card-cashback.md).
