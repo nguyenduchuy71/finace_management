@@ -18,6 +18,8 @@ function useInvalidateCardData() {
       qc.invalidateQueries({ queryKey: ['creditCards'] }),
       qc.invalidateQueries({ queryKey: ['creditCardTransactions'] }),
       qc.invalidateQueries({ queryKey: ['dashboardStats'] }),
+      qc.invalidateQueries({ queryKey: ['cashbackRules'] }),
+      qc.invalidateQueries({ queryKey: ['cardCycleExpenses'] }),
     ])
 }
 

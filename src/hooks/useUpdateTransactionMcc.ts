@@ -55,6 +55,10 @@ export function useUpdateTransactionMcc() {
     // KHÔNG trả về promise: trả về thì mutation vẫn `isPending` cho tới khi refetch xong MỌI
     // trang đã tải (20 dòng/trang, 100 dòng = 5 request tuần tự). Đồng bộ lại chạy nền, giá
     // trị lạc quan vẫn hiển thị trong lúc đó.
-    onSettled: () => { void qc.invalidateQueries({ queryKey: KEY }) },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: KEY })
+      // MCC quyết định giao dịch thuộc rule nào -> hoàn tiền ước tính của chu kỳ phải tính lại.
+      void qc.invalidateQueries({ queryKey: ['cardCycleExpenses'] })
+    },
   })
 }
