@@ -40,13 +40,13 @@ export function calculateMonthDelta(currentAmount: number, previousAmount: numbe
 
 /**
  * Calculate the previous month's date range in Vietnam timezone (UTC+7).
- * If dateFrom is provided, use it as reference to determine current month.
+ * If dateFrom is provided, use it as reference to determine current month (the end date of the
+ * current range is irrelevant: the previous range is always a whole calendar month).
  * Otherwise, use today's date in Vietnam timezone.
  * Returns { prevFrom, prevTo } as ISO format strings (YYYY-MM-DD).
  */
 export function getPreviousMonthDateRange(
-  dateFrom: string | null,
-  _dateTo: string | null
+  dateFrom: string | null
 ): { prevFrom: string; prevTo: string } {
   // Use dateFrom as reference, or today in Vietnam timezone
   const referenceDate = dateFrom ? new TZDate(dateFrom, VN_TZ) : new TZDate(new Date().toISOString(), VN_TZ)

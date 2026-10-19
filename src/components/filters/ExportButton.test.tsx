@@ -4,7 +4,7 @@ import { ExportButton } from './ExportButton'
 
 // Mock dependencies
 vi.mock('@/stores/filterStore', () => ({
-  useFilterStore: vi.fn((selector: (s: any) => any) => {
+  useFilterStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) => {
     const state = {
       accountId: 'vcb-checking-001',
       cardId: null,
@@ -126,9 +126,10 @@ describe('ExportButton', () => {
 
   it('shows loading state and disables button while exporting', async () => {
     // Make the export hang to test loading state
-    let resolveExport!: (value: any) => void
+    type ExportResult = Awaited<ReturnType<typeof exportTransactions>>
+    let resolveExport!: (value: ExportResult) => void
     mockExportTransactions.mockReturnValue(
-      new Promise((resolve) => { resolveExport = resolve })
+      new Promise<ExportResult>((resolve) => { resolveExport = resolve })
     )
 
     render(<ExportButton />)
@@ -145,10 +146,7 @@ describe('ExportButton', () => {
     expect(loadingButton).toBeDisabled()
 
     // Resolve to clean up
-    resolveExport({
-      data: [],
-      meta: { nextCursor: null, total: 0 },
-    })
+    resolveExport({ data: [], nextCursor: null, total: 0 })
   })
 
   it('captures accountId from useFilterStore on click', async () => {
@@ -164,7 +162,8 @@ describe('ExportButton', () => {
   })
 
   it('captures cardId when accountId is null', async () => {
-    mockUseFilterStore.mockImplementation((selector: any) => {
+    // Mock một phần state của store: tham số selector kiểu `never` để nhận selector của bất kỳ kiểu state nào.
+    mockUseFilterStore.mockImplementation((selector: (s: never) => unknown) => {
       const state = {
         accountId: null,
         cardId: 'tcb-visa-001',
@@ -174,7 +173,7 @@ describe('ExportButton', () => {
         txType: 'all' as const,
         category: 'all' as const,
       }
-      return selector(state)
+      return selector(state as never)
     })
     mockUseFilterParams.mockReturnValue({
       accountId: null,

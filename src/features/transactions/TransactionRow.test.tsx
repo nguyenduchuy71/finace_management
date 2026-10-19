@@ -57,7 +57,7 @@ describe('TransactionRow', () => {
   it('displays server category if no override is set', () => {
     const txWithCategory: Transaction = {
       ...mockExpenseTransaction,
-      category: 'Ăn uống' as any,
+      category: 'Ăn uống',
     }
     const { container } = render(<TransactionRow transaction={txWithCategory} />)
     // Component should render with category display
@@ -68,7 +68,7 @@ describe('TransactionRow', () => {
     useCategoryOverrideStore.getState().setOverride('tx-1', 'Mua sắm')
     const txWithCategory: Transaction = {
       ...mockExpenseTransaction,
-      category: 'Ăn uống' as any,
+      category: 'Ăn uống',
     }
     const { container } = render(<TransactionRow transaction={txWithCategory} />)
     // Component should render with override (effective category should be Mua sắm)
@@ -80,7 +80,7 @@ describe('TransactionRow', () => {
   it('opens popover when CategoryBadge is clicked', () => {
     const txWithCategory: Transaction = {
       ...mockExpenseTransaction,
-      category: 'Ăn uống' as any,
+      category: 'Ăn uống',
     }
     render(<TransactionRow transaction={txWithCategory} />)
 
@@ -93,7 +93,7 @@ describe('TransactionRow', () => {
   it('updates override when category is selected from popover', () => {
     const txWithCategory: Transaction = {
       ...mockExpenseTransaction,
-      category: 'Ăn uống' as any,
+      category: 'Ăn uống',
     }
     render(<TransactionRow transaction={txWithCategory} />)
 

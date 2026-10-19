@@ -29,7 +29,7 @@ Nếu `supabase` không có trong PATH (cài qua nvm): `~/.nvm/versions/node/<ve
 | `npm run dev` | Start dev server (HMR) |
 | `npm run build` | `tsc -b && vite build` |
 | `npm run preview` | Preview production build |
-| `npm run lint` | ESLint |
+| `npm run lint` | ESLint — **phải sạch (0 lỗi/cảnh báo)**. `src/components/ui/**` tắt `react-refresh/only-export-components` (file shadcn export kèm `*Variants` theo cấu trúc chuẩn upstream) |
 | `npm test` | Unit tests (không cần Docker) |
 | `npm run test:integration` | Integration tests (cần `supabase start`) |
 | `npm run test:all` | Cả hai |
@@ -103,6 +103,7 @@ src/
 │                        #   useUpdateTransactionMcc, useCashbackRules, useCycleCashback, useNow,
 │                        #   useDashboardStats, useBudgetAlerts, useDebounced, useAuth
 ├── lib/supabase.ts      # Supabase client singleton
+├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
 ├── services/            # supabase-js: accounts, creditCards, credit-card-mutations, cashbackRules, dashboard, exports
 │                        #   mappers (snake_case→camelCase + Zod), transactionQuery (filter/keyset)
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
