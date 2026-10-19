@@ -21,7 +21,7 @@ import type { CreditCard } from '@/types/creditCard'
 const card: CreditCard = {
   id: 'card-1', bankName: 'SHB', cardName: 'SHB Visa', cardNumber: '****x265',
   cardType: 'visa', currency: 'VND', creditLimit: 0, currentBalance: 0,
-  statementDate: 9, paymentDueDate: 29, lastUpdated: '2026-01-01T00:00:00Z',
+  statementDate: 9, paymentDueDate: 29, cashbackMonthlyCap: null, lastUpdated: '2026-01-01T00:00:00Z',
 }
 
 function renderDialog(target: CreditCard = card) {

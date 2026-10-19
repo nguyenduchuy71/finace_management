@@ -46,6 +46,7 @@ export interface CreditCardRow {
   current_balance: number | string
   statement_date: number
   payment_due_date: number
+  cashback_monthly_cap?: number | string | null
   last_updated: string
 }
 
@@ -123,6 +124,7 @@ export function mapCreditCard(row: CreditCardRow) {
     currentBalance: toInt(row.current_balance),
     statementDate: row.statement_date,
     paymentDueDate: row.payment_due_date,
+    cashbackMonthlyCap: row.cashback_monthly_cap == null ? null : toInt(row.cashback_monthly_cap),
     lastUpdated: toISO(row.last_updated),
   })
 }

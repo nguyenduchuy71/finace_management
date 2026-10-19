@@ -66,7 +66,8 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
     setErrors({})
     setBusy(true)
     try {
-      await save.mutateAsync({ ruleId: rule?.id ?? null, values: result.values })
+      // Bậc thang chưa sửa được ở form này: giữ nguyên bậc hiện có, vì RPC thay thế toàn bộ bậc bằng danh sách gửi lên.
+      await save.mutateAsync({ ruleId: rule?.id ?? null, values: { ...result.values, tiers: rule?.tiers ?? [] } })
       onDone()
     } catch (err) {
       setSubmitError((err as ApiError).message ?? 'Không lưu được rule. Vui lòng thử lại.')

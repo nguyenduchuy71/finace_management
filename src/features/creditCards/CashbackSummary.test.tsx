@@ -22,6 +22,7 @@ import type { CreditCard, CreditCardTransaction } from '@/types/creditCard'
 const card: CreditCard = {
   id: 'card-1', bankName: 'SHB', cardName: 'SHB Visa', cardNumber: '****x265', cardType: 'visa',
   currency: 'VND', creditLimit: 0, currentBalance: 0, statementDate: 9, paymentDueDate: 29,
+  cashbackMonthlyCap: null,
   lastUpdated: '2026-01-01T00:00:00Z',
 }
 const cycle = { startISO: '2026-03-09T17:00:00.000Z', endISO: '2026-04-09T17:00:00.000Z' }

@@ -23,6 +23,7 @@ import type { CreditCard } from '@/types/creditCard'
 const card: CreditCard = {
   id: 'card-1', bankName: 'SHB', cardName: 'SHB Visa', cardNumber: '****x265', cardType: 'visa',
   currency: 'VND', creditLimit: 0, currentBalance: 0, statementDate: 9, paymentDueDate: 29,
+  cashbackMonthlyCap: null,
   lastUpdated: '2026-01-01T00:00:00Z',
 }
 const food: CashbackRule = { id: 'r-food', cardId: 'card-1', mcc: '5812', ratePercent: 5, minCycleSpend: 3_000_000, capPerCycle: 200_000, tiers: [] }
@@ -90,7 +91,7 @@ describe('CashbackRulesEditor — thêm rule', () => {
     await u.click(screen.getByRole('button', { name: 'Thêm rule' }))
 
     await waitFor(() => expect(createCashbackRule).toHaveBeenCalledWith('card-1', {
-      mcc: '5812', ratePercent: 5.5, minCycleSpend: 3_000_000, capPerCycle: 200_000,
+      mcc: '5812', ratePercent: 5.5, minCycleSpend: 3_000_000, capPerCycle: 200_000, tiers: [],
     }))
     expect(await screen.findByText('Thẻ này chưa có rule hoàn tiền nào.')).toBeInTheDocument()
   })
@@ -104,7 +105,7 @@ describe('CashbackRulesEditor — thêm rule', () => {
     await u.click(screen.getByRole('button', { name: 'Thêm rule' }))
 
     await waitFor(() => expect(createCashbackRule).toHaveBeenCalledWith('card-1', {
-      mcc: null, ratePercent: 0.5, minCycleSpend: 0, capPerCycle: null,
+      mcc: null, ratePercent: 0.5, minCycleSpend: 0, capPerCycle: null, tiers: [],
     }))
   })
 
@@ -219,10 +220,22 @@ describe('CashbackRulesEditor — sửa và xoá', () => {
 
     setField('Hoàn (%)', '6')
     await u.click(screen.getByRole('button', { name: 'Lưu rule' }))
-    await waitFor(() => expect(updateCashbackRule).toHaveBeenCalledWith('r-food', {
-      mcc: '5812', ratePercent: 6, minCycleSpend: 3_000_000, capPerCycle: 200_000,
+    await waitFor(() => expect(updateCashbackRule).toHaveBeenCalledWith('card-1', 'r-food', {
+      mcc: '5812', ratePercent: 6, minCycleSpend: 3_000_000, capPerCycle: 200_000, tiers: [],
     }))
     expect(createCashbackRule).not.toHaveBeenCalled()
+  })
+
+  it('sửa rule có bậc thang: gửi lại nguyên bậc hiện có (RPC thay thế toàn bộ bậc, không được làm mất)', async () => {
+    const u = userEvent.setup()
+    const tiers = [{ minSpend: 10_000_000, ratePercent: 8 }]
+    vi.mocked(listCashbackRules).mockResolvedValue([{ ...food, tiers }])
+    vi.mocked(updateCashbackRule).mockResolvedValue({ ...food, tiers })
+    renderEditor()
+    await u.click(await screen.findByRole('button', { name: /Sửa rule/ }))
+    setField('Hoàn (%)', '6')
+    await u.click(screen.getByRole('button', { name: 'Lưu rule' }))
+    await waitFor(() => expect(updateCashbackRule).toHaveBeenCalledWith('card-1', 'r-food', expect.objectContaining({ tiers })))
   })
 
   it('xoá cần hai bước: bấm Xoá chỉ hiện nút xác nhận, chưa xoá', async () => {

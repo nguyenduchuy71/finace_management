@@ -2,17 +2,18 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { supabase } from '@/lib/supabase'
 import {
   listCashbackRules, createCashbackRule, updateCashbackRule, deleteCashbackRule, getCycleExpenses,
+  setCardCashbackCap,
 } from './cashbackRules'
 import { computeCashback } from '@/utils/cashback'
-import type { CashbackFormValues } from '@/types/cashback-form'
+import type { CashbackRuleInput } from '@/types/cashback'
 
 // Service rule hoàn tiền chạy trên Supabase local THẬT (RLS, ràng buộc, Zod, phân trang chu kỳ).
 // Dùng chung DB với các file integration khác (assert tổng cố định theo seed) nên mọi dữ liệu
 // tạo ở đây đều được dọn, kể cả khi test fail giữa chừng.
 
 const BANK = 'CashBank'
-const values = (over: Partial<CashbackFormValues> = {}): CashbackFormValues => ({
-  mcc: null, ratePercent: 1, minCycleSpend: 0, capPerCycle: null, ...over,
+const values = (over: Partial<CashbackRuleInput> = {}): CashbackRuleInput => ({
+  mcc: null, ratePercent: 1, minCycleSpend: 0, capPerCycle: null, tiers: [], ...over,
 })
 
 let userId = ''
@@ -80,18 +81,19 @@ describe('cashback rules CRUD', () => {
 
   it('sửa rule', async () => {
     const [food] = await listCashbackRules(cardId)
-    const updated = await updateCashbackRule(food.id, values({ mcc: '5812', ratePercent: 6, minCycleSpend: 0, capPerCycle: null }))
+    const updated = await updateCashbackRule(cardId, food.id, values({ mcc: '5812', ratePercent: 6, minCycleSpend: 0, capPerCycle: null }))
     expect(updated).toMatchObject({ id: food.id, ratePercent: 6, minCycleSpend: 0, capPerCycle: null })
   })
 
   it('đổi sang nhóm đã có rule khác -> 23505', async () => {
     const list = await listCashbackRules(cardId)
     const food = list.find((r) => r.mcc === '5812')!
-    await expect(updateCashbackRule(food.id, values({ mcc: null }))).rejects.toMatchObject({ code: '23505' })
+    await expect(updateCashbackRule(cardId, food.id, values({ mcc: null }))).rejects.toMatchObject({ code: '23505' })
   })
 
   it('sửa rule không tồn tại -> lỗi, không "thành công" im lặng', async () => {
-    await expect(updateCashbackRule('00000000-0000-4000-a000-0000000000fa', values())).rejects.toHaveProperty('code')
+    await expect(updateCashbackRule(cardId, '00000000-0000-4000-a000-0000000000fa', values()))
+      .rejects.toMatchObject({ code: 'P0002' })
   })
 
   it('DB chặn % ngoài 0..100 và trần 0 nếu form bị qua mặt', async () => {
@@ -119,6 +121,107 @@ describe('cashback rules CRUD', () => {
     await supabase.rpc('delete_credit_card', { p_card_id: card.data.id })
     const { data } = await supabase.from('card_cashback_rules').select('id').eq('card_id', card.data.id)
     expect(data).toHaveLength(0)
+  })
+})
+
+describe('bậc thang qua RPC save_cashback_rule', () => {
+  const tiers = [
+    { minSpend: 10_000_000, ratePercent: 1 },
+    { minSpend: 20_000_000, ratePercent: 1.5 },
+  ]
+  const ladder = (over: Partial<CashbackRuleInput> = {}) =>
+    values({ mcc: '4121', ratePercent: 0.5, minCycleSpend: 5_000_000, tiers, ...over })
+  let ruleId = ''
+
+  async function tierRows(id: string) {
+    const { data } = await supabase.from('card_cashback_rule_tiers').select('min_spend, rate_percent').eq('rule_id', id).order('min_spend')
+    return (data ?? []).map((t) => `${t.min_spend}/${Number(t.rate_percent)}`)
+  }
+
+  it('tạo rule kèm bậc: đọc lại đủ bậc, đúng thứ tự, kiểu số', async () => {
+    const r = await createCashbackRule(cardId, ladder())
+    ruleId = r.id
+    expect(r.tiers).toEqual(tiers)
+    const listed = (await listCashbackRules(cardId)).find((x) => x.id === ruleId)!
+    expect(listed.tiers).toEqual(tiers)
+    expect(typeof listed.tiers[0].minSpend).toBe('number')
+  })
+
+  it('sửa rule: bậc cũ bị thay thế, không nhân đôi', async () => {
+    const r = await updateCashbackRule(cardId, ruleId, ladder({ tiers: [{ minSpend: 12_000_000, ratePercent: 2 }] }))
+    expect(r.tiers).toEqual([{ minSpend: 12_000_000, ratePercent: 2 }])
+    expect(await tierRows(ruleId)).toEqual(['12000000/2'])
+  })
+
+  it('bậc sai bị từ chối bằng thông điệp tiếng Việt và rule + bậc giữ nguyên', async () => {
+    const bad = [{ minSpend: 20_000_000, ratePercent: 2 }, { minSpend: 10_000_000, ratePercent: 3 }]
+    await expect(updateCashbackRule(cardId, ruleId, ladder({ ratePercent: 9, tiers: bad })))
+      .rejects.toMatchObject({ code: '22023', message: expect.stringContaining('Bậc 2') })
+    const after = (await listCashbackRules(cardId)).find((x) => x.id === ruleId)!
+    expect(after.ratePercent).toBe(0.5)
+    expect(after.tiers).toEqual([{ minSpend: 12_000_000, ratePercent: 2 }])
+  })
+
+  it('bậc không lớn hơn ngưỡng nền và quá 5 bậc đều bị từ chối', async () => {
+    await expect(updateCashbackRule(cardId, ruleId, ladder({ tiers: [{ minSpend: 5_000_000, ratePercent: 2 }] })))
+      .rejects.toMatchObject({ code: '22023' })
+    const six = Array.from({ length: 6 }, (_, i) => ({ minSpend: 6_000_000 + i, ratePercent: 1 }))
+    await expect(updateCashbackRule(cardId, ruleId, ladder({ tiers: six }))).rejects.toMatchObject({ code: '22023' })
+  })
+
+  it('bậc rỗng xoá hết bậc cũ', async () => {
+    const r = await updateCashbackRule(cardId, ruleId, ladder({ tiers: [] }))
+    expect(r.tiers).toEqual([])
+    expect(await tierRows(ruleId)).toEqual([])
+  })
+
+  it('tạo rule trùng MCC kèm bậc -> 23505 và không để lại bậc mồ côi', async () => {
+    const before = await supabase.from('card_cashback_rule_tiers').select('id', { count: 'exact', head: true })
+    await expect(createCashbackRule(cardId, ladder())).rejects.toMatchObject({ code: '23505' })
+    const after = await supabase.from('card_cashback_rule_tiers').select('id', { count: 'exact', head: true })
+    expect(after.count).toBe(before.count)
+  })
+
+  it('list trả bậc theo mức chi tăng dần dù DB lưu theo thứ tự khác', async () => {
+    const r = await createCashbackRule(cardId, ladder({ mcc: '4111', tiers: [] }))
+    const { error } = await supabase.from('card_cashback_rule_tiers').insert([
+      { rule_id: r.id, min_spend: 30_000_000, rate_percent: 3 },
+      { rule_id: r.id, min_spend: 10_000_000, rate_percent: 1 },
+    ])
+    if (error) throw error
+    const listed = (await listCashbackRules(cardId)).find((x) => x.id === r.id)!
+    expect(listed.tiers.map((t) => t.minSpend)).toEqual([10_000_000, 30_000_000])
+    await deleteCashbackRule(r.id)
+  })
+
+  it('xoá rule kéo theo xoá bậc', async () => {
+    await updateCashbackRule(cardId, ruleId, ladder())
+    await deleteCashbackRule(ruleId)
+    expect(await tierRows(ruleId)).toEqual([])
+  })
+})
+
+describe('trần hoàn tiền của thẻ', () => {
+  const readCap = async () => {
+    const { data } = await supabase.from('credit_cards').select('cashback_monthly_cap').eq('id', cardId).single()
+    return data?.cashback_monthly_cap ?? null
+  }
+
+  it('đặt, đổi rồi bỏ trần (null)', async () => {
+    expect(await readCap()).toBeNull()
+    await setCardCashbackCap(cardId, 600_000)
+    expect(Number(await readCap())).toBe(600_000)
+    await setCardCashbackCap(cardId, null)
+    expect(await readCap()).toBeNull()
+  })
+
+  it('trần 0 bị DB từ chối nếu form bị qua mặt', async () => {
+    await expect(setCardCashbackCap(cardId, 0)).rejects.toHaveProperty('code', '23514')
+  })
+
+  it('thẻ không tồn tại -> NOT_FOUND, không "thành công" im lặng', async () => {
+    await expect(setCardCashbackCap('00000000-0000-4000-a000-0000000000fb', 1))
+      .rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 })
 

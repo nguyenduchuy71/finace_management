@@ -13,6 +13,8 @@ export const CreditCardSchema = z.object({
   currentBalance: z.number().int(),
   statementDate: z.number().int().min(1).max(31),   // day of month: 15
   paymentDueDate: z.number().int().min(1).max(31),  // day of month: 5
+  // Trần hoàn tiền tổng cho cả thẻ mỗi kỳ sao kê; null = không giới hạn (xem docs/credit-card-cashback.md)
+  cashbackMonthlyCap: z.number().int().positive().nullable(),
   lastUpdated: z.string().datetime(),
 })
 

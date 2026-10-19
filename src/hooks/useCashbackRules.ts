@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  listCashbackRules, createCashbackRule, updateCashbackRule, deleteCashbackRule,
+  listCashbackRules, createCashbackRule, updateCashbackRule, deleteCashbackRule, setCardCashbackCap,
 } from '@/services/cashbackRules'
-import type { CashbackFormValues } from '@/types/cashback-form'
+import type { CashbackRuleInput } from '@/types/cashback'
 
 export function useCashbackRules(cardId: string) {
   return useQuery({
@@ -22,8 +22,8 @@ function useInvalidateCashback(cardId: string) {
 export function useSaveCashbackRule(cardId: string) {
   const invalidate = useInvalidateCashback(cardId)
   return useMutation({
-    mutationFn: ({ ruleId, values }: { ruleId: string | null; values: CashbackFormValues }) =>
-      ruleId ? updateCashbackRule(ruleId, values) : createCashbackRule(cardId, values),
+    mutationFn: ({ ruleId, values }: { ruleId: string | null; values: CashbackRuleInput }) =>
+      ruleId ? updateCashbackRule(cardId, ruleId, values) : createCashbackRule(cardId, values),
     onSuccess: async (_rule, { ruleId }) => {
       await invalidate()
       toast.success(ruleId ? 'Đã cập nhật rule' : 'Đã thêm rule')
@@ -38,6 +38,18 @@ export function useDeleteCashbackRule(cardId: string) {
     onSuccess: async () => {
       await invalidate()
       toast.success('Đã xoá rule')
+    },
+  })
+}
+
+/** Trần tổng của thẻ nằm trên credit_cards: đổi xong phải làm mới danh sách thẻ để Summary tính lại. */
+export function useSetCardCashbackCap(cardId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (cap: number | null) => setCardCashbackCap(cardId, cap),
+    onSuccess: async (_void, cap) => {
+      await qc.invalidateQueries({ queryKey: ['creditCards'] })
+      toast.success(cap === null ? 'Đã bỏ trần hoàn tiền của thẻ' : 'Đã lưu trần hoàn tiền của thẻ')
     },
   })
 }
