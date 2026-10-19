@@ -13,10 +13,19 @@ export function ChatInput({ inputRef, prefillText, onPrefillConsumed }: {
   const internalRef = useRef<HTMLTextAreaElement>(null)
   const textareaRef = inputRef || internalRef
 
-  // Handle prefill from ConversationStarters
+  // Điền sẵn từ ConversationStarters. Điều chỉnh state NGAY TRONG LÚC RENDER (mẫu React khuyến nghị
+  // thay cho setState trong effect, vốn gây thêm một lượt render thừa): chỉ điền khi gặp prefill MỚI.
+  // Cha xoá prefill sau khi dùng (prefillText -> undefined) nên phải đặt lại `appliedPrefill`, nếu
+  // không thì chọn lại ĐÚNG gợi ý đó lần nữa sẽ bị coi là đã áp dụng và không điền.
+  const [appliedPrefill, setAppliedPrefill] = useState<string | undefined>()
+  if (prefillText !== appliedPrefill) {
+    setAppliedPrefill(prefillText)
+    if (prefillText) setText(prefillText)
+  }
+
+  // Tác dụng phụ thật (không phải setState của chính component này): báo cha đã dùng và focus.
   useEffect(() => {
     if (prefillText) {
-      setText(prefillText)
       onPrefillConsumed?.()
       textareaRef.current?.focus()
     }

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useCreditCardTransactions } from '@/hooks/useCreditCardTransactions'
 import { useCreditCards } from '@/hooks/useCreditCards'
+import { useNow } from '@/hooks/useNow'
 import { useFilterStore } from '@/stores/filterStore'
 import { groupTransactionsByCycle, computeCurrentCycle } from '@/utils/billingCycle'
 import { BillingCycleGroup } from './BillingCycleGroup'
@@ -26,10 +27,13 @@ export function CreditCardTransactionList() {
     [data]
   )
 
-  const now = useMemo(() => new Date().toISOString(), [])
+  // Tự cập nhật (cùng đồng hồ với BillingCycleInfoCard): tab mở qua mốc cắt sao kê thì nhóm
+  // "Chu kỳ hiện tại" phải sang kỳ mới, nếu không hai khối trên trang sẽ hiện hai chu kỳ khác nhau.
+  const now = useNow()
+  const statementDate = card?.statementDate
   const currentCycle = useMemo(
-    () => card ? computeCurrentCycle(card.statementDate, now) : null,
-    [card?.statementDate, now]
+    () => statementDate !== undefined ? computeCurrentCycle(statementDate, now) : null,
+    [statementDate, now]
   )
   const cycleGroups = useMemo(
     () => currentCycle ? groupTransactionsByCycle(allTransactions, currentCycle) : [],
