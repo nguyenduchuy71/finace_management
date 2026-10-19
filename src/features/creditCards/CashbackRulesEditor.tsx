@@ -11,6 +11,7 @@ import type { CashbackRule } from '@/types/cashback'
 import type { CreditCard } from '@/types/creditCard'
 import { DEFAULT_RULE_LABEL } from '@/types/cashback-form'
 import { CashbackRuleForm } from './CashbackRuleForm'
+import { CardCashbackCapField } from './CardCashbackCapField'
 
 interface CashbackRulesEditorProps {
   card: CreditCard
@@ -25,6 +26,9 @@ function describeRule(r: CashbackRule): string {
   const parts = [`Hoàn ${r.ratePercent}%`]
   if (r.minCycleSpend > 0) parts.push(`chi tối thiểu ${formatVND(r.minCycleSpend)}/kỳ`)
   if (r.capPerCycle !== null) parts.push(`trần ${formatVND(r.capPerCycle)}/kỳ`)
+  if (r.tiers.length > 0) {
+    parts.push(`bậc: ${r.tiers.map((t) => `từ ${formatVND(t.minSpend)} hoàn ${t.ratePercent}%`).join(', ')}`)
+  }
   return parts.join(' · ')
 }
 
@@ -92,8 +96,8 @@ function EditorBody({ card, onClose, setBusy }: {
       <DialogHeader>
         <DialogTitle>Rule hoàn tiền — {card.cardName}</DialogTitle>
         <DialogDescription>
-          Mỗi nhóm MCC một rule; rule mặc định áp cho mọi giao dịch còn lại. Ngưỡng chi và trần hoàn
-          tính riêng cho từng rule, theo chu kỳ sao kê.
+          Mỗi nhóm MCC một rule; rule mặc định áp cho mọi giao dịch còn lại. Ngưỡng chi, bậc thang và trần hoàn
+          của rule tính riêng cho từng rule; trần cả thẻ áp sau cùng. Tất cả theo chu kỳ sao kê.
         </DialogDescription>
       </DialogHeader>
 
@@ -121,6 +125,7 @@ function EditorBody({ card, onClose, setBusy }: {
               ))}
             </ul>
           )}
+          <CardCashbackCapField card={card} setBusy={setBusy} />
           <div className="flex justify-between">
             <Button type="button" variant="outline" onClick={onClose}>Đóng</Button>
             <Button type="button" disabled={!rules.isSuccess} onClick={() => setMode({ kind: 'new' })}>

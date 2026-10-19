@@ -20,8 +20,13 @@ function RuleLine({ r }: { r: RuleCashback }) {
       <div className="min-w-0">
         <span className="font-medium">{r.mcc ? formatMcc(r.mcc) : DEFAULT_RULE_LABEL}</span>
         <span className="ml-2 text-xs text-muted-foreground">
-          chi {formatVND(r.spend)} · {r.ratePercent}%
+          chi {formatVND(r.spend)} · {r.belowMin ? r.ratePercent : r.appliedRatePercent}%
         </span>
+        {!r.belowMin && r.nextTier && (
+          <p className="text-xs text-muted-foreground">
+            Còn {formatVND(r.nextTier.minSpend - r.spend)} nữa để lên bậc {r.nextTier.ratePercent}%
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2">
         {r.belowMin && (
@@ -79,6 +84,12 @@ export function CashbackSummary({ card, cycle }: CashbackSummaryProps) {
             {formatVND(shown.total)}
             <span className="ml-2 text-xs font-normal text-muted-foreground">ước tính</span>
           </p>
+          {shown.cardCapped && shown.cardCap !== null && (
+            <p className="text-xs text-muted-foreground">
+              <Badge variant="secondary" className="mr-1 text-xs">Đã chạm trần thẻ</Badge>
+              {formatVND(shown.cardCap)}/kỳ (tổng các rule trước khi cắt: {formatVND(shown.uncappedTotal)})
+            </p>
+          )}
           {active.length > 0 ? (
             <ul className="space-y-1.5">{active.map((r) => <RuleLine key={r.ruleId} r={r} />)}</ul>
           ) : (

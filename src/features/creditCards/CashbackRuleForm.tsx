@@ -4,15 +4,16 @@ import { describedBy } from '@/components/form/form-aria'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSaveCashbackRule } from '@/hooks/useCashbackRules'
+import { CashbackTierFields } from './CashbackTierFields'
 import {
   DEFAULT_RULE_LABEL, EMPTY_CASHBACK_FORM, ruleToFormInput, validateCashbackForm,
-  type CashbackFormErrors, type CashbackFormInput,
+  type CashbackFormErrors, type CashbackFormInput, type CashbackScalarField,
 } from '@/types/cashback-form'
 import type { CashbackRule } from '@/types/cashback'
 import type { ApiError } from '@/types/api'
 import { MCC_OPTIONS, formatMcc } from '@/utils/mcc'
 
-const FIELD_ID: Record<keyof CashbackFormInput, string> = {
+const FIELD_ID: Record<CashbackScalarField, string> = {
   mcc: 'rule-mcc',
   ratePercent: 'rule-rate',
   minCycleSpend: 'rule-min',
@@ -45,7 +46,7 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
   // Nhóm đã có rule ở rule KHÁC thì không cho chọn lại (DB cũng chặn bằng unique).
   const taken = new Set(existing.filter((r) => r.id !== rule?.id).map((r) => r.mcc ?? ''))
 
-  const fieldProps = (key: keyof CashbackFormInput) => ({
+  const fieldProps = (key: CashbackScalarField) => ({
     id: FIELD_ID[key],
     value: form[key],
     'aria-invalid': errors[key] ? true : undefined,
@@ -66,8 +67,7 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
     setErrors({})
     setBusy(true)
     try {
-      // Bậc thang chưa sửa được ở form này: giữ nguyên bậc hiện có, vì RPC thay thế toàn bộ bậc bằng danh sách gửi lên.
-      await save.mutateAsync({ ruleId: rule?.id ?? null, values: { ...result.values, tiers: rule?.tiers ?? [] } })
+      await save.mutateAsync({ ruleId: rule?.id ?? null, values: result.values })
       onDone()
     } catch (err) {
       setSubmitError((err as ApiError).message ?? 'Không lưu được rule. Vui lòng thử lại.')
@@ -106,6 +106,15 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
           <Input {...fieldProps('capPerCycle')} inputMode="numeric" placeholder="200.000" />
         </FormField>
       </div>
+
+      <CashbackTierFields
+        tiers={form.tiers} errors={errors} disabled={save.isPending}
+        onChange={(tiers) => {
+          setForm((f) => ({ ...f, tiers }))
+          setErrors((prev) => ({ ...prev, tiers: undefined, tierRows: undefined }))
+          setSubmitError(null)
+        }}
+      />
 
       {submitError && <p role="alert" className="text-sm text-destructive">{submitError}</p>}
 
