@@ -74,7 +74,7 @@ describe('validateCashbackForm — từ chối', () => {
 })
 
 describe('ruleToFormInput', () => {
-  const rule = { id: 'r1', cardId: 'c1', mcc: '5812', ratePercent: 5.5, minCycleSpend: 3_000_000, capPerCycle: 200_000 }
+  const rule = { id: 'r1', cardId: 'c1', mcc: '5812', ratePercent: 5.5, minCycleSpend: 3_000_000, capPerCycle: 200_000, tiers: [] }
 
   it('đi một vòng rule -> form -> giá trị không đổi', () => {
     const r = validateCashbackForm(ruleToFormInput(rule))
