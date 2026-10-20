@@ -125,6 +125,27 @@ const cases: Array<{
   },
 ]
 
+const OCB_SAMPLE =
+  'Thông báo biến động số dư\n20/10 11:29 Thẻ tín dụng: 35-9586 Số tiền: +100,000 VND  Hạn mức khả dụng: 48,853,000  Nội dung: THANH TOAN THE TIN DUNG'
+
+cases.push(
+  {
+    // Dinh dang THAT tu push OCB OMNI (xac nhan 20/10/2026) — tra no the
+    name: 'OCB trả nợ thẻ',
+    text: OCB_SAMPLE,
+    expect: {
+      bank_name: 'OCB', amount: 100000, source_type: 'credit_card',
+      account_ref: '9586', merchant_name: null,
+      description: 'THANH TOAN THE TIN DUNG',
+    },
+  },
+  {
+    name: 'OCB dấu trừ -> chi tiêu',
+    text: OCB_SAMPLE.replace('+100,000', '-250,000'),
+    expect: { bank_name: 'OCB', amount: -250000, account_ref: '9586' },
+  },
+)
+
 for (const c of cases) {
   Deno.test(`parser: ${c.name}`, () => {
     const got = parse(c.text)
@@ -145,4 +166,35 @@ Deno.test('OTP không bị parse nhầm thành giao dịch', () => {
 Deno.test('account_ref có thể chứa wildcard -> BẮT BUỘC escape trước khi .like()', () => {
   const got = parse('The VPBank 5239...9%08 vua chi tieu -5,061,000VND ND:X vao luc 13:17 24/08.')
   assertEquals(got?.account_ref, '9%08')
+})
+
+// Chạy Date.now giả để test không phụ thuộc ngày chạy và múi giờ máy.
+function withNow<T>(iso: string, fn: () => T): T {
+  const real = Date.now
+  Date.now = () => Date.parse(iso)
+  try { return fn() } finally { Date.now = real }
+}
+
+Deno.test('OCB: ngày 20/10 11:29 giờ VN, năm suy từ hiện tại', () => {
+  const got = withNow('2026-10-20T08:00:00Z', () => parse(OCB_SAMPLE))
+  assertEquals(got?.transaction_date, '2026-10-20T11:29:00+07:00')
+})
+
+Deno.test('OCB: giao thừa — 01/01 03:00 VN khi server UTC còn 31/12 -> năm mới', () => {
+  const t = OCB_SAMPLE.replace('20/10 11:29', '01/01 03:00')
+  const got = withNow('2026-12-31T20:00:00Z', () => parse(t))
+  assertEquals(got?.transaction_date, '2027-01-01T03:00:00+07:00')
+})
+
+Deno.test('OCB: thiếu dấu +/- -> không đoán, no_match', () => {
+  assertEquals(parse(OCB_SAMPLE.replace('+100,000', '100,000')), null)
+})
+
+Deno.test('OCB: payload dài khớp tiền tố không treo regex, không khớp', () => {
+  const big = '20/10 11:29 Thẻ tín dụng: 35-9586 Số tiền: +' + '1,'.repeat(900)
+  assertEquals(parse(big), null)
+})
+
+Deno.test('OCB: số tiền có phần thập phân bị từ chối (VND không có lẻ)', () => {
+  assertEquals(parse(OCB_SAMPLE.replace('+100,000', '+100.5')), null)
 })

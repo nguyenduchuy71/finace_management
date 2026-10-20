@@ -43,7 +43,8 @@ export function vnDate(
  */
 export function inferYear(mm: string, dd: string, hh: string, min: string): string {
   const now = Date.now()
-  let year = new Date(now).getFullYear()
+  // Năm theo giờ VN: edge function chạy UTC nên getFullYear() sai quanh giao thừa.
+  let year = new Date(now + 7 * 3600_000).getUTCFullYear()
   const candidate = new Date(vnDate(String(year), mm, dd, hh, min))
   if (candidate.getTime() > now + 86_400_000) year -= 1
   return String(year)
