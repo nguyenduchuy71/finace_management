@@ -177,9 +177,9 @@ Form thẻ (`credit-card-form.ts`) vì thế **ép `card_number` dạng `****xxx
 
 iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>" }` + header
 `x-shortcut-secret`. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
-Luồng: OTP → chống trùng (cùng `raw_text` trong 10 phút) → 11 regex parser → `unparsed_messages`
+Luồng: OTP → chống trùng (cùng `raw_text` trong 10 phút) → 12 regex parser → `unparsed_messages`
 (kèm `source`, `reason`). Bank chưa có parser: lấy mẫu thật từ `unparsed_messages` rồi viết regex.
-11 parser: LPBank (app + SMS), SHB, HDBank, MSB, VPBank, WOORIVN, UOB, Sacombank, MoMo, BIDV.
+12 parser: LPBank (app + SMS), SHB, HDBank, MSB, VPBank, WOORIVN, UOB, Sacombank, MoMo, BIDV, OCB (chỉ mẫu trả nợ thẻ).
 
 **Giới hạn `text` 2000 ký tự (`MAX_TEXT_LENGTH`) — không được bỏ.** Regex parser chạy đồng bộ
 và có độ phức tạp phi tuyến với input dài (đo thật: 203KB = 8.665ms trước khi neo regex SHB).

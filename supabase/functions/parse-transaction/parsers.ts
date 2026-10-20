@@ -234,6 +234,28 @@ const tryBIDV: Parser = (text) => {
   })
 }
 
+// OCB — push app OCB OMNI (định dạng THẬT, xác nhận 20/10/2026; mới có mẫu TRẢ NỢ thẻ)
+// "Thông báo biến động số dư\n20/10 11:29 Thẻ tín dụng: 35-9586 Số tiền: +100,000 VND
+//  Hạn mức khả dụng: 48,853,000  Nội dung: THANH TOAN THE TIN DUNG"
+// Text KHÔNG có năm -> suy bằng inferYear. Dấu +/- là bắt buộc: thiếu dấu thì không
+// suy được vào/ra, để rơi xuống no_match thay vì đoán. Chưa có mẫu chi tiêu thẻ OCB.
+const tryOCB: Parser = (text) => {
+  const m = text.match(
+    /(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})\s+Thẻ tín dụng:\s*\d{2}-(\d{4})\s+Số tiền:\s*([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND[^\n]{0,60}?Nội dung:\s*([^\n]{1,100})/,
+  )
+  if (!m) return null
+  const [, dd, mm, hh, min, card, amountStr, desc] = m
+  return build(text, {
+    bank_name: 'OCB',
+    amount: parseVND(amountStr),
+    transaction_date: vnDate(inferYear(mm, dd, hh, min), mm, dd, hh, min),
+    description: desc.trim(),
+    source_type: 'credit_card',
+    account_ref: card,
+    merchant_name: null,
+  })
+}
+
 /**
  * Thứ tự QUAN TRỌNG: parser chạy lần lượt, cái nào khớp trước thì thắng.
  * Đặt định dạng CỤ THỂ hơn lên trước định dạng tổng quát
@@ -251,13 +273,14 @@ export const parsers: Parser[] = [
   trySacombank,
   tryMoMo,
   tryBIDV,
+  tryOCB,
 ]
 
 // ---------------------------------------------------------------------------
 // CÁCH THÊM PARSER CHO BANK MỚI
 //
-// CHƯA CÓ parser: OCB, Eximbank, VIB, ACB, HSBC, KBank, Cake, Vietinbank,
-//                 BaoVietBank, ShinhanBank  (17/41 thẻ)
+// CHƯA CÓ parser: Eximbank, VIB, ACB, HSBC, KBank, Cake, Vietinbank,
+//                 BaoVietBank, ShinhanBank  (OCB mới chỉ có mẫu trả nợ thẻ)
 // KHÔNG viết regex theo phỏng đoán — sai định dạng thì hoặc không khớp, hoặc
 // tệ hơn là bóc sai SỐ TIỀN mà không ai biết. Quy trình đúng:
 //
