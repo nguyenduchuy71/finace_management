@@ -8,7 +8,7 @@ Thông báo app (iOS 27+) ─┐
 SMS (trigger Message)    ├─► Automation (1 cái / bank) ─► Shortcut "FM Gửi giao dịch"
 Email (trigger Email)    ┘        gắn source="<bank>"        POST {text, source}
                                                                     │
-     edge function: OTP? → trùng 10 phút? → 11 regex parser → (không khớp) unparsed_messages
+     edge function: NFC → OTP? → trùng 10 phút? → 19 regex parser → (không khớp / chưa có TK) unparsed_messages
 ```
 
 | Kênh | Trigger trong Shortcuts | Dùng khi |
@@ -42,7 +42,7 @@ Kiểm tra: không header → `401`; đúng secret + `{"text":"ping"}` → `200 
 Giao dịch chỉ hiện trong danh sách khi gắn được vào `accounts`/`credit_cards`:
 
 - `bank_name` phải **trùng chính xác** với tên parser đặt (`LPBank`, `SHB`, `HDBank`, `MSB`,
-  `VPBank`, `WOORIVN`, `UOB`, `Sacombank`, `MoMo`, `BIDV`).
+  `VPBank`, `WOORIVN`, `UOB`, `Sacombank`, `MoMo`, `BIDV`, `OCB`, `Vietinbank`, `Cake`).
 - `account_number`/`card_number` phải **kết thúc bằng 4 ký tự cuối** in trong thông báo
   (vd thông báo ghi `4074***2789` → số thẻ lưu kết thúc bằng `2789`).
 
@@ -124,6 +124,13 @@ Hoặc chạy `supabase/functions/parse-transaction/inspect-unparsed.sh`, hoặc
 > `unparsed_messages` có `source = null`, nên vài định dạng (tài khoản `800xx0300`, "Thông báo ghi có
 > Tài khoản **0265", "Số dư tài khoản của bạn vừa tăng") **không biết là bank nào** và chưa viết
 > parser được (`bank_name` sai thì giao dịch không gắn được tài khoản).
+
+### OCB (push app OCB OMNI)
+
+OCB không gửi SMS thẻ tín dụng nữa → tạo automation trigger **Notification** của app OCB OMNI, `source: "OCB"`.
+Parser phủ mẫu "Thông báo biến động số dư" của **tài khoản** (`Tài khoản: …`) và **thẻ tín dụng** (`Thẻ tín dụng: 35-9586`).
+Thẻ/TK trong DB: `bank_name = OCB`, số kết thúc đúng 4 số cuối (vd thẻ `****9586`, TK `****0265`).
+Dấu +/- là bắt buộc: thiếu dấu thì không đoán, tin vào hộp "Chưa phân loại".
 
 ## 6. Tin chưa đọc được
 

@@ -9,6 +9,8 @@
 //   (JS `\s` gồm cả U+2008), không dùng dấu cách cứng.
 // - Khoảng trống giữa hai field dùng `[\s\S]{0,N}?` có cận trên — không `.*?`
 //   không neo (xem MAX_TEXT_LENGTH trong index.ts).
+// - Số tiền: nhóm nghìn đúng chuẩn hoặc số thuần, KHÔNG nhận phần lẻ ("+100.5" -> parseVND = 1005đ).
+//   VND không có lẻ; chuỗi lạ thì rơi xuống hộp tin thay vì bóc sai số tiền.
 // - Tin không có ngày giờ -> `nowVN(now)`: push đến gần như tức thì sau giao dịch
 //   (`now` = thời điểm nhận, xem type Parser).
 
@@ -23,7 +25,7 @@ const desc = (s: string) => s.trim()
 //  Số dư cuối: 545,832 VND Nội dung giao dịch: MB-TKThe ..."
 const tryBIDVAccount: Parser = (text, now) => {
   const m = text.match(
-    /Tài khoản thanh toán:\s*(\d+)\s+Số tiền GD:\s*([-+][\d,.]+)\s*VND\s+Số dư cuối:[\s\S]{0,40}?Nội dung giao dịch:\s*([^\n]{1,300})/,
+    /Tài khoản thanh toán:\s*(\d+)\s+Số tiền GD:\s*([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND\s+Số dư cuối:[\s\S]{0,40}?Nội dung giao dịch:\s*([^\n]{1,300})/,
   )
   if (!m) return null
   const [, acct, amountStr, content] = m
@@ -43,7 +45,7 @@ const tryBIDVAccount: Parser = (text, now) => {
 // "(DAO)" ở đầu nội dung = đảo/hoàn giao dịch, giữ nguyên dấu + của text.
 const tryVietinbank: Parser = (text) => {
   const m = text.match(
-    /Thời gian:\s*(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})\s+Tài khoản:\s*(\d+)\s+Giao dịch:\s*([-+][\d,.]+)\s*VND\s+Số dư hiện tại:[\s\S]{0,40}?Nội dung:\s*([^\n]{1,300})/,
+    /Thời gian:\s*(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})\s+Tài khoản:\s*(\d+)\s+Giao dịch:\s*([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND\s+Số dư hiện tại:[\s\S]{0,40}?Nội dung:\s*([^\n]{1,300})/,
   )
   if (!m) return null
   const [, dd, mm, yyyy, hh, min, acct, amountStr, content] = m
@@ -64,7 +66,7 @@ const tryVietinbank: Parser = (text) => {
 // Neo vào nhãn "Tài khoản:"/"Thẻ tín dụng:" ngay sau giờ — tin cùng tiêu đề của
 // bank khác ("Số dư tài khoản của bạn vừa tăng ...") không khớp.
 const OCB_HEAD = /Thông báo biến động số dư\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})\s+/.source
-const OCB_TAIL = /\s+Số tiền:\s*([-+][\d.,]+)\s*VND[\s\S]{0,80}?Nội dung:\s*([^\n]{1,300})/.source
+const OCB_TAIL = /\s+Số tiền:\s*([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND[\s\S]{0,80}?Nội dung:\s*([^\n]{1,300})/.source
 
 const tryOCBAccount: Parser = (text, now) => {
   const m = text.match(new RegExp(`${OCB_HEAD}Tài khoản:\\s*(\\d+)${OCB_TAIL}`))
@@ -100,7 +102,7 @@ const tryOCBCard: Parser = (text, now) => {
 // Không có ngày giờ.
 const trySHBSaha: Parser = (text, now) => {
   const m = text.match(
-    /^SHB SAHA\s+Phát sinh\s+([-+][\d,.]+)\s*VND\s+Tài khoản\s+(\d+)\s+([^\n]{1,300})/,
+    /^SHB SAHA\s+Phát sinh\s+([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND\s+Tài khoản\s+(\d+)\s+([^\n]{1,300})/,
   )
   if (!m) return null
   const [, amountStr, acct, content] = m
@@ -119,7 +121,7 @@ const trySHBSaha: Parser = (text, now) => {
 //  SD KHA DUNG 35\nND NGUYEN DUC HUY chuyen tien"  (khác tryHDBank cũ là giao dịch thẻ)
 const tryHDBankAccount: Parser = (text) => {
   const m = text.match(
-    /(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s+TK\s+(\d+)\(VND\)\s+([-+][\d,.]+)\s+SD\s[\s\S]{0,80}?\sND\s+([^\n]{1,300})/,
+    /(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s+TK\s+(\d+)\(VND\)\s+([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s+SD\s[\s\S]{0,80}?\sND\s+([^\n]{1,300})/,
   )
   if (!m) return null
   const [, dd, mm, yyyy, hh, min, ss, acct, amountStr, content] = m
@@ -138,7 +140,7 @@ const tryHDBankAccount: Parser = (text) => {
 //  lúc 10:11 19/10/2026"
 const tryCakeCard: Parser = (text) => {
   const m = text.match(
-    /^([-+][\d.,]+)\s*đ\s+Tài khoản tín dụng, thẻ\s*[^\d\s]{0,4}(\d{4})\s+Tại\s+([^\n]{1,120}?),\s*lúc\s+(\d{2}):(\d{2})\s+(\d{2})\/(\d{2})\/(\d{4})/,
+    /^([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*đ\s+Tài khoản tín dụng, thẻ\s*[^\d\s]{0,4}(\d{4})\s+Tại\s+([^\n]{1,120}?),\s*lúc\s+(\d{2}):(\d{2})\s+(\d{2})\/(\d{2})\/(\d{4})/,
   )
   if (!m) return null
   const [, amountStr, ref, merchant, hh, min, dd, mm, yyyy] = m
@@ -159,7 +161,7 @@ const tryCakeCard: Parser = (text) => {
 // là chuyển nội bộ (trả nợ từ TK của chính mình) -> gắn kind ngay tại parser.
 const trySacombankRepayment: Parser = (text) => {
   const m = text.match(
-    /Ngày\s+(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})\s+Cảm ơn Quý khách đã thanh toán\s+([\d,.]+)\s*VND vào thẻ\s[^\n]{0,80}?(\d{4})\./,
+    /Ngày\s+(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})\s+Cảm ơn Quý khách đã thanh toán\s+((?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND vào thẻ\s[^\n]{0,80}?(\d{4})\./,
   )
   if (!m) return null
   const [, dd, mm, yyyy, hh, min, amountStr, ref] = m
