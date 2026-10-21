@@ -3,6 +3,7 @@ import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { useSaveCashbackRule } from '@/hooks/useCashbackRules'
 import { CashbackTierFields } from './CashbackTierFields'
 import {
@@ -79,15 +80,12 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <FormField id="rule-mcc" label="Áp dụng cho" error={errors.mcc}>
-        <select
-          {...fieldProps('mcc')}
-          className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-        >
+        <NativeSelect {...fieldProps('mcc')}>
           <option value="" disabled={taken.has('')}>{DEFAULT_RULE_LABEL}</option>
           {MCC_OPTIONS.map((o) => (
             <option key={o.code} value={o.code} disabled={taken.has(o.code)}>{formatMcc(o.code)}</option>
           ))}
-        </select>
+        </NativeSelect>
       </FormField>
       <div className="grid gap-4 sm:grid-cols-3">
         <FormField id="rule-rate" label="Hoàn (%)" error={errors.ratePercent}>

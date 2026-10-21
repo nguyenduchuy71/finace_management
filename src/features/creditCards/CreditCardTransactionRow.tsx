@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { NativeSelect } from '@/components/ui/native-select'
 import { useUpdateTransactionMcc } from '@/hooks/useUpdateTransactionMcc'
 import { formatVND } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/dates'
@@ -66,19 +67,20 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
         </div>
         {/* MCC do user tự gán — dùng để tính hoàn tiền theo rule của thẻ */}
         <div className="flex flex-wrap items-center gap-2 mt-1.5">
-          <select
+          <NativeSelect
+            size="sm"
             aria-label={`Phân loại MCC cho ${merchantLabel}`}
             aria-busy={updateMcc.isPending}
             value={tx.mcc ?? ''}
             onChange={(e) => setMcc(e.target.value || null)}
-            className="border-input h-8 w-full max-w-[15rem] rounded-md border bg-transparent px-2 text-xs aria-busy:opacity-60 sm:w-auto"
+            className="max-w-[15rem] sm:w-60"
           >
             <option value="">Chưa phân loại MCC</option>
             {hasUnknownMcc && <option value={tx.mcc}>{tx.mcc}</option>}
             {MCC_OPTIONS.map((o) => (
               <option key={o.code} value={o.code}>{formatMcc(o.code)}</option>
             ))}
-          </select>
+          </NativeSelect>
           {suggestion && (
             <button
               type="button"
