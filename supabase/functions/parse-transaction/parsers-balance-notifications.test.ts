@@ -8,6 +8,7 @@ import { assert, assertEquals, assertMatch } from 'https://deno.land/std@0.203.0
 import { parsers } from './parsers.ts'
 import { detectInternalTransfer, normalizeVN, parseOwnerNames, withKind } from './internal-transfer.ts'
 import { normalizeInput, nowVN } from './helpers.ts'
+import { isOtp, parseNotification } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
 
 const SP = ' ' // punctuation space — OCB/BIDV dùng thay dấu xuống dòng
@@ -201,4 +202,21 @@ Deno.test('balance: tin không có ngày dùng thời điểm nhận được tr
     const r = parsers.map((p) => p(c.text, receivedAt)).find((x) => x !== null)!
     assertEquals(r.transaction_date, '2026-10-19T16:35:00+07:00', c.name)
   }
+})
+
+Deno.test('detectInternalTransfer: phí có cụm "thanh toán thẻ tín dụng" vẫn là chi thật', () => {
+  assert(!detectInternalTransfer('PHI DICH VU THANH TOAN THE TIN DUNG', -11000, OWNERS))
+  assert(!detectInternalTransfer('Phí thanh toán thẻ tín dụng', -11000, OWNERS))
+})
+
+Deno.test('parseNotification: số tiền 0 -> invalid, không ghi giao dịch', () => {
+  const r = parseNotification('SHB SAHA\nPhát sinh +0 VND\nTài khoản 0349000265\nX', OWNERS)
+  assertEquals(r, { status: 'invalid', bank: 'SHB' })
+})
+
+Deno.test('isOtp: có dấu / không dấu / OTP', () => {
+  assert(isOtp('Mã xác thực của bạn là 123456'))
+  assert(isOtp('Ma xac thuc: 123456'))
+  assert(isOtp('OTP 123456'))
+  assert(!isOtp('SHB SAHA\nPhát sinh -10,000 VND\nTài khoản 0349000265\nchuyen tien'))
 })

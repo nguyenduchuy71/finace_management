@@ -22,8 +22,11 @@ const NUM = /(\d{1,3}(?:[.,]\d{3})+|\d+)/.source
 const SIGNED = new RegExp(
   `(?:^|[\\s:(])([+-])\\s*(?:VND\\s*${NUM}|${NUM}\\s*(?:VND|đ(?![a-zà-ỹ])|$))`, 'm',
 )
-// Số không dấu đi kèm đơn vị: "với số tiền 15.000đ", "thanh toán 5,000,000 VND"
-const UNSIGNED = /(\d{1,3}(?:[.,]\d{3})+|\d{4,})\s*(?:VND|đ(?![a-zà-ỹ]))/
+// Số không dấu đi kèm đơn vị: "với số tiền 15.000đ", "thanh toán 5,000,000 VND".
+// Không có ranh giới trái thì "1234.567 VND" bị bắt thành 234567.
+const UNSIGNED = /(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d{4,})\s*(?:VND|đ(?![a-zà-ỹ]))/
+// Số dư / hạn mức / dư nợ không phải số tiền giao dịch — bỏ trước khi tìm số không dấu.
+const BALANCE = /(?:số dư|khả dụng|hạn mức|dư nợ)[^\d\n]{0,30}[\d.,]+\s*(?:VND|đ)?/gi
 // "20/10/2026 17:32", "20/10 11:30", "18/10/2026 11:30:51"
 const DATE_FIRST = /(\d{2})\/(\d{2})(?:\/(\d{4}))?\s+(\d{2}):(\d{2})/
 // "lúc 10:11 19/10/2026", "Thời gian giao dịch: 07:27 07/09/2026"
@@ -45,7 +48,7 @@ export function suggestFromText(text: string, receivedAtISO: string): UnparsedSu
     out.amount = Number((signed[2] ?? signed[3]).replace(/[.,]/g, ''))
     out.direction = signed[1] === '+' ? 'income' : 'expense'
   } else {
-    const unsigned = text.match(UNSIGNED)
+    const unsigned = text.replace(BALANCE, ' ').match(UNSIGNED)
     if (unsigned) out.amount = Number(unsigned[1].replace(/[.,]/g, ''))
   }
 

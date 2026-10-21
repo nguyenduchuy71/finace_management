@@ -15,6 +15,9 @@ export const ResolveFormSchema = z.object({
   amount: moneyAmountField('Số tiền').refine((n) => n > 0, 'Nhập số tiền lớn hơn 0'),
   localDateTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Chọn ngày giờ giao dịch'),
   description: z.string().trim().max(300, 'Tối đa 300 ký tự'),
+}).refine((v) => v.kind !== 'cashback' || v.direction === 'income', {
+  // Cashback âm sẽ trừ vào thu trên tổng quan — gần như chắc chắn là chọn nhầm chiều.
+  path: ['direction'], message: 'Cashback là tiền vào — chọn "Tiền vào (thu)"',
 })
 
 export type ResolveFormInput = z.input<typeof ResolveFormSchema>

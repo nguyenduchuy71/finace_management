@@ -44,7 +44,8 @@ export function detectInternalTransfer(
   ownerNames: string[],
 ): boolean {
   const d = normalizeVN(description)
-  if (d.includes('THANH TOAN THE TIN DUNG')) return true
+  // Phí dịch vụ có thể chứa cụm này ("PHI ... THANH TOAN THE TIN DUNG") — phí là chi thật.
+  if (d.includes('THANH TOAN THE TIN DUNG') && !/\bPHI\b/.test(d)) return true
 
   return ownerNames.some((owner) => {
     const name = escapeRe(owner)

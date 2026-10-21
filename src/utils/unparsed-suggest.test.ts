@@ -62,3 +62,13 @@ describe('vnLocalToISO', () => {
     expect(new Date(vnLocalToISO('2026-10-19T16:35')).toISOString()).toBe('2026-10-19T09:35:00.000Z')
   })
 })
+
+describe('suggestFromText — số không dấu', () => {
+  it('bỏ qua số dư / hạn mức đứng trước số tiền giao dịch', () => {
+    expect(suggestFromText('Số dư: 545,832 VND. Số tiền: 499,000 VND', RECEIVED).amount).toBe(499000)
+    expect(suggestFromText('Hạn mức khả dụng: 41,800,000 VND. Đã thanh toán 199,000 VND', RECEIVED).amount).toBe(199000)
+  })
+  it('không cắt giữa số: "1234.567 VND" không thành 234567', () => {
+    expect(suggestFromText('Thanh toán 1234.567 VND', RECEIVED).amount).not.toBe(234567)
+  })
+})

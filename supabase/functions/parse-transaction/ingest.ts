@@ -12,13 +12,23 @@ export type ParseOutcome =
   | { status: 'invalid'; bank: string } // regex khớp nhưng ra NaN / ngày hỏng
   | { status: 'no_match' }
 
+/**
+ * Tin OTP / bảo mật — không phải giao dịch, và KHÔNG được lưu (mã còn hiệu lực).
+ * Bao phủ mọi biến thể dấu của "ma xac thuc" (a/á/à/ả/ã/ạ, u/ư/ứ/ừ/ự...): bản cũ chỉ
+ * có dạng không dấu nên OTP có dấu lọt xuống unparsed_messages nguyên văn.
+ */
+export function isOtp(text: string): boolean {
+  return /OTP|m[aáàảãạ]\s*x[aáàảãạ]c\s*th[uưúùủũụứừửữự]c/i.test(text)
+}
+
 /** Chạy lần lượt các parser trên text ĐÃ normalizeInput(). `now` = thời điểm nhận tin. */
 export function parseNotification(text: string, ownerNames: string[], now?: number): ParseOutcome {
   for (const parser of parsers) {
     const parsed = parser(text, now)
     if (!parsed) continue
-    // Regex có thể khớp nhưng cho ra dữ liệu vô nghĩa (NaN amount, ngày không hợp lệ).
-    if (!Number.isFinite(parsed.amount) || Number.isNaN(Date.parse(parsed.transaction_date))) {
+    // Regex có thể khớp nhưng cho ra dữ liệu vô nghĩa (NaN/0 amount, ngày không hợp lệ).
+    if (!Number.isFinite(parsed.amount) || parsed.amount === 0
+        || Number.isNaN(Date.parse(parsed.transaction_date))) {
       return { status: 'invalid', bank: parsed.bank_name }
     }
     return { status: 'parsed', tx: withKind(parsed, ownerNames) }
@@ -42,9 +52,8 @@ export type Refs = { account_id?: string; card_id?: string }
 
 /**
  * Tìm account_id / card_id từ (bank_name, account_ref).
- * Không khớp -> trả {} để insert với FK null. LƯU Ý: row FK null KHÔNG hiện
- * trong danh sách giao dịch (mọi query đều lọc theo account_id/card_id).
- * Dùng getUnlinkedCount() ở frontend để phát hiện.
+ * Không khớp, hoặc khớp NHIỀU (2 TK cùng bank cùng đuôi) -> {}. Caller không được
+ * insert khi {}: row FK null KHÔNG hiện trong danh sách nhưng dashboard vẫn đếm.
  */
 export async function resolveRefs(
   db: SupabaseClient,
@@ -57,16 +66,17 @@ export async function resolveRefs(
   const table = isBank ? 'accounts' : 'credit_cards'
   const column = isBank ? 'account_number' : 'card_number'
 
-  const { data } = await db
+  const { data, error } = await db
     .from(table)
     .select('id')
     .eq('user_id', userId)
     .eq('bank_name', p.bank_name)
     .like(column, `%${escapeLike(p.account_ref)}`)
-    .maybeSingle()
+    .limit(2)
 
-  if (!data) return {}
-  return isBank ? { account_id: data.id } : { card_id: data.id }
+  if (error || data?.length !== 1) return {}
+  const id = data[0].id as string
+  return isBank ? { account_id: id } : { card_id: id }
 }
 
 /** Ghi giao dịch (đã resolve FK), trả id. */

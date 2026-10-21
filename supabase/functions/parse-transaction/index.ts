@@ -14,7 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { parseOwnerNames } from './internal-transfer.ts'
 import { normalizeInput } from './helpers.ts'
 import { classifyUnparsed } from './classify-unparsed.ts'
-import { insertTransaction, parseNotification, resolveRefs } from './ingest.ts'
+import { insertTransaction, isOtp, parseNotification, resolveRefs } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
 
 const supabase = createClient(
@@ -86,19 +86,30 @@ function json(body: unknown, status: number): Response {
  * quán cách nhau 1 tiếng là 2 giao dịch thật có text y hệt nhau.
  */
 async function isDuplicate(text: string, userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('raw_text', text)
-    .gte('created_at', new Date(Date.now() - DEDUP_WINDOW_MS).toISOString())
-    .limit(1)
-  return (data?.length ?? 0) > 0
+  const since = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString()
+  // Tin lặp có thể đã thành giao dịch, HOẶC đã vào hộp tin chưa phân loại
+  // (không kiểm bảng này thì hộp hiện 2 dòng cho cùng một thông báo).
+  const [tx, unparsed] = await Promise.all([
+    supabase.from('transactions').select('id')
+      .eq('user_id', userId).eq('raw_text', text).gte('created_at', since).limit(1),
+    supabase.from('unparsed_messages').select('id')
+      .eq('user_id', userId).eq('raw_text', text).gte('received_at', since).limit(1),
+  ])
+  return (tx.data?.length ?? 0) > 0 || (unparsed.data?.length ?? 0) > 0
 }
 
-/** Ghi giao dịch + resolve FK. Trả response cho Shortcut. */
-async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Response> {
+/**
+ * Ghi giao dịch + resolve FK. Chưa có TK/thẻ khớp -> KHÔNG ghi giao dịch mồ côi (dashboard
+ * đếm, danh sách không hiện) mà đưa vào hộp tin; tạo TK rồi chạy backfill-unparsed.ts.
+ */
+async function insertTx(
+  parsed: ParsedTransaction, userId: string, source: string | null,
+): Promise<Response> {
   const refs = await resolveRefs(supabase, parsed, userId)
+  if (!refs.account_id && !refs.card_id) {
+    await saveUnparsed(parsed.raw_text, source, 'no_account', 'transaction')
+    return json({ skipped: 'no_account', bank: parsed.bank_name, account_ref: parsed.account_ref }, 200)
+  }
   await insertTransaction(supabase, parsed, refs, userId)
 
   // KHÔNG vọng `raw_text` về response: nó chứa nguyên văn thông báo
@@ -112,7 +123,9 @@ async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Resp
  * Lưu tin không ghi được thành giao dịch: vào hộp "Chưa phân loại" của user
  * (kèm gợi ý loại để ẩn quảng cáo) và là nguồn mẫu để viết regex parser mới.
  */
-async function saveUnparsed(text: string, source: string | null, reason: string) {
+async function saveUnparsed(
+  text: string, source: string | null, reason: string, suggested = classifyUnparsed(text),
+) {
   // user_id bắt buộc (NOT NULL từ migration 20261021100000) — tin hiện trong hộp
   // "Chưa phân loại" của user. Lỗi không chặn response cho Shortcut nhưng phải lộ
   // ra log: trước đây bị nuốt im lặng, mất luôn mẫu để viết parser.
@@ -120,7 +133,7 @@ async function saveUnparsed(text: string, source: string | null, reason: string)
     .from('unparsed_messages')
     .insert({
       raw_text: text, source, reason, user_id: DEFAULT_USER_ID,
-      suggested_kind: classifyUnparsed(text),
+      suggested_kind: suggested,
     })
   if (error) console.error('saveUnparsed failed', error.code, error.message)
 }
@@ -156,11 +169,8 @@ serve(async (req) => {
       return json({ error: 'text too long', max: MAX_TEXT_LENGTH }, 413)
     }
 
-    // Bỏ qua tin nhắn OTP / bảo mật, không phải giao dịch thật.
-    // Bao phủ mọi biến thể dấu của "ma xac thuc" (a/á/à/ả/ã/ạ, u/ư/ứ/ừ/ự...):
-    // bản cũ chỉ có dạng không dấu nên OTP tiếng Việt có dấu lọt xuống nhánh
-    // no_match và bị lưu NGUYÊN VĂN cả mã còn hiệu lực vào `unparsed_messages`.
-    if (/OTP|m[aáàảãạ]\s*x[aáàảãạ]c\s*th[uưúùủũụứừửữự]c/i.test(text)) {
+    // OTP / bảo mật: không phải giao dịch và KHÔNG lưu (mã còn hiệu lực).
+    if (isOtp(text)) {
       return json({ skipped: 'otp_or_security' }, 200)
     }
 
@@ -170,7 +180,7 @@ serve(async (req) => {
 
     const outcome = parseNotification(text, OWNER_NAMES)
     if (outcome.status === 'parsed') {
-      return await insertTx(outcome.tx, DEFAULT_USER_ID)
+      return await insertTx(outcome.tx, DEFAULT_USER_ID, source)
     }
     // Regex khớp nhưng ra dữ liệu vô nghĩa -> không ghi rác vào DB, trả 422
     // thay vì để Postgres báo 500.

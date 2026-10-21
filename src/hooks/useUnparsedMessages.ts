@@ -41,5 +41,8 @@ export function useResolveUnparsed() {
       await Promise.all(keys.map((queryKey) => qc.invalidateQueries({ queryKey })))
       toast.success(txId ? `Đã ghi giao dịch (${RESOLVE_KIND_LABEL[kind]})` : `Đã đánh dấu: ${RESOLVE_KIND_LABEL[kind]}`)
     },
+    // Tin có thể đã được xử lý ở tab/thiết bị khác (22023) hoặc bị xoá (P0002): tải lại
+    // hộp để tin đó biến mất thay vì user bấm mãi vẫn lỗi.
+    onError: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }

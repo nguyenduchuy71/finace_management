@@ -61,3 +61,15 @@ describe('matchSourceByRef', () => {
     expect(matchSourceByRef(undefined, accounts, cards)).toBe('')
   })
 })
+
+describe('validateResolveForm — cashback', () => {
+  it('cashback chiều chi -> lỗi tại ô chiều tiền', () => {
+    const r = validateResolveForm({ ...initialResolveForm(SUG, 'cashback', 'card:c1'), direction: 'expense' })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.errors.direction).toMatch(/tiền vào/)
+  })
+  it('cashback chiều thu -> số dương', () => {
+    const r = validateResolveForm({ ...initialResolveForm(SUG, 'cashback', 'card:c1'), direction: 'income' })
+    expect(r.ok && r.tx.amount).toBe(84000)
+  })
+})

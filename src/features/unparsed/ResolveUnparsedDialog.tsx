@@ -96,7 +96,7 @@ function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
             </optgroup>
           </select>
         </FormField>
-        <FormField id="resolve-direction" label="Chiều tiền">
+        <FormField id="resolve-direction" label="Chiều tiền" error={errors.direction}>
           <select {...field('direction', 'resolve-direction')} className={SELECT_CLASS}>
             <option value="expense">Tiền ra (chi)</option>
             <option value="income">Tiền vào (thu)</option>
