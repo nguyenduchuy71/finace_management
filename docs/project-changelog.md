@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-21 — Sửa theo code review hộp tin chưa phân loại
+
+Plan: `plans/261021-1552-unparsed-inbox-review-followups/`.
+
+### Sửa
+- Gợi ý thời điểm cho tin không ghi năm: tin "31/12" nhận ngày 01/01 không còn bị đoán thành 31/12 năm sau
+  (cùng quy tắc `inferYear` của edge function).
+- `backfill-unparsed.ts`: chỉ đánh dấu tin còn chưa xử lý; user xử lý tin trên web trong lúc script chạy thì
+  giao dịch script vừa tạo bị xoá (`lostRace`) — không còn giao dịch trùng. Tin cùng nội dung với giao dịch
+  đã gắn tin khác được giữ trong hộp (`duplicateKept`) thay vì làm script dừng; lỗi giữa chừng không xoá nhầm.
+- **Edge function — năm của tin không ghi năm** (VPBank, OCB): runtime chạy UTC nên tin "01/01 00:05" nhận lúc
+  00:00–07:00 ngày 01/01 giờ VN bị gán năm cũ. `inferYear` giờ lấy năm theo giờ VN. Cần deploy lại function.
+- Ngày không tồn tại (29/02 năm thường) trong gợi ý giữ thời điểm nhận tin.
+
+### Thêm
+- CSV có cột **Dòng tiền** (Nội bộ / Cashback / trống) ngay sau cột Loại, để đối chiếu với Tổng quan
+  (Tổng quan không tính giao dịch Nội bộ).
+
+### Refactor (không đổi hành vi)
+- `src/services/mappers.ts` → thêm `api-errors.ts`, `query-cursor.ts`; edge function → `parsers-card-sms.ts`,
+  `shortcut-auth.ts`. Replay 99 tin thật trước/sau giống hệt.
+
+### Đã chạy trên production (21/10/2026)
+- Deploy lại `parse-transaction`; `backfill-unparsed.ts --apply` trên 120 tin: 6 giao dịch thẻ mới (OCB ×3 và
+  Sacombank trả nợ = nội bộ, Cake ×2 chi), 23 tin chờ tài khoản (BIDV ****3946, OCB/SHB/HDBank ****0265,
+  Vietinbank ****4982; MoMo ×3 không có số TK), gắn nhãn 77 quảng cáo. Hộp tin mặc định: 37 tin. 0 giao dịch mồ côi.
+
+### Giới hạn đã biết
+- `OWNER_NAMES` chưa đặt trên production: trả nợ thẻ từ TK ngân hàng vẫn tính là chi, chuyển giữa TK của mình
+  đếm cả thu lẫn chi. Xem bảng sự cố trong `ios-shortcut-setup.md`.
+
 ## 2026-10-21 — Giao dịch ngân hàng: parser push, hộp tin chưa phân loại, tài khoản
 
 Plan: `plans/261021-0940-unparsed-inbox-bank-tab/`.

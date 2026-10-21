@@ -148,4 +148,5 @@ Sau khi deploy parser mới, chạy `backfill-unparsed.ts` (dry-run trước) đ
 | Có trong dashboard, không có trong danh sách | `bank_name` trong DB khác tên parser, hoặc số thẻ/TK không kết thúc bằng 4 ký tự trong thông báo |
 | Ghi 2 lần | Bank bật cả SMS và app cùng lúc — tắt automation của một kênh |
 | Tin có dấu tiếng Việt không khớp parser dù nhìn giống mẫu | iOS gửi Unicode NFD; edge function đã chuẩn hoá NFC (`normalizeInput`) — test thủ công bằng `try-parse.ts` (cũng chuẩn hoá) |
+| Trả nợ thẻ từ TK ngân hàng tính là chi; chuyển giữa TK của mình hiện ở cả thu lẫn chi | **Giới hạn đã biết khi chưa đặt `OWNER_NAMES`** (production hiện chưa đặt). Bật: `supabase secrets set OWNER_NAMES="TEN CHU TK"` (bỏ dấu không bắt buộc, nhiều tên phân tách `;`). Giao dịch cũ: sửa tay hoặc ghi lại qua hộp tin |
 | Trả nợ thẻ / chuyển giữa TK của mình làm phồng thu-chi | Giao dịch phải là `kind = internal_transfer`. Tự gắn khi nội dung có "THANH TOAN THE TIN DUNG", hoặc tên trong secret `OWNER_NAMES` là người gửi (tiền vào) / người nhận (tiền ra) |

@@ -105,8 +105,9 @@ src/
 │                        #   useDashboardStats, useBudgetAlerts, useDebounced, useAuth
 ├── lib/supabase.ts      # Supabase client singleton
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
-├── services/            # supabase-js: accounts, creditCards, credit-card-mutations, cashbackRules, dashboard, exports
-│                        #   mappers (snake_case→camelCase + Zod), transactionQuery (filter/keyset)
+├── services/            # supabase-js: accounts, account-mutations, creditCards, credit-card-mutations, cashbackRules,
+│                        #   dashboard, exports, unparsed-messages; mappers (snake_case→camelCase + Zod),
+│                        #   api-errors (toApiError), query-cursor (keyset cursor, sanitizeSearch), transactionQuery (filter)
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, credit-card-form.ts, cashback.ts, cashback-form.ts,
 │                        #   form-fields.ts (moneyAmountField), budget.ts, categories.ts
@@ -197,8 +198,11 @@ chống trùng kiểm cả `transactions` lẫn `unparsed_messages`;
 không khớp → `unparsed_messages` kèm `source`, `reason`, `user_id`, `suggested_kind` (`classify-unparsed.ts`, ưu tiên recall:
 giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolve FK/insert) dùng chung với `backfill-unparsed.ts`
 (chạy tay, dry-run mặc định). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
-Parser: LPBank (app + SMS), SHB, HDBank, MSB, VPBank, WOORIVN, UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + BIDV push,
-Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ (`parsers-balance-notifications.ts`).
+Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
+(`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
+(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check: `shortcut-auth.ts`.
+**`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
+đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
 Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.
 Thứ tự deploy với migration 20261021100000: db push rồi deploy function ngay (function cũ không ghi user_id).
 
@@ -303,7 +307,7 @@ CATEGORY_TAXONOMY                   // Record<Category, string[]> keyword map
 
 ### CSV (`csv.ts`)
 ```typescript
-formatTransactionForCSV(tx, accountOrCard?, overrides?)  → CSVTransactionRow
+formatTransactionForCSV(tx, accountOrCard?, overrides?)  → CSVTransactionRow   // có cột 'Dòng tiền' (Nội bộ/Cashback)
 downloadCSV(csvString, filename)                         // UTF-8 BOM download
 ```
 
