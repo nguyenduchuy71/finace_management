@@ -145,7 +145,10 @@ describe('DashboardPage', () => {
       renderDashboardPage()
       const net = await screen.findByTestId('net-cash-flow')
       expect(net).toHaveTextContent('–đ 2.000.000')
-      expect(net.className).toContain('text-expense')
+      expect(net.parentElement!.className).toContain('text-expense')
+      // Số chạy (aria-hidden) dừng đúng giá trị cuối
+      await waitFor(() => expect(net.previousElementSibling).toHaveTextContent('–đ 2.000.000'), { timeout: 3000 })
+      expect(net.previousElementSibling).toHaveAttribute('aria-hidden', 'true')
       expect(screen.getByText('Kỳ này chi vượt thu')).toBeInTheDocument()
     })
 

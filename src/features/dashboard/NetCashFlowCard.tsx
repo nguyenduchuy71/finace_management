@@ -5,6 +5,7 @@ import { MeterBar } from '@/components/ui/MeterBar'
 import { formatVND } from '@/utils/currency'
 import { computeNetFlow } from '@/utils/cashflow'
 import { cn } from '@/lib/utils'
+import { useCountUp } from '@/hooks/useCountUp'
 
 interface NetCashFlowCardProps {
   totalIncome: number
@@ -18,6 +19,7 @@ interface NetCashFlowCardProps {
 export function NetCashFlowCard({ totalIncome, totalExpense, transactionCount, isError, onRetry }: NetCashFlowCardProps) {
   const { net, spendRatio } = computeNetFlow(totalIncome, totalExpense)
   const positive = net >= 0
+  const animatedNet = useCountUp(net)
 
   return (
     <Card className="relative h-full overflow-hidden">
@@ -38,11 +40,10 @@ export function NetCashFlowCard({ totalIncome, totalExpense, transactionCount, i
         ) : (
           <>
             <div>
-              <p
-                data-testid="net-cash-flow"
-                className={cn('heading-display money', positive ? 'text-income' : 'text-expense')}
-              >
-                {positive ? '+' : '–'}{formatVND(net)}
+              <p className={cn('heading-display money', positive ? 'text-income' : 'text-expense')}>
+                {/* Số chạy chỉ để nhìn; trình đọc màn hình luôn nhận giá trị cuối, không đọc số trung gian */}
+                <span aria-hidden="true">{positive ? '+' : '–'}{formatVND(animatedNet)}</span>
+                <span className="sr-only" data-testid="net-cash-flow">{positive ? '+' : '–'}{formatVND(net)}</span>
               </p>
               <p className="body-sm text-muted-foreground mt-2">
                 {transactionCount === 0

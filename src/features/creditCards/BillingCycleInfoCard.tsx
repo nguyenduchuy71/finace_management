@@ -22,7 +22,10 @@ export function BillingCycleInfoCard({ card }: BillingCycleInfoCardProps) {
   return (
     <div className="grid gap-4 rounded-2xl border bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[340px_1fr] lg:gap-6">
       <div className="space-y-4">
-        <CardVisual card={card} />
+        {/* key: đổi thẻ thì thẻ mới "trượt vào" (chỉ khi người dùng cho phép chuyển động) */}
+        <div key={card.id} className="motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 duration-300">
+          <CardVisual card={card} />
+        </div>
         <CycleProgress cycle={cycle} nowISO={now} />
       </div>
       <CashbackSummary card={card} cycle={cycle} />
