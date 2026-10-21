@@ -51,7 +51,7 @@ export function BudgetProgressSection({ categoryBreakdown }: BudgetProgressSecti
                 <span
                   data-testid="alert-badge"
                   data-variant="warning"
-                  className="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-200"
+                  className="inline-flex items-center rounded-full bg-cashback-soft px-2 py-0.5 text-xs font-medium text-cashback"
                 >
                   {alertCount}
                 </span>

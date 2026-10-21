@@ -33,14 +33,14 @@ function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
   }, [tx.category, tx.merchantName, tx.type, override])
 
   return (
-    <div className="flex items-center justify-between section-padding-x py-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors duration-200 dark:border-slate-700 dark:bg-slate-900">
+    <div className="flex items-center justify-between section-padding-x py-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors duration-200">
       {/* Left: icon + description + date */}
       <div className="flex items-center gap-3 min-w-0">
         <div
           className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-full ${
             isIncome
-              ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400'
-              : 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
+              ? 'bg-income-soft text-income'
+              : 'bg-expense-soft text-expense'
           }`}
         >
           {isIncome ? (
@@ -88,8 +88,8 @@ function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
       <span
         className={`shrink-0 heading-label ml-4 tabular-nums ${
           isIncome
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-red-600 dark:text-red-400'
+            ? 'text-income'
+            : 'text-expense'
         }`}
       >
         {isIncome ? '+' : '–'}{formatVND(Math.abs(tx.amount))}

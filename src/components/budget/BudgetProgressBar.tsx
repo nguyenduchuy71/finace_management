@@ -23,10 +23,10 @@ export function BudgetProgressBar({ category, spent, budget, className = '' }: B
   const isWarning = percent >= 80 && percent < 100
 
   const fillColorClass = isOverBudget
-    ? 'bg-red-600 dark:bg-red-500'
+    ? 'bg-expense'
     : isWarning
-      ? 'bg-yellow-500 dark:bg-yellow-400'
-      : 'bg-emerald-600 dark:bg-emerald-500'
+      ? 'bg-warning'
+      : 'bg-income'
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -36,8 +36,8 @@ export function BudgetProgressBar({ category, spent, budget, className = '' }: B
         <span className="heading-label text-muted-foreground">{percent}%</span>
       </div>
 
-      {/* Progress bar: full width, bg-slate-200, rounded-full, conditional fill */}
-      <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+      {/* Progress bar: full width, bg-muted, rounded-full, conditional fill */}
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
         <div
           data-testid="budget-fill"
           className={`h-full ${fillColorClass} transition-all duration-300`}
