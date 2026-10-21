@@ -1,7 +1,8 @@
 {
   "version": "4",
   "redirects": {
-    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.115.0"
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.115.0",
+    "https://esm.sh/iceberg-js@^0.8.1?target=denonext": "https://esm.sh/iceberg-js@0.8.1?target=denonext"
   },
   "remote": {
     "https://deno.land/std@0.203.0/assert/_constants.ts": "8a9da298c26750b28b326b297316cdde860bc237533b07e1337c021379e6b2a9",
@@ -38,7 +39,18 @@
     "https://deno.land/std@0.203.0/async/delay.ts": "a6142eb44cdd856b645086af2b811b1fcce08ec06bb7d50969e6a872ee9b8659",
     "https://deno.land/std@0.203.0/fmt/colors.ts": "c51c4642678eb690dcf5ffee5918b675bf01a33fba82acf303701ae1a4f8c8d9",
     "https://deno.land/std@0.203.0/http/server.ts": "1b2403b3c544c0624ad23e8ca4e05877e65380d9e0d75d04957432d65c3d5f41",
-    "https://esm.sh/@supabase/supabase-js@2.115.0": "f4e488ef8059a64be766b58feb4d6a18aa812038fdcf9c7c916efbdf26ab9585"
+    "https://esm.sh/@supabase/auth-js@2.115.0/denonext/auth-js.mjs": "ee695fb5271cd20891151acb8f7b7dccd7a3d2cddcf7ea22707ed847c6310068",
+    "https://esm.sh/@supabase/functions-js@2.115.0/denonext/functions-js.mjs": "45dbef89b45252297c8088c37f5085fddf14f56e9d662efe9cf6fe928249b76a",
+    "https://esm.sh/@supabase/phoenix@0.4.5/denonext/phoenix.mjs": "40bd2a70829cd847848baac58e635bacd83fd62188f6624b44e2c295341004eb",
+    "https://esm.sh/@supabase/postgrest-js@2.115.0/denonext/postgrest-js.mjs": "be07c08a0221f3cc021ce179f3f3865899e7118a499a873609d35313cb6a0338",
+    "https://esm.sh/@supabase/realtime-js@2.115.0/denonext/realtime-js.mjs": "3032ecc022da4d8ad7a973ac9c7d3efb4d5d140940b32351ffe7753b2a656ae3",
+    "https://esm.sh/@supabase/storage-js@2.115.0/denonext/storage-js.mjs": "a79c4f054784fbc837b2ab250c3eaba8bcd8b7e7b001d8303dc6bc0a3ddaddf3",
+    "https://esm.sh/@supabase/supabase-js@2.115.0": "f4e488ef8059a64be766b58feb4d6a18aa812038fdcf9c7c916efbdf26ab9585",
+    "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/dist/tracingRegistry.mjs": "5c7f16d4b145f80bc9b76e3c657854a91a8ef36df29558b35733ebc179d5ca47",
+    "https://esm.sh/@supabase/supabase-js@2.115.0/denonext/supabase-js.mjs": "6e4d33a86264c0c0505b514a2b748d184a0836d3f501f33d0c533731726c63db",
+    "https://esm.sh/iceberg-js@0.8.1/denonext/iceberg-js.mjs": "d839d81a2e3966500ca2cdd0c1cb458e9608bacfc91f7bb67a69b2e878dcdb4f",
+    "https://esm.sh/iceberg-js@0.8.1?target=denonext": "58c849d7fe2bf4eca4a84eb501e83c161a7d8c34ca1bec15a962b3bec3062633",
+    "https://esm.sh/tslib@2.8.1/denonext/tslib.mjs": "c38da5dd6da6281964435002ce204cd586634fe3bdfb24a0ee116f48cf3292e9"
   },
   "workspace": {
     "dependencies": [
