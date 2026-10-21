@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { TX_PAGE_SIZE } from '@/services/transactionQuery'
 import { useShallow } from 'zustand/react/shallow'
 import { getCreditCardTransactions } from '@/services/creditCards'
 import { useFilterStore } from '@/stores/filterStore'
@@ -26,7 +27,7 @@ export function useMultiCardTransactions() {
   return useInfiniteQuery({
     queryKey: ['creditCardTransactions', 'multi', sortedIds, { dateFrom, dateTo, searchQuery, txType }],
     queryFn: ({ pageParam }) =>
-      getCreditCardTransactions({ cardIds: sortedIds }, pageParam as string | undefined, 20, {
+      getCreditCardTransactions({ cardIds: sortedIds }, pageParam as string | undefined, TX_PAGE_SIZE, {
         search: searchQuery || undefined,
         dateFrom,
         dateTo,

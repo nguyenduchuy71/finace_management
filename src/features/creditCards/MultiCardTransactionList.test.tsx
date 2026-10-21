@@ -13,6 +13,7 @@ vi.mock('@/services/creditCards', () => ({
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 import { getCreditCards, getCreditCardTransactions, updateCardTransactionMcc } from '@/services/creditCards'
+import { TX_PAGE_SIZE } from '@/services/transactionQuery'
 import { useFilterStore } from '@/stores/filterStore'
 import { MultiCardPicker } from './MultiCardPicker'
 import { MultiCardTransactionList } from './MultiCardTransactionList'
@@ -54,7 +55,7 @@ describe('Mục "Nhiều thẻ"', () => {
   it('mặc định tất cả thẻ: gộp một dòng thời gian nhóm theo ngày, mỗi dòng ghi rõ thẻ', async () => {
     renderView()
     const day = await screen.findByRole('region', { name: /20\/10\/2026|Hôm nay|Hôm qua/ })
-    expect(getCreditCardTransactions).toHaveBeenCalledWith({ cardIds: [] }, undefined, 20, expect.anything())
+    expect(getCreditCardTransactions).toHaveBeenCalledWith({ cardIds: [] }, undefined, TX_PAGE_SIZE, expect.anything())
     const rows = within(day).getAllByRole('listitem')
     expect(rows).toHaveLength(2)
     expect(within(rows[0]).getByText('VPBank StepUp · ···· 2222')).toBeInTheDocument()
@@ -74,7 +75,7 @@ describe('Mục "Nhiều thẻ"', () => {
     expect(screen.getByRole('option', { name: /SHB Visa/ })).toHaveAttribute('aria-selected', 'true')
 
     await waitFor(() => expect(getCreditCardTransactions).toHaveBeenLastCalledWith(
-      { cardIds: ['c-shb', 'c-vp'] }, undefined, 20, expect.anything()))
+      { cardIds: ['c-shb', 'c-vp'] }, undefined, TX_PAGE_SIZE, expect.anything()))
     expect(useFilterStore.getState().cardIds).toEqual(['c-vp', 'c-shb'])
     expect(screen.getByRole('button', { name: 'Tất cả thẻ (2)' })).toHaveAttribute('aria-pressed', 'false')
 
@@ -82,7 +83,7 @@ describe('Mục "Nhiều thẻ"', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Bỏ VPBank StepUp khỏi danh sách xem' }))
     expect(useFilterStore.getState().cardIds).toEqual(['c-shb'])
     await waitFor(() => expect(getCreditCardTransactions).toHaveBeenLastCalledWith(
-      { cardIds: ['c-shb'] }, undefined, 20, expect.anything()))
+      { cardIds: ['c-shb'] }, undefined, TX_PAGE_SIZE, expect.anything()))
   })
 
   it('thẻ đã bị xoá tự rời khỏi lựa chọn khi danh sách thẻ tải xong', async () => {

@@ -63,6 +63,7 @@ export function TransactionList() {
         isFetchingNextPage={isFetchingNextPage}
         onLoadMore={() => fetchNextPage()}
         loadedCount={allTransactions.length}
+        totalCount={data?.pages[0]?.total}
       />
     </div>
   )
