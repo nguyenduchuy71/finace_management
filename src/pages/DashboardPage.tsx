@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { LayoutDashboard } from 'lucide-react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { DashboardDatePicker } from '@/features/dashboard/DashboardDatePicker'
 import { StatCard } from '@/features/dashboard/StatCard'
@@ -21,10 +22,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center gap-2">
-        <LayoutDashboard className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold tracking-tight">Tổng quan</h1>
-      </div>
+      <PageHeader icon={LayoutDashboard} title="Tổng quan" />
 
       {/* Date range picker — prominent at top, independent of main filter store */}
       <DashboardDatePicker />

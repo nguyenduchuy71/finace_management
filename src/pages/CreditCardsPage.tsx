@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useCreditCards } from '@/hooks/useCreditCards'
 import { useFilterStore } from '@/stores/filterStore'
 import { CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 /** Form đang thêm thẻ mới, hoặc sửa một thẻ (theo id); null = đóng. */
 type FormMode = { kind: 'create' } | { kind: 'edit'; cardId: string } | null
@@ -37,33 +38,33 @@ export function CreditCardsPage() {
   return (
     <div className="space-y-4">
       {/* Page header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <CreditCard className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">Thẻ tín dụng</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {card && (
-            <>
-              <Button
-                variant="outline" size="sm" aria-label="Sửa thẻ đang chọn"
-                onClick={() => setFormMode({ kind: 'edit', cardId: card.id })}
-              >
-                <Pencil className="h-4 w-4" /> Sửa
-              </Button>
-              <Button
-                variant="outline" size="sm" aria-label="Xoá thẻ đang chọn"
-                onClick={() => setDeleteTargetId(card.id)}
-              >
-                <Trash2 className="h-4 w-4" /> Xoá
-              </Button>
-            </>
-          )}
-          <Button size="sm" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Thêm thẻ
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={CreditCard}
+        title="Thẻ tín dụng"
+        actions={
+          <>
+            {card && (
+              <>
+                <Button
+                  variant="outline" size="sm" aria-label="Sửa thẻ đang chọn"
+                  onClick={() => setFormMode({ kind: 'edit', cardId: card.id })}
+                >
+                  <Pencil className="h-4 w-4" /> Sửa
+                </Button>
+                <Button
+                  variant="outline" size="sm" aria-label="Xoá thẻ đang chọn"
+                  onClick={() => setDeleteTargetId(card.id)}
+                >
+                  <Trash2 className="h-4 w-4" /> Xoá
+                </Button>
+              </>
+            )}
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="h-4 w-4" /> Thêm thẻ
+            </Button>
+          </>
+        }
+      />
 
       {isError && !cardsData ? (
         // Lỗi tải KHÔNG được hiện như "chưa có thẻ": user sẽ bị mời thêm lại thẻ đã có.
