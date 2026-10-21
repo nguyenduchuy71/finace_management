@@ -141,6 +141,37 @@ describe('credit cards service', () => {
     expect(payment.type).toBe('payment')
   })
 
+  it('nhiều thẻ: hợp giao dịch của các thẻ, mới nhất trước', async () => {
+    const shb = await getCreditCardTransactions(SHB_CARD)
+    const vp = await getCreditCardTransactions(VPBANK_CARD)
+    const both = await getCreditCardTransactions({ cardIds: [SHB_CARD, VPBANK_CARD] })
+    expect(both.total).toBe(shb.total + vp.total)
+    expect(new Set(both.data.map((t) => t.id))).toEqual(new Set([...shb.data, ...vp.data].map((t) => t.id)))
+    const dates = both.data.map((t) => t.transactionDate)
+    expect([...dates].sort().reverse()).toEqual(dates)
+  })
+
+  it('nhiều thẻ, danh sách rỗng = tất cả thẻ; chỉ một thẻ thì chỉ thẻ đó', async () => {
+    const all = await getCreditCardTransactions({ cardIds: [] })
+    const both = await getCreditCardTransactions({ cardIds: [SHB_CARD, VPBANK_CARD] })
+    expect(all.total).toBe(both.total) // seed chỉ có 2 thẻ
+    const onlyShb = await getCreditCardTransactions({ cardIds: [SHB_CARD] })
+    expect(onlyShb.data.every((t) => t.cardId === SHB_CARD)).toBe(true)
+    expect(onlyShb.total).toBe(2)
+  })
+
+  it('nhiều thẻ: phân trang keyset qua nhiều thẻ không trùng, không sót dòng', async () => {
+    const all = await getCreditCardTransactions({ cardIds: [] })
+    const seen: string[] = []
+    let cursor: string | undefined
+    do {
+      const page = await getCreditCardTransactions({ cardIds: [] }, cursor, 1)
+      seen.push(...page.data.map((t) => t.id))
+      cursor = page.nextCursor ?? undefined
+    } while (cursor)
+    expect(seen).toEqual(all.data.map((t) => t.id))
+  })
+
   it('txType=income luôn rỗng (thẻ chỉ có chi tiêu)', async () => {
     const res = await getCreditCardTransactions(SHB_CARD, undefined, 20, { txType: 'income' })
     expect(res.data).toHaveLength(0)

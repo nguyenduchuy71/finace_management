@@ -3,6 +3,7 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 
 // Mock ở tầng hook/service như các test khác; các thành phần con nặng được thay bằng
 // stub vì test này chỉ kiểm phần quản lý thẻ (thêm/sửa/xoá) của trang.
@@ -22,7 +23,11 @@ vi.mock('@/hooks/useCreditCards', () => ({
 vi.mock('@/features/creditCards/CreditCardSelector', () => ({ CreditCardSelector: () => <div>selector</div> }))
 vi.mock('@/features/creditCards/CreditCardTransactionList', () => ({ CreditCardTransactionList: () => <div>tx-list</div> }))
 vi.mock('@/features/creditCards/BillingCycleInfoCard', () => ({ BillingCycleInfoCard: () => <div>cycle-info</div> }))
-vi.mock('@/components/filters/FilterBar', () => ({ FilterBar: () => <div>filter-bar</div> }))
+vi.mock('@/components/filters/FilterBar', () => ({
+  FilterBar: ({ showExport = true }: { showExport?: boolean }) => <div>filter-bar{showExport ? '' : ' (không xuất)'}</div>,
+}))
+vi.mock('@/features/creditCards/MultiCardPicker', () => ({ MultiCardPicker: () => <div>multi-picker</div> }))
+vi.mock('@/features/creditCards/MultiCardTransactionList', () => ({ MultiCardTransactionList: () => <div>multi-list</div> }))
 vi.mock('@/services/credit-card-mutations', () => ({
   createCreditCard: vi.fn(), updateCreditCard: vi.fn(), deleteCreditCard: vi.fn(),
   countCardTransactions: vi.fn().mockResolvedValue(7),
@@ -39,10 +44,15 @@ const card = {
   statementDate: 9, paymentDueDate: 29, lastUpdated: '2026-01-01T00:00:00Z',
 }
 
-function renderPage() {
+function LocationProbe() {
+  return <span data-testid="search">{useLocation().search}</span>
+}
+
+function renderPage(path = '/credit-cards') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client }, children)
+    React.createElement(QueryClientProvider, { client },
+      React.createElement(MemoryRouter, { initialEntries: [path] }, children, React.createElement(LocationProbe)))
   return render(<CreditCardsPage />, { wrapper })
 }
 
@@ -159,5 +169,39 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     act(() => useFilterStore.setState({ cardId: 'card-2' }))
     view.rerender(<CreditCardsPage />)
     expect(screen.queryByText(/Xoá thẻ “/)).not.toBeInTheDocument()
+  })
+})
+
+describe('CreditCardsPage — mục Từng thẻ / Nhiều thẻ', () => {
+  beforeEach(() => {
+    state.cards = [card]
+    useFilterStore.setState({ cardId: 'card-1' })
+  })
+
+  it('mặc định "Từng thẻ": selector, chu kỳ, danh sách một thẻ, có Sửa/Xoá', () => {
+    renderPage()
+    expect(screen.getByRole('tab', { name: 'Từng thẻ' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('selector')).toBeInTheDocument()
+    expect(screen.getByText('tx-list')).toBeInTheDocument()
+    expect(screen.queryByText('multi-list')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sửa thẻ đang chọn' })).toBeInTheDocument()
+  })
+
+  it('chuyển "Nhiều thẻ": ghi ?view=all, hiện danh sách gộp, ẩn Sửa/Xoá và nút xuất', async () => {
+    renderPage()
+    await userEvent.click(screen.getByRole('tab', { name: 'Nhiều thẻ' }))
+    expect(screen.getByTestId('search')).toHaveTextContent('?view=all')
+    expect(screen.getByText('multi-picker')).toBeInTheDocument()
+    expect(screen.getByText('multi-list')).toBeInTheDocument()
+    expect(screen.getByText('filter-bar (không xuất)')).toBeInTheDocument()
+    expect(screen.queryByText('tx-list')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sửa thẻ đang chọn' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Thêm thẻ/ })).toBeInTheDocument()
+  })
+
+  it('mở thẳng URL ?view=all vào mục Nhiều thẻ', () => {
+    renderPage('/credit-cards?view=all')
+    expect(screen.getByRole('tab', { name: 'Nhiều thẻ' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('multi-list')).toBeInTheDocument()
   })
 })

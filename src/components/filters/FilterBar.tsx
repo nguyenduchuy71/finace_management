@@ -7,7 +7,8 @@ import { ExportButton } from './ExportButton'
 import { Button } from '@/components/ui/button'
 import { useFilterStore } from '@/stores/filterStore'
 
-export function FilterBar() {
+/** `showExport=false`: mục "Nhiều thẻ" — xuất CSV hiện chỉ theo một TK/thẻ. */
+export function FilterBar({ showExport = true }: { showExport?: boolean }) {
   const resetFilters = useFilterStore((s) => s.resetFilters)
   const searchQuery = useFilterStore((s) => s.searchQuery)
   const dateFrom = useFilterStore((s) => s.dateFrom)
@@ -34,7 +35,7 @@ export function FilterBar() {
           Xóa bộ lọc
         </Button>
       )}
-      <ExportButton />
+      {showExport && <ExportButton />}
     </div>
   )
 }

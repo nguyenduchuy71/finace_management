@@ -4,14 +4,17 @@ import { formatVND } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/dates'
 import { MCC_OPTIONS, formatMcc, getMccLabel, suggestMcc } from '@/utils/mcc'
 import { ShoppingBag } from 'lucide-react'
-import type { CreditCardTransaction } from '@/types/creditCard'
+import type { CreditCard, CreditCardTransaction } from '@/types/creditCard'
+import { BankLogo } from './BankLogo'
 import { TransactionKindBadge } from '@/components/ui/TransactionKindBadge'
 
 interface CreditCardTransactionRowProps {
   transaction: CreditCardTransaction
+  /** Mục "Nhiều thẻ": hiện thẻ của giao dịch (logo ngân hàng + tên + 4 số cuối). */
+  card?: CreditCard
 }
 
-export function CreditCardTransactionRow({ transaction: tx }: CreditCardTransactionRowProps) {
+export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTransactionRowProps) {
   const isPending = tx.status === 'pending'
   const updateMcc = useUpdateTransactionMcc()
 
@@ -29,9 +32,13 @@ export function CreditCardTransactionRow({ transaction: tx }: CreditCardTransact
 
   return (
     <li className="flex gap-3 p-3 hover:bg-muted/50 transition-colors duration-200">
-      <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-expense-soft text-expense">
-        <ShoppingBag className="h-4 w-4" />
-      </div>
+      {card ? (
+        <BankLogo bankName={card.bankName} className="h-9 w-9" />
+      ) : (
+        <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-expense-soft text-expense">
+          <ShoppingBag className="h-4 w-4" />
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         {/* Tên + số tiền cùng một hàng: số tiền không bao giờ tranh chỗ với ô chọn MCC bên dưới */}
         <div className="flex items-baseline justify-between gap-3">
@@ -40,6 +47,11 @@ export function CreditCardTransactionRow({ transaction: tx }: CreditCardTransact
             –{formatVND(Math.abs(tx.amount))}
           </span>
         </div>
+        {card && (
+          <p className="text-xs text-muted-foreground truncate">
+            {card.cardName} · ···· {card.cardNumber.slice(-4)}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
           <p className="text-xs text-muted-foreground">{formatDisplayDate(tx.transactionDate)}</p>
           <TransactionKindBadge kind={tx.kind} />
