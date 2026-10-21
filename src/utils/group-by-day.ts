@@ -7,7 +7,10 @@ const WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ n
 export interface DayGroup<T> {
   /** Ngày theo giờ VN, `yyyy-MM-dd` — dùng làm key. */
   dayKey: string
-  /** Tổng thu (dương) / tổng chi (dương) của các dòng ĐÃ TẢI trong ngày. */
+  /**
+   * Tổng thu (dương) / tổng chi (dương) của các dòng ĐÃ TẢI trong ngày. KHÔNG gồm chuyển nội bộ
+   * (`kind = 'internal_transfer'`), khớp cách dashboard tính — dòng đó vẫn nằm trong `items`.
+   */
   income: number
   expense: number
   items: T[]
@@ -22,7 +25,7 @@ export function vnDayKey(iso: string): string {
  * Nhóm giao dịch theo ngày VN, giữ nguyên thứ tự đầu vào (danh sách đã sắp mới nhất trước).
  * Nhóm lại trên TOÀN BỘ các trang đã tải mỗi lần: trang mới nối vào giữa một ngày vẫn gộp đúng nhóm.
  */
-export function groupByDay<T extends { transactionDate: string; amount: number }>(items: T[]): DayGroup<T>[] {
+export function groupByDay<T extends { transactionDate: string; amount: number; kind?: string }>(items: T[]): DayGroup<T>[] {
   const groups: DayGroup<T>[] = []
   const byKey = new Map<string, DayGroup<T>>()
   for (const item of items) {
@@ -34,6 +37,7 @@ export function groupByDay<T extends { transactionDate: string; amount: number }
       groups.push(g)
     }
     g.items.push(item)
+    if (item.kind === 'internal_transfer') continue
     if (item.amount > 0) g.income += item.amount
     else g.expense += -item.amount
   }

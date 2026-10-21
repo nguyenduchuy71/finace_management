@@ -24,6 +24,16 @@ describe('groupByDay', () => {
     ])
   })
 
+  it('chuyển nội bộ vẫn hiện trong nhóm nhưng không cộng vào tổng ngày (khớp dashboard)', () => {
+    const [g] = groupByDay([
+      { id: 'a', transactionDate: '2026-10-20T02:00:00Z', amount: -3_000_000, kind: 'internal_transfer' },
+      { id: 'b', transactionDate: '2026-10-20T03:00:00Z', amount: -40_000, kind: 'normal' },
+      { id: 'c', transactionDate: '2026-10-20T04:00:00Z', amount: 3_000_000, kind: 'internal_transfer' },
+    ])
+    expect(g.items.map((i) => i.id)).toEqual(['a', 'b', 'c'])
+    expect([g.income, g.expense]).toEqual([0, 40_000])
+  })
+
   it('danh sách rỗng -> không nhóm nào', () => {
     expect(groupByDay([])).toEqual([])
   })
