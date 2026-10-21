@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-10-21 — Làm mới giao diện "Ví Jade" và mục Nhiều thẻ
+
+Plan: `plans/261021-1851-ui-visual-identity-refresh/` (7 phase: token, shell, dashboard, thẻ, danh sách, nhiều thẻ, motion/QA).
+
+### Thêm
+- **Bảng màu "Ví Jade"** sáng/tối trong `src/index.css`, màu ngữ nghĩa thu / chi / hoàn tiền / nội bộ / cảnh báo
+  (`text-income`, `bg-expense-soft`, `text-cashback`, `bg-internal-soft`, `bg-warning`…). Mọi cặp chữ/nền đạt WCAG AA ở cả hai theme.
+- **Font Be Vietnam Pro tự host** (`@fontsource`, import trong `main.tsx`) vì CSP `font-src 'self'` chặn Google Fonts.
+- **Điều hướng**: thanh tab dưới `MobileTabBar` cho điện thoại (< `sm`); header và tab dưới cùng đọc `nav-items.ts`. Tiêu đề trang dùng chung `PageHeader`.
+- **Màn hình trống** có minh hoạ (`components/empty-state/EmptyState`) cho danh sách giao dịch, hộp tin, dashboard.
+- **Tổng quan bố cục bento**: `NetCashFlowCard` (thu − chi ròng, tỉ lệ chi/thu), xếp hạng danh mục, biểu đồ danh mục.
+- **Thẻ dạng thẻ vật lý** (`CardVisual`), thanh tiến độ chu kỳ sao kê (`CycleProgress`, đổi màu theo độ gấp), `MeterBar` cho thước hoàn tiền theo bậc/trần.
+- **Danh sách giao dịch gọn**: nhóm theo ngày kèm tổng thu/chi từng ngày (`DayGroupHeader`), nút tải thêm (`LoadMoreFooter`).
+- **Nhiều thẻ** (`/credit-cards?view=all`): chọn một hoặc nhiều thẻ (`MultiCardPicker` dùng chung `CardSearchListbox` với bộ chọn thẻ đơn),
+  xem lịch sử gộp (`MultiCardTransactionList`, `useMultiCardTransactions`). `getCreditCardTransactions` nhận `{ cardIds }`; rỗng = mọi thẻ.
+- **Số dòng tiền chạy tăng dần** (`useCountUp`); chuyển động tắt khi người dùng bật giảm chuyển động.
+
+### Sửa
+- **Biểu đồ danh mục xám**: màu tra theo khoá tiếng Anh (`food`, `shopping`) trong khi dữ liệu là tên tiếng Việt, mọi lát rơi về màu "Khác".
+  Nay `getCategoryChartColor` (`utils/category-colors.ts`) khoá theo 6 Category thật.
+- **Giao dịch thẻ dồn hết vào chu kỳ hiện tại**: `groupTransactionsByCycle` nay đặt mỗi giao dịch vào chu kỳ chứa ngày giao dịch.
+  Trước đây mọi giao dịch đều hiện trong kỳ đang mở.
+- **Khoản trả vào thẻ hiển thị như chi**: khoản trả nợ thẻ nay có dấu + và màu thu.
+- **Tràn ngang trên điện thoại** không còn xuất hiện ở `main`.
+
+### Thay đổi hành vi / cần biết
+- `groupTransactionsByCycle(txs, currentCycle, statementDay)` thêm tham số `statementDay`. Ai gọi hàm cũ cần truyền thêm.
+- `filterStore` có thêm `cardIds`; `resetFilters` cũng reset `cardIds`.
+- QueryKey của `useMultiCardTransactions` bắt đầu bằng `['creditCardTransactions']` để optimistic patch MCC và invalidate khi sửa/xoá thẻ vẫn áp dụng. Đổi prefix này sẽ làm hỏng cả hai.
+- Chỉ đổi giao diện và phần hiển thị; không có migration DB và không cần deploy Edge Function.
+
 ## 2026-10-21 — Sửa theo code review hộp tin chưa phân loại
 
 Plan: `plans/261021-1552-unparsed-inbox-review-followups/`.
