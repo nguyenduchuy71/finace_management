@@ -43,7 +43,10 @@ const { data: rows, error } = await db
   .order('received_at')
 if (error) throw error
 
-const stats = { total: rows.length, inserted: 0, linkedExisting: 0, lostRace: 0, waitingAccount: 0, reclassified: {} as Record<string, number> }
+const stats = {
+  total: rows.length, inserted: 0, linkedExisting: 0, lostRace: 0, duplicateKept: 0, waitingAccount: 0,
+  reclassified: {} as Record<string, number>,
+}
 const waiting: string[] = []
 
 for (const r of rows as Row[]) {
@@ -67,23 +70,39 @@ for (const r of rows as Row[]) {
   }
 
   const existing = await findExisting(r.user_id, tx.raw_text)
-  if (existing) stats.linkedExisting++
-  else stats.inserted++
-  if (!apply) continue
+  // Cùng nội dung đã là giao dịch của TIN KHÁC: có thể là thông báo gửi lặp, có thể là 2 giao
+  // dịch thật giống hệt (MoMo không có giờ). Không đoán — để user quyết trong hộp tin.
+  if (existing === 'linked_elsewhere') {
+    stats.duplicateKept++
+    if (apply) await update(r.id, { suggested_kind: 'transaction' })
+    continue
+  }
+  if (!apply) {
+    if (existing) stats.linkedExisting++
+    else stats.inserted++
+    continue
+  }
 
   const inserted = existing ? null : await insertTransaction(db, tx, refs, r.user_id)
-  const claimed = await claimMessage(r.id, {
-    resolved: true, kind: tx.kind ?? 'normal', transaction_id: existing ?? inserted, suggested_kind: 'transaction',
-  }).catch(async (e) => {
-    if (inserted) await removeTransaction(inserted)
+  let claimed: boolean
+  try {
+    claimed = await claimMessage(r.id, {
+      resolved: true, kind: tx.kind ?? 'normal', transaction_id: existing ?? inserted, suggested_kind: 'transaction',
+    })
+  } catch (e) {
+    // Update có thể ĐÃ commit dù client nhận lỗi (mạng/timeout) — xoá mù sẽ để lại tin "đã xử lý"
+    // mà không còn giao dịch. Chỉ xoá khi tin chắc chắn không trỏ tới giao dịch vừa tạo.
+    if (inserted) await removeIfUnlinked(r.id, inserted)
     throw e
-  })
+  }
   // User xử lý tin này trên web trong lúc script chạy: giao dịch vừa tạo là thừa.
   if (!claimed) {
     if (inserted) await removeTransaction(inserted)
-    stats.inserted -= inserted ? 1 : 0
     stats.lostRace++
+    continue
   }
+  if (existing) stats.linkedExisting++
+  else stats.inserted++
 }
 
 console.log(apply ? 'ĐÃ GHI' : 'DRY-RUN (thêm --apply để ghi)', JSON.stringify(stats, null, 2))
@@ -113,9 +132,26 @@ async function removeTransaction(id: string) {
   if (error) throw error
 }
 
-async function findExisting(userId: string, rawText: string): Promise<string | null> {
-  const { data, error } = await db
-    .from('transactions').select('id').eq('user_id', userId).eq('raw_text', rawText).limit(1)
+async function removeIfUnlinked(msgId: string, txId: string) {
+  const { data, error } = await db.from('unparsed_messages').select('transaction_id').eq('id', msgId).single()
   if (error) throw error
-  return data[0]?.id ?? null
+  if (data.transaction_id !== txId) await removeTransaction(txId)
+}
+
+/**
+ * Giao dịch cùng raw_text CHƯA gắn tin nào (lần chạy trước insert xong nhưng crash trước khi
+ * đánh dấu tin) -> id để liên kết lại. Mọi giao dịch cùng nội dung đều đã gắn tin khác ->
+ * 'linked_elsewhere' (gắn thêm sẽ vi phạm uq_unparsed_transaction). Không có -> null.
+ */
+async function findExisting(userId: string, rawText: string): Promise<string | 'linked_elsewhere' | null> {
+  const { data: txs, error } = await db
+    .from('transactions').select('id').eq('user_id', userId).eq('raw_text', rawText).limit(20)
+  if (error) throw error
+  if (txs.length === 0) return null
+  const ids = txs.map((t) => t.id as string)
+  const { data: links, error: linkErr } = await db
+    .from('unparsed_messages').select('transaction_id').in('transaction_id', ids)
+  if (linkErr) throw linkErr
+  const linked = new Set(links.map((l) => l.transaction_id as string))
+  return ids.find((id) => !linked.has(id)) ?? 'linked_elsewhere'
 }

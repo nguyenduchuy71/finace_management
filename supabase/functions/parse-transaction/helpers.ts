@@ -46,6 +46,9 @@ export function vnDate(
   return `${year}-${p(mm)}-${p(dd)}T${p(hh)}:${p(min)}:${p(ss)}+07:00`
 }
 
+/** Giờ VN = UTC+7, không có giờ mùa hè. */
+const VN_OFFSET_MS = 7 * 3_600_000
+
 /**
  * Thời điểm hiện tại theo giờ VN, cùng định dạng với vnDate().
  *
@@ -53,19 +56,22 @@ export function vnDate(
  * thì sau giao dịch nên thời điểm nạp là xấp xỉ tốt nhất.
  */
 export function nowVN(now = Date.now()): string {
-  return new Date(now + 7 * 3_600_000).toISOString().slice(0, 19) + '+07:00'
+  return new Date(now + VN_OFFSET_MS).toISOString().slice(0, 19) + '+07:00'
 }
 
 /**
  * Suy năm cho SMS KHÔNG chứa năm (VPBank, và một số bank chỉ ghi "24/08").
  *
- * Lấy năm hiện tại; nếu ra ngày ở tương lai quá 1 ngày thì tin nhắn thuộc năm
- * trước (bắt được lỗi quanh giao thừa: SMS 31/12 nhận ngày 01/01).
+ * Lấy năm hiện tại THEO GIỜ VN; nếu ra ngày ở tương lai quá 1 ngày thì tin nhắn thuộc
+ * năm trước (bắt được lỗi quanh giao thừa: SMS 31/12 nhận ngày 01/01).
+ *
+ * KHÔNG dùng `getFullYear()`: edge runtime chạy UTC, nên 00:00–07:00 ngày 01/01 giờ VN
+ * vẫn là năm cũ -> tin "01/01 00:05" bị gán năm trước (đo thật trên Deno TZ mặc định).
  */
 export function inferYear(
   mm: string, dd: string, hh: string, min: string, now = Date.now(),
 ): string {
-  let year = new Date(now).getFullYear()
+  let year = new Date(now + VN_OFFSET_MS).getUTCFullYear()
   const candidate = new Date(vnDate(String(year), mm, dd, hh, min))
   if (candidate.getTime() > now + 86_400_000) year -= 1
   return String(year)

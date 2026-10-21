@@ -56,9 +56,10 @@ export function suggestFromText(text: string, receivedAtISO: string): UnparsedSu
 
   const tf = text.match(TIME_FIRST)
   const df = tf ? null : text.match(DATE_FIRST)
+  let guessed: string | undefined
   if (tf) {
     const [, hh, mi, dd, mm, yyyy] = tf
-    out.localDateTime = `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+    guessed = `${yyyy}-${mm}-${dd}T${hh}:${mi}`
   } else if (df) {
     const [, dd, mm, yyyy, hh, mi] = df
     let year = yyyy ? Number(yyyy) : received.getFullYear()
@@ -67,13 +68,22 @@ export function suggestFromText(text: string, receivedAtISO: string): UnparsedSu
     if (!yyyy && Date.parse(vnLocalToISO(`${year}-${mm}-${dd}T${hh}:${mi}`)) > Date.parse(receivedAtISO) + 86_400_000) {
       year -= 1
     }
-    out.localDateTime = `${year}-${mm}-${dd}T${hh}:${mi}`
+    guessed = `${year}-${mm}-${dd}T${hh}:${mi}`
   }
+  // Ngày không tồn tại (29/02 năm không nhuận, 31/04, 25:00) -> giữ thời điểm nhận tin
+  // thay vì đưa chuỗi hỏng vào ô datetime-local (ô sẽ trống, user không biết vì sao).
+  if (guessed && isRealVnDateTime(guessed)) out.localDateTime = guessed
 
   const ref = text.match(REF)
   if (ref) out.ref = ref[1].slice(-4)
 
   return out
+}
+
+/** Chuỗi "YYYY-MM-DDTHH:mm" giờ VN có phải thời điểm có thật (Date không tự cuộn 29/02 -> 01/03). */
+function isRealVnDateTime(local: string): boolean {
+  const t = Date.parse(vnLocalToISO(local))
+  return !Number.isNaN(t) && new Date(t + 7 * 3_600_000).toISOString().slice(0, 16) === local
 }
 
 /** "YYYY-MM-DDTHH:mm" (giờ VN, từ ô datetime-local) -> ISO có offset cho RPC. */

@@ -85,3 +85,13 @@ describe('suggestFromText — năm của tin không ghi năm', () => {
     expect(suggestFromText('Thời gian: 20/10/2027 17:32\nTài khoản: 1', RECEIVED).localDateTime).toBe('2027-10-20T17:32')
   })
 })
+
+describe('suggestFromText — ngày không tồn tại', () => {
+  it('29/02 năm không nhuận / 31/04 -> giữ thời điểm nhận tin', () => {
+    expect(suggestFromText('Thời gian: 29/02/2027 10:00\nTài khoản: 1', RECEIVED).localDateTime).toBe('2026-10-21T09:30')
+    expect(suggestFromText('lúc 10:00 31/04/2026', RECEIVED).localDateTime).toBe('2026-10-21T09:30')
+  })
+  it('29/02 năm nhuận vẫn nhận', () => {
+    expect(suggestFromText('Thời gian: 29/02/2028 10:00\nTài khoản: 1', RECEIVED).localDateTime).toBe('2028-02-29T10:00')
+  })
+})

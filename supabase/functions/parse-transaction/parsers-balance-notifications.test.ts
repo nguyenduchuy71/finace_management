@@ -7,7 +7,7 @@
 import { assert, assertEquals, assertMatch } from 'https://deno.land/std@0.203.0/assert/mod.ts'
 import { parsers } from './parsers.ts'
 import { detectInternalTransfer, normalizeVN, parseOwnerNames, withKind } from './internal-transfer.ts'
-import { normalizeInput, nowVN } from './helpers.ts'
+import { inferYear, normalizeInput, nowVN } from './helpers.ts'
 import { isOtp, parseNotification } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
 
@@ -219,4 +219,12 @@ Deno.test('isOtp: có dấu / không dấu / OTP', () => {
   assert(isOtp('Ma xac thuc: 123456'))
   assert(isOtp('OTP 123456'))
   assert(!isOtp('SHB SAHA\nPhát sinh -10,000 VND\nTài khoản 0349000265\nchuyen tien'))
+})
+
+// Edge runtime chạy UTC: 00:30 ngày 01/01/2027 giờ VN vẫn là 2026 theo UTC.
+Deno.test('inferYear: theo giờ VN, không theo TZ runtime', () => {
+  const vn = (iso: string) => Date.parse(iso)
+  assertEquals(inferYear('01', '01', '00', '05', vn('2027-01-01T00:30:00+07:00')), '2027')
+  assertEquals(inferYear('12', '31', '23', '58', vn('2027-01-01T00:01:00+07:00')), '2026')
+  assertEquals(inferYear('10', '20', '11', '30', vn('2026-10-21T09:00:00+07:00')), '2026')
 })
