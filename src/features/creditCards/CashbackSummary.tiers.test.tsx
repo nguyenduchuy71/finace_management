@@ -98,3 +98,39 @@ describe('CashbackSummary — bậc thang và trần thẻ', () => {
     expect(screen.getByTestId('cashback-total')).toHaveTextContent('100.000')
   })
 })
+
+describe('CashbackSummary — thước tiến độ', () => {
+  it('rule chưa ở bậc cao nhất: thanh tiến tới bậc kế = chi / ngưỡng bậc kế', async () => {
+    // Bậc nền 5tr đạt, bậc 1 cần 10tr: chi 6tr -> 60%
+    vi.mocked(listCashbackRules).mockResolvedValue([rule({})])
+    vi.mocked(getCycleExpenses).mockResolvedValue([tx(-6_000_000)])
+    renderSummary()
+    const bar = await screen.findByRole('progressbar', { name: 'Tiến tới bậc 1%' })
+    expect(bar).toHaveAttribute('aria-valuenow', '60')
+  })
+
+  it('rule ở bậc cao nhất có trần: thanh là mức đã dùng của trần rule', async () => {
+    vi.mocked(listCashbackRules).mockResolvedValue([rule({ tiers: [], minCycleSpend: 0, ratePercent: 1, capPerCycle: 40_000 })])
+    vi.mocked(getCycleExpenses).mockResolvedValue([tx(-2_000_000)]) // 1% = 20.000 / 40.000
+    renderSummary()
+    const bar = await screen.findByRole('progressbar', { name: 'Đã dùng trần của rule' })
+    expect(bar).toHaveAttribute('aria-valuenow', '50')
+  })
+
+  it('thẻ có trần: thanh tổng hoàn / trần thẻ, kẹp 100 khi chạm trần', async () => {
+    vi.mocked(listCashbackRules).mockResolvedValue([rule({ tiers: [], minCycleSpend: 0, ratePercent: 1 })])
+    vi.mocked(getCycleExpenses).mockResolvedValue([tx(-30_000_000)]) // 300.000 > trần 200.000
+    renderSummary({ ...card, cashbackMonthlyCap: 200_000 })
+    const bar = await screen.findByRole('progressbar', { name: 'Đã dùng trần hoàn tiền của thẻ' })
+    expect(bar).toHaveAttribute('aria-valuenow', '100')
+    expect(screen.getByText(/trần thẻ đ 200\.000/)).toBeInTheDocument()
+  })
+
+  it('thẻ không có trần: không có thanh trần thẻ', async () => {
+    vi.mocked(listCashbackRules).mockResolvedValue([rule({})])
+    vi.mocked(getCycleExpenses).mockResolvedValue([tx(-6_000_000)])
+    renderSummary()
+    await screen.findByTestId('cashback-total')
+    expect(screen.queryByRole('progressbar', { name: 'Đã dùng trần hoàn tiền của thẻ' })).not.toBeInTheDocument()
+  })
+})

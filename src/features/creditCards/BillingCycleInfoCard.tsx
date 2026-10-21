@@ -1,14 +1,16 @@
 import { useMemo } from 'react'
 import { useNow } from '@/hooks/useNow'
 import { computeCurrentCycle } from '@/utils/billingCycle'
-import { Badge } from '@/components/ui/badge'
 import type { CreditCard } from '@/types/creditCard'
+import { CardVisual } from './CardVisual'
+import { CycleProgress } from './CycleProgress'
 import { CashbackSummary } from './CashbackSummary'
 
 interface BillingCycleInfoCardProps {
   card: CreditCard
 }
 
+/** Khối "ví": thẻ vật lý + tiến độ chu kỳ (trái) và hoàn tiền ước tính (phải) trên màn rộng. */
 export function BillingCycleInfoCard({ card }: BillingCycleInfoCardProps) {
   // Tự cập nhật: tab mở qua mốc cắt sao kê thì chu kỳ và hoàn tiền ước tính phải sang kỳ mới.
   const now = useNow()
@@ -17,31 +19,12 @@ export function BillingCycleInfoCard({ card }: BillingCycleInfoCardProps) {
     [card.statementDate, now]
   )
 
-  const urgencyVariant = cycle.daysUntilClose <= 3
-    ? 'destructive'
-    : cycle.daysUntilClose <= 7
-    ? 'secondary'
-    : 'default'
-
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Chu kỳ sao kê hiện tại</h3>
-        <Badge variant={urgencyVariant}>
-          Còn {cycle.daysUntilClose} ngày
-        </Badge>
+    <div className="grid gap-4 rounded-2xl border bg-card p-4 shadow-sm sm:p-5 lg:grid-cols-[340px_1fr] lg:gap-6">
+      <div className="space-y-4">
+        <CardVisual card={card} />
+        <CycleProgress cycle={cycle} nowISO={now} />
       </div>
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <p className="text-xs text-muted-foreground">Bắt đầu chu kỳ</p>
-          <p className="font-medium">{cycle.startDisplay}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Ngày sao kê</p>
-          <p className="font-medium">{cycle.statementDateDisplay}</p>
-        </div>
-      </div>
-
       <CashbackSummary card={card} cycle={cycle} />
     </div>
   )
