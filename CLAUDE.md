@@ -2,7 +2,7 @@
 
 ## Overview
 
-Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions, kèm quản lý thẻ (thêm/sửa/xoá), gán MCC cho giao dịch thẻ và hoàn tiền ước tính theo rule của từng thẻ (`docs/credit-card-cashback.md`). Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`.
+Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions, kèm quản lý thẻ (thêm/sửa/xoá), gán MCC cho giao dịch thẻ và hoàn tiền ước tính theo rule của từng thẻ (`docs/credit-card-cashback.md`). Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`. Giao diện thương hiệu **"Ví Jade"** (sáng/tối, xem [Styling](#styling--ví-jade)).
 
 ---
 
@@ -57,13 +57,25 @@ Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER
 - **Zustand 5** — state management
 - **Zod 4** — schema validation at service boundary
 - **React Router DOM 7** — routing
-- **Tailwind CSS 4** + **shadcn/radix-ui** — styling & UI
+- **Tailwind CSS 4** + **shadcn/radix-ui** — styling & UI; font **Be Vietnam Pro** tự host (`@fontsource`)
 - **Recharts** — charts (lazy-loaded, ~372KB chunk)
 - **Supabase** — Postgres, Auth, RLS, Edge Functions (`@supabase/supabase-js`)
 - **Sonner** — toast notifications
 - **@anthropic-ai/sdk** — chatbot feature
 - **@date-fns/tz** — Vietnam timezone (UTC+7)
 - **papaparse** — CSV export
+
+### Styling — Ví Jade
+
+- Token màu ở `src/index.css` (`:root` sáng, `.dark` tối). Dùng utility ngữ nghĩa, **không** hardcode màu:
+  `text-income` / `bg-income-soft`, `text-expense` / `bg-expense-soft`, `text-cashback` / `bg-cashback-soft` / `text-cashback-strong`,
+  `text-internal` / `bg-internal-soft` (chuyển nội bộ), `bg-warning`.
+- **KHÔNG** dùng green/red/emerald/rose cho thu/chi trong component (hiện 0 chỗ trong `src/` ngoài test).
+- Biểu đồ: `--chart-1..6` ứng với 6 Category, map qua `src/utils/category-colors.ts` (`getCategoryChartColor`). Khoá là tên tiếng Việt của Category, không phải tiếng Anh.
+- Utility: `.money` (số tabular, căn cột), `.heading-display` (tiêu đề số lớn).
+- Font: `@fontsource/be-vietnam-pro` import trong `src/main.tsx`. CSP `font-src 'self' data:` chặn Google Fonts → không thêm link Google Fonts.
+- Mọi cặp chữ/nền đo **WCAG AA (≥ 4.5:1)** ở cả hai theme. Đổi giá trị `oklch` thì đo lại.
+- Chuyển động tôn trọng `prefers-reduced-motion` (xem `useCountUp`).
 
 ---
 
@@ -73,8 +85,10 @@ Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER
 /              → redirect to /accounts
 /dashboard     → DashboardPage
 /accounts      → BankAccountsPage ("Giao dịch ngân hàng": ?view=inbox|recorded — hộp tin chưa phân loại / giao dịch theo TK)
-/credit-cards  → CreditCardsPage
+/credit-cards  → CreditCardsPage (?view=all = "Nhiều thẻ"; mặc định "Từng thẻ")
 ```
+
+Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `sm`) và thanh tab dưới `MobileTabBar` (< `sm`).
 
 All routes wrapped in `<AppShell>` (header + layout + chat button/panel).
 
@@ -88,21 +102,25 @@ src/
 ├── features/
 │   ├── accounts/        # AccountTabs, RecordedTransactionsView, AccountFormDialog, DeleteAccountDialog
 │   ├── unparsed/        # UnparsedInbox, UnparsedMessageItem, ResolveUnparsedDialog, UnparsedCountBadge
-│   ├── transactions/    # TransactionList, TransactionRow, Skeleton, EmptyState
-│   ├── creditCards/     # CreditCardSelector, CardFormDialog, DeleteCardDialog, BillingCycleGroup, BillingCycleInfoCard,
-│   │                    #   CreditCardTransactionRow (chọn MCC), CashbackSummary / CashbackRulesEditor / CashbackRuleForm, BankLogo
-│   ├── dashboard/       # StatCard, CategoryChart, DashboardDatePicker, BudgetProgressSection
+│   ├── transactions/    # TransactionList (nhóm theo ngày), TransactionRow, TransactionListSkeleton, TransactionEmptyState,
+│   │                    #   DayGroupHeader, LoadMoreFooter
+│   ├── creditCards/     # CreditCardSelector + MultiCardPicker (cùng dùng CardSearchListbox), CardVisual (thẻ vật lý),
+│   │                    #   CycleProgress, MultiCardTransactionList (?view=all), CardFormDialog, DeleteCardDialog,
+│   │                    #   BillingCycleGroup, BillingCycleInfoCard, CreditCardTransactionRow (chọn MCC),
+│   │                    #   CashbackSummary / CashbackRulesEditor / CashbackRuleForm, BankLogo
+│   ├── dashboard/       # StatCard, NetCashFlowCard, CategoryChart, DashboardDatePicker, BudgetProgressSection (bố cục bento)
 │   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
 │   └── auth/            # AuthProvider, LoginPage, ProtectedRoute
 ├── components/
-│   ├── layout/          # AppShell, AppHeader
+│   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts
+│   ├── empty-state/     # EmptyState (icon + tiêu đề + mô tả + hành động)
 │   ├── filters/         # FilterBar, SearchInput, DateRangePicker, CategoryFilter, ExportButton
 │   ├── budget/          # BudgetProgressBar, BudgetSettings
 │   ├── form/            # FormField (nhãn+gợi ý+lỗi), form-aria (describedBy)
-│   └── ui/              # shadcn components
-├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useCreditCardMutations,
-│                        #   useUpdateTransactionMcc, useCashbackRules, useCycleCashback, useNow,
-│                        #   useDashboardStats, useBudgetAlerts, useDebounced, useAuth
+│   └── ui/              # shadcn components + CategoryBadge, TransactionKindBadge, MeterBar (thanh tiến độ)
+├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useMultiCardTransactions,
+│                        #   useCreditCardMutations, useUpdateTransactionMcc, useCashbackRules, useCycleCashback, useNow,
+│                        #   useDashboardStats, useBudgetAlerts, useDebounced, useCountUp, useAuth
 ├── lib/supabase.ts      # Supabase client singleton
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
 ├── services/            # supabase-js: accounts, account-mutations, creditCards, credit-card-mutations, cashbackRules,
@@ -111,7 +129,8 @@ src/
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, credit-card-form.ts, cashback.ts, cashback-form.ts,
 │                        #   form-fields.ts (moneyAmountField), budget.ts, categories.ts
-├── utils/               # dates, currency, categories, csv, billingCycle, mcc, cashback
+├── utils/               # dates, currency, categories, csv, billingCycle, mcc, cashback, cashflow, category-colors,
+│                        #   cycle-progress, group-by-day
 ├── test/                # fixtures/, integration-setup.ts
 └── lib/utils.ts         # cn() = clsx + twMerge
 ```
@@ -176,6 +195,8 @@ người khác, và khi họ xoá thẻ thì giao dịch bị `set null` thành 
 `select('*')`** — `*` kéo cả `raw_text` (nguyên văn SMS: số dư, tên người chuyển) về browser
 dù không mapper nào đọc. `countOption(cursor)` chỉ đếm ở trang đầu, vì `totalForPage()`
 vứt bỏ count từ trang 2 trở đi.
+`getCreditCardTransactions(card: string | { cardIds })`: `cardIds` rỗng = mọi thẻ của user (RLS giới hạn); keyset
+`(transaction_date, id)` vẫn đúng khi gộp nhiều thẻ.
 
 ⚠️ **`account_number`/`card_number` phải kết thúc bằng đúng `account_ref` mà parser bắt được**
 (vd LPBank → `****x265`). Sai format thì edge function không resolve được FK, và hậu quả
@@ -219,7 +240,7 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 
 | Store | Persisted | Description |
 |---|---|---|
-| `filterStore` | No | accountId, cardId, dateFrom, dateTo, searchQuery, txType, category |
+| `filterStore` | No | accountId, cardId, cardIds (mục "Nhiều thẻ"), dateFrom, dateTo, searchQuery, txType, category. `resetFilters` reset `cardIds` như `cardId` |
 | `dashboardStore` | No | Independent date range for dashboard page |
 | `budgetStore` | localStorage | Budget amounts per Category |
 | `categoryOverrideStore` | localStorage | User overrides for transaction categories |
@@ -238,6 +259,8 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 | `useTransactions()` | Infinite query, reads from filterStore |
 | `useCreditCards()` | `{ data: CreditCard[], ... }` |
 | `useCreditCardTransactions()` | Infinite query, reads from filterStore |
+| `useMultiCardTransactions()` | Infinite query cho "Nhiều thẻ", đọc `filterStore.cardIds`. QueryKey **phải** bắt đầu bằng `['creditCardTransactions']` để optimistic patch MCC và invalidate khi sửa/xoá thẻ vẫn áp dụng |
+| `useCountUp(target, durationMs = 600)` | Số chạy tăng dần tới `target`; `prefers-reduced-motion` → trả `target` ngay |
 | `useCreateCreditCard()` / `useUpdateCreditCard(card)` / `useDeleteCreditCard()` | Mutations; invalidate thẻ, giao dịch thẻ, dashboard, rule, chi tiêu chu kỳ |
 | `useCardTransactionCount(cardId)` | Đếm giao dịch của thẻ (luôn lấy mới) cho dialog xoá |
 | `useUpdateTransactionMcc()` | Gán/bỏ MCC, optimistic ở mọi trang cache, hoàn tác đúng giao dịch khi lỗi |
@@ -314,10 +337,20 @@ downloadCSV(csvString, filename)                         // UTF-8 BOM download
 ### Billing Cycle (`billingCycle.ts`)
 ```typescript
 computeCurrentCycle(statementDay, nowISO)         → BillingCycle   // ngày sao kê 29-31 được KẸP vào độ dài tháng
-groupTransactionsByCycle(txs, currentCycle)       → BillingCycleGroupData[]
+groupTransactionsByCycle(txs, currentCycle, statementDay) → BillingCycleGroupData[]   // mỗi giao dịch vào chu kỳ CHỨA ngày giao dịch (không dồn vào kỳ hiện tại)
 formatCycleDateRange(startISO, endISO)            → { startDisplay, endDisplay }
+cycleProgressPercent(startISO, endISO, nowISO)    → number      // cycle-progress.ts
+cycleUrgency(daysUntilClose)                      → 'calm' | 'soon' | 'urgent'   // ≤3 ngày = urgent, ≤7 = soon
 ```
 Chu kỳ là khoảng **nửa mở `[startISO, endISO)`**; truy vấn dùng `dateFrom` + `dateBefore` (cận trên loại trừ).
+
+### Dashboard & danh sách (`cashflow.ts`, `group-by-day.ts`)
+```typescript
+computeNetFlow(totalIncome, totalExpense) → { net, spendRatio | null }   // nhận số DƯƠNG từ RPC; spendRatio null khi không có thu
+groupByDay(items)                         → DayGroup[] { dayKey, income, expense, items }   // theo ngày VN, tổng chỉ của dòng ĐÃ TẢI, không gồm internal_transfer (khớp dashboard)
+formatDayLabel(dayKey, nowISO)            → "Hôm nay" | "Hôm qua" | "Thứ hai, 05/10/2026"
+getCategoryChartColor(category)           → 'var(--chart-n)'   // danh mục lạ → màu "Khác"
+```
 
 ### MCC (`mcc.ts`)
 ```typescript
@@ -359,8 +392,10 @@ Cổng 54321/54322 phải trống (các stack Supabase của dự án khác dùn
 - Form dài: điền bằng `fireEvent.change`, **không** `userEvent.type` từng phím — chậm gấp chục lần khi cả bộ chạy song
   song và vượt timeout 5s.
 - Component dùng hook thật cần 1 test **mount thật** (render loop từng lọt qua hàng trăm test xanh vì không test nào mount nó).
-- Sau khi thêm test, **phá code có chủ đích** (mutation thủ công) để chắc test thật sự bắt được lỗi; khôi phục bằng đúng đường dẫn
-  (một lần khôi phục nhầm đường dẫn đã để sót một file thừa).
+- Sau khi thêm test, **phá code có chủ đích** (mutation thủ công) để chắc test thật sự bắt được lỗi. **Sao lưu file trước** và khôi phục
+  từ bản sao. **Không** `git checkout <file>` để khôi phục: nó xoá mất thay đổi chưa commit.
+- **Test UI timeout trên máy đang tải cao** thường do tranh CPU khi vitest chạy song song mặc định. Chạy `--maxWorkers=6` để phân biệt
+  timeout do tải với lỗi thật.
 
 Integration hộp tin seed `unparsed_messages` bằng service_role **local**: thêm `VITE_TEST_SERVICE_ROLE_KEY` (SERVICE_ROLE_KEY của
 `supabase status -o env`) vào `.env.test.local` — file chỉ nạp ở mode test, không vào bundle.
