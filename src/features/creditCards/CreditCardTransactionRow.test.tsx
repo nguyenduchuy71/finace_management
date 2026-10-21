@@ -103,3 +103,18 @@ describe('CreditCardTransactionRow — MCC', () => {
     expect(screen.getByLabelText('Phân loại MCC cho GD THE 1234')).toBeInTheDocument()
   })
 })
+
+describe('CreditCardTransactionRow — dấu số tiền', () => {
+  it('chi tiêu: dấu – màu chi', () => {
+    renderRow()
+    const amount = screen.getByText('–đ 150.000')
+    expect(amount.className).toContain('text-expense')
+  })
+
+  it('tiền vào thẻ (trả nợ/hoàn tiền): dấu + màu thu, không hiện như khoản chi', () => {
+    renderRow({ ...base, amount: 5_000_000, type: 'payment', merchantName: 'GD qua NHDT' })
+    const amount = screen.getByText('+đ 5.000.000')
+    expect(amount.className).toContain('text-income')
+    expect(screen.queryByText('–đ 5.000.000')).not.toBeInTheDocument()
+  })
+})
