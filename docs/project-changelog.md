@@ -1,5 +1,40 @@
 # Changelog
 
+## 2026-10-21 — Giao dịch ngân hàng: parser push, hộp tin chưa phân loại, tài khoản
+
+Plan: `plans/261021-0940-unparsed-inbox-bank-tab/`.
+
+### Thêm
+- **Parser push "biến động số dư"** (`parsers-balance-notifications.ts`): BIDV SmartBanking, Vietinbank,
+  OCB (TK + thẻ tín dụng), SHB SAHA, HDBank TK, Cake thẻ tín dụng, Sacombank Pay trả nợ thẻ.
+- **Chuẩn hoá NFC** đầu vào edge function: phần lớn thông báo iOS là NFD nên regex không khớp. Đo trên 99 tin
+  thật: 0 → 27 tin parse được (cả parser MoMo cũ giờ khớp).
+- **`transactions.kind`** (`normal` / `internal_transfer` / `cashback`); `get_dashboard_stats` bỏ
+  `internal_transfer` khỏi thu/chi. Tự gắn khi nội dung có "THANH TOAN THE TIN DUNG" hoặc tên trong secret
+  `OWNER_NAMES` là người gửi (tiền vào) / người nhận (tiền ra). Khoản chi chỉ có tên mình là người gửi vẫn là
+  `normal` (có thể là chuyển cho người khác).
+- **Hộp tin chưa phân loại**: `unparsed_messages` có `user_id`, `suggested_kind` (gợi ý lúc nạp:
+  giao dịch / nhắc thẻ / quảng cáo / chưa rõ), `kind`, `transaction_id`; RLS chính chủ, grant theo cột,
+  trigger khoá tin đã xử lý. RPC `resolve_unparsed` tạo giao dịch + đánh dấu tin nguyên tử.
+- **Tab "Giao dịch ngân hàng"**: mục *Chưa phân loại* (mặc định, badge số tin, ẩn quảng cáo) và *Đã ghi nhận*.
+  Dialog ghi giao dịch điền sẵn số tiền / chiều / thời điểm, chọn sẵn TK/thẻ khớp đuôi số.
+- **Thêm / sửa / xoá tài khoản ngân hàng**; xoá kèm giao dịch qua RPC `delete_bank_account`. Số TK ép mask
+  `****xxxx` (form + check constraint).
+- `backfill-unparsed.ts`: chạy lại tin cũ qua parser hiện tại (dry-run mặc định, chỉ ghi giao dịch khi
+  resolve được TK/thẻ, ngày theo `received_at` với tin không ghi ngày).
+- Test: `supabase/tests/unparsed-accounts-rls.sql` (2 user), Deno test parser/classify, integration hộp tin.
+
+### Thay đổi hành vi / cần biết khi deploy
+- Edge function **không còn ghi giao dịch mồ côi**: parse được nhưng chưa có TK/thẻ khớp (hoặc khớp nhiều) → vào hộp
+  tin với `reason = no_account`. MoMo (không có số TK trong tin) vì vậy luôn vào hộp tin để user chọn nguồn tiền.
+  Tin gửi lặp trong 10 phút cũng không tạo 2 dòng trong hộp.
+- **Thứ tự deploy:** `supabase db push` (migration `20261021100000`) rồi **ngay** `supabase functions deploy
+  parse-transaction`. Edge function cũ không ghi `user_id` → sau migration, tin không parse được bị NOT NULL
+  chặn (mất tin) cho tới khi deploy function mới.
+- Secret mới (tuỳ chọn): `supabase secrets set OWNER_NAMES="NGUYEN VAN A"` (phân tách `;`).
+- Sau deploy: tạo TK/thẻ khớp đuôi số, chạy `backfill-unparsed.ts` dry-run rồi `--apply`.
+- Integration test cần `VITE_TEST_SERVICE_ROLE_KEY` (key **local**) trong `.env.test.local`.
+
 ## 2026-10-19 — Hoàn tiền: bậc thang theo mức chi và trần tổng cho cả thẻ
 
 Chi tiết: [credit-card-cashback.md](credit-card-cashback.md).
