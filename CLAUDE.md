@@ -397,7 +397,12 @@ Integration hộp tin seed `unparsed_messages` bằng service_role **local**: th
 
 ## Deployment (Vercel)
 
-- Install: `npm ci`
-- Build: `npm run build` → `dist/`
-- Env: set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` trong Vercel dashboard
-- Region: `sfo1`
+- **Chỉ deploy qua GitHub Actions, SAU khi CI xanh** (`.github/workflows/ci.yml`): job `verify` (lint, unit, build,
+  Deno check + test parser) → job `deploy` (`needs: verify`) bằng Vercel CLI. Push `main` → production; PR → preview
+  (bỏ qua PR từ fork). Git Integration của Vercel **tắt** (`"git": { "deploymentEnabled": false }` trong `vercel.json`)
+  — bật lại là Vercel deploy song song, không chờ CI.
+- GitHub secrets bắt buộc: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (`vercel link` → `.vercel/project.json`).
+  Thiếu thì job deploy fail rõ ràng (không deploy gì).
+- Integration test không chạy ở CI (cần stack Supabase + seed bị gitignore) → chạy local trước khi merge.
+- Install: `npm ci`; Build: `tsc -b && vite build` → `dist/`; Region: `sfo1`
+- Env: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` đặt trong Vercel dashboard (job deploy lấy bằng `vercel pull`)
