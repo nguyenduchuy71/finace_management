@@ -440,4 +440,7 @@ Integration hộp tin seed `unparsed_messages` bằng service_role **local**: th
   Thiếu thì job deploy fail rõ ràng (không deploy gì).
 - Integration test không chạy ở CI (cần stack Supabase + seed bị gitignore) → chạy local trước khi merge.
 - Install: `npm ci`; Build: `tsc -b && vite build` → `dist/`; Region: `sfo1`
-- Env: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` đặt trong Vercel dashboard (job deploy lấy bằng `vercel pull`)
+- Env: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` đặt trong Vercel dashboard. Job deploy dùng `vercel deploy`
+  (**build trên Vercel**), KHÔNG `vercel pull` + `--prebuilt`: biến loại Sensitive không kéo về được (`vercel pull` ghi
+  `"[SENSITIVE]"`), build trên runner đóng gói chuỗi đó làm URL → production trắng trang "Invalid supabaseUrl" (2026-10-21).
+  `vite.config.ts` làm `vite build` FAIL khi `VITE_SUPABASE_URL` không phải URL http(s) hợp lệ.
