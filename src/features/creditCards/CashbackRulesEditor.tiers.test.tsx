@@ -72,7 +72,9 @@ describe('CashbackRuleForm — bậc thang', () => {
       minCycleSpend: 5_000_000,
       tiers: [{ minSpend: 10_000_000, ratePercent: 1 }, { minSpend: 20_000_000, ratePercent: 1.5 }],
     })))
-  })
+    // Test đầu file gánh chi phí mount Dialog + form lần đầu: ~0,8s khi chạy riêng nhưng vượt 5s
+    // mặc định khi cả bộ chạy song song (đã đỏ cả trên commit trước thay đổi UI). Không phải chờ logic.
+  }, 15_000)
 
   it('xoá bậc ở giữa không làm lệch giá trị của các bậc còn lại', async () => {
     await openNewRule()
