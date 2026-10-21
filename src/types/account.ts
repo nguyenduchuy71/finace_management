@@ -18,6 +18,16 @@ export const BankAccountSchema = z.object({
 export const TransactionKindSchema = z.enum(['normal', 'internal_transfer', 'cashback'])
 export type TransactionKind = z.infer<typeof TransactionKindSchema>
 
+/** Nhãn ngắn của loại dòng tiền — dùng chung cho nhãn trên dòng giao dịch và cột CSV. '' = giao dịch thường. */
+export const TRANSACTION_KIND_LABEL: Record<TransactionKind, string> = {
+  normal: '',
+  internal_transfer: 'Nội bộ',
+  cashback: 'Cashback',
+}
+
+/** Giải thích vì sao giao dịch nội bộ không có trong tổng thu/chi ở Tổng quan. */
+export const INTERNAL_TRANSFER_HINT = 'Chuyển giữa tài khoản/thẻ của bạn — không tính vào thu/chi'
+
 export const TransactionSchema = z.object({
   id: z.string(),
   accountId: z.string(),
