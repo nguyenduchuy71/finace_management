@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
@@ -139,5 +139,25 @@ describe('TransactionList', () => {
     expect(accountsService.getTransactions).toHaveBeenLastCalledWith(
       ACCOUNT_ID, 'cursor-abc', 20, expect.anything()
     )
+  })
+})
+
+describe('TransactionList — nhóm theo ngày', () => {
+  it('nhóm theo ngày VN, mỗi nhóm có tổng thu/chi của riêng ngày đó', async () => {
+    mockPage([
+      tx({ id: 'a', amount: -50_000, transactionDate: '2026-09-02T01:00:00.000Z' }),
+      tx({ id: 'b', amount: 2_000_000, type: 'income', merchantName: 'Lương', transactionDate: '2026-09-01T18:00:00.000Z' }), // 01:00 02/09 VN
+      tx({ id: 'c', amount: -30_000, merchantName: 'Grab', transactionDate: '2026-09-01T03:00:00.000Z' }),
+    ])
+    render(createElement(TransactionList), { wrapper: createWrapper() })
+
+    const day2 = await screen.findByRole('region', { name: /02\/09\/2026/ })
+    const day1 = screen.getByRole('region', { name: /01\/09\/2026/ })
+    // Tổng ngày nằm ở tiêu đề nhóm (dòng giao dịch cũng hiện số tiền riêng của nó)
+    const total = (section: HTMLElement) => section.querySelector('h3')!.nextElementSibling!.textContent
+    expect(within(day2).getAllByRole('listitem')).toHaveLength(2)
+    expect(total(day2)).toBe('+đ 2.000.000–đ 50.000')
+    expect(within(day1).getAllByRole('listitem')).toHaveLength(1)
+    expect(total(day1)).toBe('–đ 30.000')
   })
 })
