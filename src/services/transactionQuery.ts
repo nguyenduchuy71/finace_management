@@ -2,6 +2,9 @@ import type { PostgrestFilterBuilder } from '@supabase/postgrest-js'
 import type { Category } from '@/types/categories'
 import { decodeCursor, sanitizeSearch } from './query-cursor'
 
+/** Số giao dịch mỗi trang "Xem thêm" ở mọi danh sách lịch sử giao dịch (ngân hàng, một thẻ, nhiều thẻ). */
+export const TX_PAGE_SIZE = 20
+
 export interface TransactionFilters {
   search?: string
   dateFrom?: string | null

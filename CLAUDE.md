@@ -194,7 +194,7 @@ người khác, và khi họ xoá thẻ thì giao dịch bị `set null` thành 
 **Truy vấn giao dịch:** dùng `TX_COLUMNS` (`src/services/transactionQuery.ts`), **không dùng
 `select('*')`** — `*` kéo cả `raw_text` (nguyên văn SMS: số dư, tên người chuyển) về browser
 dù không mapper nào đọc. `countOption(cursor)` chỉ đếm ở trang đầu, vì `totalForPage()`
-vứt bỏ count từ trang 2 trở đi.
+vứt bỏ count từ trang 2 trở đi. Cỡ trang "Xem thêm" của mọi danh sách giao dịch: `TX_PAGE_SIZE` (= 20, cùng file).
 `getCreditCardTransactions(card: string | { cardIds })`: `cardIds` rỗng = mọi thẻ của user (RLS giới hạn); keyset
 `(transaction_date, id)` vẫn đúng khi gộp nhiều thẻ.
 

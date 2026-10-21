@@ -6,6 +6,7 @@ import { createElement } from 'react'
 import { useFilterStore } from '@/stores/filterStore'
 import { TransactionList } from './TransactionList'
 import * as accountsService from '@/services/accounts'
+import { TX_PAGE_SIZE } from '@/services/transactionQuery'
 import type { Transaction } from '@/types/account'
 
 // Mock ở tầng service: component test kiểm tra render logic, không cần DB thật.
@@ -106,7 +107,7 @@ describe('TransactionList', () => {
       expect(accountsService.getTransactions).toHaveBeenCalledWith(
         ACCOUNT_ID,
         undefined,
-        20,
+        TX_PAGE_SIZE,
         expect.objectContaining({ search: 'Highlands', txType: 'expense' })
       )
     })
@@ -137,7 +138,7 @@ describe('TransactionList', () => {
     await waitFor(() => expect(screen.getByText('SHOPEE')).toBeInTheDocument())
 
     expect(accountsService.getTransactions).toHaveBeenLastCalledWith(
-      ACCOUNT_ID, 'cursor-abc', 20, expect.anything()
+      ACCOUNT_ID, 'cursor-abc', TX_PAGE_SIZE, expect.anything()
     )
   })
 })

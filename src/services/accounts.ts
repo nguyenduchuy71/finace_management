@@ -3,7 +3,7 @@ import { mapAccount, mapTransaction, type AccountRow, type TransactionRow } from
 import { toApiError } from './api-errors'
 import { encodeCursor } from './query-cursor'
 import {
-  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS,
+  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS, TX_PAGE_SIZE,
   type TransactionFilters,
 } from './transactionQuery'
 
@@ -28,7 +28,7 @@ export async function getAccounts() {
 export async function getTransactions(
   accountId: string,
   cursor?: string,
-  limit = 20,
+  limit = TX_PAGE_SIZE,
   filters?: TransactionFilters
 ) {
   const base = supabase

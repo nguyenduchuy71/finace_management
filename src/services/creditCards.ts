@@ -5,7 +5,7 @@ import { mapCreditCard, mapCreditCardTransaction, type CreditCardRow, type Trans
 import { toApiError } from './api-errors'
 import { encodeCursor } from './query-cursor'
 import {
-  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS,
+  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS, TX_PAGE_SIZE,
   type TransactionFilters,
 } from './transactionQuery'
 
@@ -31,7 +31,7 @@ export interface MultiCardSelection {
 export async function getCreditCardTransactions(
   card: string | MultiCardSelection,
   cursor?: string,
-  limit = 20,
+  limit = TX_PAGE_SIZE,
   filters?: TransactionFilters
 ) {
   // Thẻ tín dụng chỉ có chi tiêu -> txType='income' luôn rỗng (giữ hành vi cũ của mock)

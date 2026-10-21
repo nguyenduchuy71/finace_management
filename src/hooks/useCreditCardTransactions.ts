@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
+import { TX_PAGE_SIZE } from '@/services/transactionQuery'
 import { getCreditCardTransactions } from '@/services/creditCards'
 import { useFilterStore } from '@/stores/filterStore'
 import { useShallow } from 'zustand/react/shallow'
@@ -22,7 +23,7 @@ export function useCreditCardTransactions() {
     queryKey: ['creditCardTransactions', cardId, { dateFrom, dateTo, searchQuery, txType }],
     queryFn: ({ pageParam }) => {
       if (!cardId) return Promise.resolve({ data: [], nextCursor: null, total: 0 })
-      return getCreditCardTransactions(cardId, pageParam as string | undefined, 20, {
+      return getCreditCardTransactions(cardId, pageParam as string | undefined, TX_PAGE_SIZE, {
         search: searchQuery || undefined,
         dateFrom,
         dateTo,
