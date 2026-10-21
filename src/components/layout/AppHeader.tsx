@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useThemeStore } from '@/stores/themeStore'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/query-client'
+import { UnparsedCountBadge } from '@/features/unparsed/UnparsedCountBadge'
 
 export function AppHeader() {
   const { theme, toggleTheme } = useThemeStore()
@@ -50,7 +51,9 @@ export function AppHeader() {
               }`
             }
           >
-            Ngân hàng
+            <span className="hidden sm:inline">Giao dịch NH</span>
+            <span className="sm:hidden">NH</span>
+            <UnparsedCountBadge className="ml-1" />
           </NavLink>
           <NavLink
             to="/credit-cards"

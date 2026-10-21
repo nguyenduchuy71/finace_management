@@ -5,6 +5,7 @@ import { formatDisplayDate } from '@/utils/dates'
 import { MCC_OPTIONS, formatMcc, getMccLabel, suggestMcc } from '@/utils/mcc'
 import { ShoppingBag } from 'lucide-react'
 import type { CreditCardTransaction } from '@/types/creditCard'
+import { TransactionKindBadge } from '@/components/ui/TransactionKindBadge'
 
 interface CreditCardTransactionRowProps {
   transaction: CreditCardTransaction
@@ -37,6 +38,7 @@ export function CreditCardTransactionRow({ transaction: tx }: CreditCardTransact
           <p className="font-medium text-sm text-foreground truncate">{tx.merchantName}</p>
           <div className="flex items-center gap-1.5 mt-0.5">
             <p className="text-xs text-muted-foreground">{formatDisplayDate(tx.transactionDate)}</p>
+            <TransactionKindBadge kind={tx.kind} />
             <Badge
               variant={isPending ? 'secondary' : 'default'}
               className="text-xs px-1.5 py-0"

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/popover'
 import type { Transaction } from '@/types/account'
 import type { Category } from '@/types/categories'
+import { TransactionKindBadge } from '@/components/ui/TransactionKindBadge'
 
 interface TransactionRowProps {
   transaction: Transaction
@@ -55,7 +56,7 @@ function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
           </p>
           {/* body-sm: text-sm font-normal leading-relaxed for date */}
           <p className="body-sm text-muted-foreground mt-0.5 !leading-none">
-            {formatDisplayDate(tx.transactionDate)}
+            {formatDisplayDate(tx.transactionDate)} <TransactionKindBadge kind={tx.kind} />
           </p>
           {/* Category badge for expense transactions */}
           {effectiveCategory && (
