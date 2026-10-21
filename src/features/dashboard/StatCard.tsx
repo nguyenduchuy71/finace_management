@@ -29,8 +29,8 @@ export function StatCard({
   const Icon = isIncome ? TrendingUp : TrendingDown
   const label = isIncome ? 'Tổng thu' : 'Tổng chi'
   const colorClass = isIncome
-    ? 'text-emerald-600 dark:text-emerald-400'
-    : 'text-red-600 dark:text-red-400'
+    ? 'text-income'
+    : 'text-expense'
 
   // Determine delta display message and color
   let deltaMessage: string | null = null
@@ -53,13 +53,13 @@ export function StatCard({
     if (isIncome) {
       // For income: positive (↑) is good (green), negative (↓) is bad (red)
       deltaColorClass = delta >= 0
-        ? 'text-emerald-600 dark:text-emerald-400'
-        : 'text-red-600 dark:text-red-400'
+        ? 'text-income'
+        : 'text-expense'
     } else {
       // For expense: positive (↑) is bad (red), negative (↓) is good (green)
       deltaColorClass = delta >= 0
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-emerald-600 dark:text-emerald-400'
+        ? 'text-expense'
+        : 'text-income'
     }
   }
 

@@ -38,7 +38,7 @@ describe('StatCard Component - Delta Badge Display', () => {
     )
 
     const deltaElement = screen.getByText('↑12% vs tháng trước')
-    expect(deltaElement.className).toContain('text-emerald')
+    expect(deltaElement.className).toContain('text-income')
   })
 
   // Test 5: Negative delta colored red for income
@@ -48,7 +48,7 @@ describe('StatCard Component - Delta Badge Display', () => {
     )
 
     const deltaElement = screen.getByText('↓8% vs tháng trước')
-    expect(deltaElement.className).toContain('text-red')
+    expect(deltaElement.className).toContain('text-expense')
   })
 
   // Test 6: Positive delta colored red for expense
@@ -58,7 +58,7 @@ describe('StatCard Component - Delta Badge Display', () => {
     )
 
     const deltaElement = screen.getByText('↑12% vs tháng trước')
-    expect(deltaElement.className).toContain('text-red')
+    expect(deltaElement.className).toContain('text-expense')
   })
 
   // Test 7: Negative delta colored green for expense
@@ -68,7 +68,7 @@ describe('StatCard Component - Delta Badge Display', () => {
     )
 
     const deltaElement = screen.getByText('↓8% vs tháng trước')
-    expect(deltaElement.className).toContain('text-emerald')
+    expect(deltaElement.className).toContain('text-income')
   })
 
   // Test 8: deltaLoading=true shows "Đang tính..."

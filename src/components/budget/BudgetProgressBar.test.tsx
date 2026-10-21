@@ -16,7 +16,7 @@ describe('BudgetProgressBar Component', () => {
 
     // Should have emerald color class
     const fillBar = document.querySelector('[data-testid="budget-fill"]')
-    expect(fillBar?.className).toContain('bg-emerald')
+    expect(fillBar?.className).toContain('bg-income')
   })
 
   it('BudgetProgressBar with spent=500, budget=1000 renders 50% with emerald fill', () => {
@@ -26,7 +26,7 @@ describe('BudgetProgressBar Component', () => {
     expect(percentText).toBeTruthy()
 
     const fillBar = document.querySelector('[data-testid="budget-fill"]')
-    expect(fillBar?.className).toContain('bg-emerald')
+    expect(fillBar?.className).toContain('bg-income')
   })
 
   it('BudgetProgressBar with spent=800, budget=1000 renders 80% with yellow fill (warning state)', () => {
@@ -36,7 +36,7 @@ describe('BudgetProgressBar Component', () => {
     expect(percentText).toBeTruthy()
 
     const fillBar = document.querySelector('[data-testid="budget-fill"]')
-    expect(fillBar?.className).toContain('bg-yellow')
+    expect(fillBar?.className).toContain('bg-warning')
   })
 
   it('BudgetProgressBar with spent=900, budget=1000 renders 90% with yellow fill', () => {
@@ -46,7 +46,7 @@ describe('BudgetProgressBar Component', () => {
     expect(percentText).toBeTruthy()
 
     const fillBar = document.querySelector('[data-testid="budget-fill"]')
-    expect(fillBar?.className).toContain('bg-yellow')
+    expect(fillBar?.className).toContain('bg-warning')
   })
 
   it('BudgetProgressBar with spent=1000, budget=1000 renders 100% with red fill (overbudget)', () => {
@@ -56,7 +56,7 @@ describe('BudgetProgressBar Component', () => {
     expect(percentText).toBeTruthy()
 
     const fillBar = document.querySelector('[data-testid="budget-fill"]')
-    expect(fillBar?.className).toContain('bg-red')
+    expect(fillBar?.className).toContain('bg-expense')
   })
 
   it('BudgetProgressBar with spent=1200, budget=1000 renders 100% (capped) with red fill, but label shows "120%"', () => {
@@ -68,7 +68,7 @@ describe('BudgetProgressBar Component', () => {
 
     // Visual fill should be capped at 100%
     const fillBar = document.querySelector('[data-testid="budget-fill"]')
-    expect(fillBar?.className).toContain('bg-red')
+    expect(fillBar?.className).toContain('bg-expense')
 
     // Check the fill width is capped
     const fillWidth = fillBar?.getAttribute('style')
