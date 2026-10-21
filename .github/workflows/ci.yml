@@ -12,8 +12,10 @@ name: CI
 #   VERCEL_TOKEN       — vercel.com/account/tokens
 #   VERCEL_ORG_ID      — `.vercel/project.json` sau khi chạy `vercel link`, khoá "orgId"
 #   VERCEL_PROJECT_ID  — cùng file, khoá "projectId"
-# Biến VITE_* của bản deploy lấy từ Environment Variables của project trên Vercel (`vercel pull`),
-# KHÔNG lấy từ GitHub.
+# Biến VITE_* của bản deploy lấy từ Environment Variables của project trên Vercel, KHÔNG lấy từ GitHub.
+# Bản deploy được BUILD TRÊN VERCEL (`vercel deploy` không --prebuilt): biến loại "Sensitive" chỉ đọc được
+# trong môi trường build của Vercel — `vercel pull` ghi "[SENSITIVE]" thay giá trị thật, build trên runner
+# sẽ đóng gói chuỗi đó làm URL Supabase (production từng trắng trang: "Invalid supabaseUrl").
 
 on:
   push:
@@ -120,20 +122,12 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@62.5.0
 
-      # Lấy cấu hình + Environment Variables (VITE_*) của môi trường tương ứng từ Vercel.
-      - name: Pull Vercel environment
-        run: vercel pull --yes --environment="$VERCEL_ENV" --token="$VERCEL_TOKEN"
-
-      # Build trên runner (dùng buildCommand trong vercel.json), rồi upload bản đã build.
-      - name: Build
-        run: |
-          args=(); [ "$VERCEL_ENV" = production ] && args+=(--prod)
-          vercel build "${args[@]}" --token="$VERCEL_TOKEN"
-
       - name: Deploy
         id: deploy
         run: |
           args=(); [ "$VERCEL_ENV" = production ] && args+=(--prod)
-          url=$(vercel deploy --prebuilt "${args[@]}" --token="$VERCEL_TOKEN")
+          # Vercel build từ source với Environment Variables của nó (đọc được biến Sensitive).
+          # vite.config.ts làm build FAIL nếu VITE_SUPABASE_URL không phải URL hợp lệ -> không deploy bản trắng trang.
+          url=$(vercel deploy "${args[@]}" --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Deployed ($VERCEL_ENV): $url" >> "$GITHUB_STEP_SUMMARY"
