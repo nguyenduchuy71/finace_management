@@ -4,6 +4,12 @@ import { Button } from '@/components/ui/button'
 import { formatVND } from '@/utils/currency'
 import type { ReactNode } from 'react'
 
+/** Nền chip delta theo màu chữ — tốt (income) / xấu (expense) / trung tính. */
+const DELTA_BG: Record<string, string> = {
+  'text-income': 'bg-income-soft',
+  'text-expense': 'bg-expense-soft',
+}
+
 interface StatCardProps {
   variant: 'income' | 'expense'
   amount: number
@@ -31,6 +37,7 @@ export function StatCard({
   const colorClass = isIncome
     ? 'text-income'
     : 'text-expense'
+  const iconBgClass = isIncome ? 'bg-income-soft' : 'bg-expense-soft'
 
   // Determine delta display message and color
   let deltaMessage: string | null = null
@@ -64,11 +71,13 @@ export function StatCard({
   }
 
   return (
-    <Card className="min-h-[140px] transition-colors duration-200">
+    <Card className="h-full min-h-[140px] transition-colors duration-200">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         {/* heading-label: text-sm font-medium leading-snug — matches card label pattern */}
         <CardTitle className="heading-label text-muted-foreground">{label}</CardTitle>
-        <Icon className={`h-5 w-5 ${colorClass}`} />
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconBgClass}`}>
+          <Icon className={`h-5 w-5 ${colorClass}`} />
+        </span>
       </CardHeader>
       <CardContent className="card-gap flex flex-col">
         {isError ? (
@@ -82,15 +91,17 @@ export function StatCard({
           </div>
         ) : transactionCount === 0 ? (
           <div>
-            <p className={`heading-h1 tabular-nums ${colorClass}`}>{formatVND(0)}</p>
+            <p className={`heading-h1 money ${colorClass}`}>{formatVND(0)}</p>
             <p className="body-sm text-muted-foreground mt-1">Không có giao dịch trong kỳ này</p>
           </div>
         ) : (
           <div>
-            <p className={`heading-h1 tabular-nums ${colorClass}`}>{formatVND(amount)}</p>
+            <p className={`heading-h1 money ${colorClass}`}>{formatVND(amount)}</p>
             {children}
             {deltaMessage && (
-              <p className={`body-sm ${deltaColorClass} mt-1`}>{deltaMessage}</p>
+              <p className={`mt-3 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${deltaColorClass} ${DELTA_BG[deltaColorClass] ?? 'bg-muted'}`}>
+                {deltaMessage}
+              </p>
             )}
           </div>
         )}
