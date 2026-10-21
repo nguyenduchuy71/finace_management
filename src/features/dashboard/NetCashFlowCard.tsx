@@ -1,6 +1,7 @@
 import { Scale } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { MeterBar } from '@/components/ui/MeterBar'
 import { formatVND } from '@/utils/currency'
 import { computeNetFlow } from '@/utils/cashflow'
 import { cn } from '@/lib/utils'
@@ -28,7 +29,7 @@ export function NetCashFlowCard({ totalIncome, totalExpense, transactionCount, i
           <Scale className="h-5 w-5" />
         </span>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="flex flex-1 flex-col gap-5">
         {isError ? (
           <div className="space-y-2">
             <p className="body-sm text-muted-foreground">Không thể tải dữ liệu</p>
@@ -55,20 +56,16 @@ export function NetCashFlowCard({ totalIncome, totalExpense, transactionCount, i
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Đã chi <span className="font-semibold text-foreground">{spendRatio}%</span> số thu</span>
                 </div>
-                <div
-                  role="progressbar" aria-label="Tỉ lệ chi trên thu"
-                  aria-valuenow={Math.min(spendRatio, 100)} aria-valuemin={0} aria-valuemax={100}
-                  className="h-2 overflow-hidden rounded-full bg-income-soft"
-                >
-                  <div
-                    className={cn('h-full rounded-full', spendRatio > 100 ? 'bg-expense' : spendRatio >= 80 ? 'bg-warning' : 'bg-income')}
-                    style={{ width: `${Math.min(spendRatio, 100)}%` }}
-                  />
-                </div>
+                <MeterBar
+                  percent={spendRatio}
+                  label="Tỉ lệ chi trên thu"
+                  className="bg-income-soft"
+                  fillClassName={spendRatio > 100 ? 'bg-expense' : spendRatio >= 80 ? 'bg-warning' : 'bg-income'}
+                />
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground">Thu − Chi trong kỳ, không gồm chuyển khoản nội bộ.</p>
+            <p className="mt-auto text-xs text-muted-foreground">Thu − Chi trong kỳ, không gồm chuyển khoản nội bộ.</p>
           </>
         )}
       </CardContent>

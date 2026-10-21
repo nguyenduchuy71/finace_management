@@ -19,6 +19,11 @@ export interface BankBrand {
   short: string
   /** Tailwind classes: nền + chữ. Dùng cặp có tương phản đủ ở cả light/dark. */
   className: string
+  /**
+   * Gradient nền "thẻ vật lý" (CardVisual), luôn chữ trắng. Shade 700→950 của cùng tông:
+   * mọi shade 700 của Tailwind đạt >= 4.5:1 với chữ trắng (kể cả amber/cyan), nên chữ đọc được ở mọi điểm.
+   */
+  gradient: string
 }
 
 /**
@@ -27,28 +32,29 @@ export interface BankBrand {
  * đúng màu nhãn hiệu, đồng thời đảm bảo tương phản ở dark mode.
  */
 const BANKS: Record<string, BankBrand> = {
-  ACB:         { short: 'ACB',  className: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
-  BIDV:        { short: 'BIDV', className: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' },
-  BaoVietBank: { short: 'BV',   className: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300' },
-  Cake:        { short: 'Cake', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300' },
-  Eximbank:    { short: 'EXIM', className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
-  HDBank:      { short: 'HD',   className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' },
-  HSBC:        { short: 'HSBC', className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' },
-  KBank:       { short: 'KB',   className: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' },
-  LPBank:      { short: 'LP',   className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300' },
-  MSB:         { short: 'MSB',  className: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300' },
-  OCB:         { short: 'OCB',  className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' },
-  SHB:         { short: 'SHB',  className: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' },
-  Sacombank:   { short: 'STB',  className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' },
-  ShinhanBank: { short: 'SHIN', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' },
-  UOB:         { short: 'UOB',  className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' },
-  VIB:         { short: 'VIB',  className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300' },
-  VPBank:      { short: 'VP',   className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' },
-  Vietinbank:  { short: 'CTG',  className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' },
-  WOORIVN:     { short: 'WOO',  className: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300' },
+  ACB:         { short: 'ACB',  className: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300', gradient: 'from-blue-700 to-blue-950' },
+  BIDV:        { short: 'BIDV', className: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300', gradient: 'from-teal-700 to-teal-950' },
+  BaoVietBank: { short: 'BV',   className: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300', gradient: 'from-sky-700 to-sky-950' },
+  Cake:        { short: 'Cake', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300', gradient: 'from-pink-700 to-pink-950' },
+  Eximbank:    { short: 'EXIM', className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300', gradient: 'from-blue-700 to-blue-950' },
+  HDBank:      { short: 'HD',   className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300', gradient: 'from-red-700 to-red-950' },
+  HSBC:        { short: 'HSBC', className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300', gradient: 'from-red-700 to-red-950' },
+  KBank:       { short: 'KB',   className: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300', gradient: 'from-green-700 to-green-950' },
+  LPBank:      { short: 'LP',   className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300', gradient: 'from-fuchsia-700 to-fuchsia-950' },
+  MSB:         { short: 'MSB',  className: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300', gradient: 'from-orange-700 to-orange-950' },
+  OCB:         { short: 'OCB',  className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300', gradient: 'from-emerald-700 to-emerald-950' },
+  SHB:         { short: 'SHB',  className: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300', gradient: 'from-amber-700 to-amber-950' },
+  Sacombank:   { short: 'STB',  className: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300', gradient: 'from-indigo-700 to-indigo-950' },
+  ShinhanBank: { short: 'SHIN', className: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300', gradient: 'from-blue-700 to-blue-950' },
+  UOB:         { short: 'UOB',  className: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300', gradient: 'from-red-700 to-red-950' },
+  VIB:         { short: 'VIB',  className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300', gradient: 'from-cyan-700 to-cyan-950' },
+  VPBank:      { short: 'VP',   className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300', gradient: 'from-emerald-700 to-emerald-950' },
+  Vietinbank:  { short: 'CTG',  className: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300', gradient: 'from-blue-700 to-blue-950' },
+  WOORIVN:     { short: 'WOO',  className: 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300', gradient: 'from-violet-700 to-violet-950' },
 }
 
 const FALLBACK_CLASS = 'bg-muted text-muted-foreground'
+const FALLBACK_GRADIENT = 'from-teal-700 to-slate-950'
 
 /**
  * Trả về monogram cho một ngân hàng. Ngân hàng chưa khai báo (thẻ mới thêm sau)
@@ -60,7 +66,7 @@ export function getBankBrand(bankName: string): BankBrand {
   if (known) return known
 
   const short = bankName.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase()
-  return { short: short || '?', className: FALLBACK_CLASS }
+  return { short: short || '?', className: FALLBACK_CLASS, gradient: FALLBACK_GRADIENT }
 }
 
 /** Nhãn loại thẻ hiển thị cho người dùng. */

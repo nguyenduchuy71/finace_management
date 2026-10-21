@@ -59,3 +59,15 @@ describe('canonicalBankName', () => {
     for (const n of KNOWN_BANK_NAMES) expect(canonicalBankName(n)).toBe(n)
   })
 })
+
+describe('getBankBrand — gradient thẻ', () => {
+  it('mọi ngân hàng có gradient shade 700→950 cùng tông (chữ trắng đạt tương phản)', () => {
+    for (const bank of KNOWN_BANK_NAMES) {
+      expect(getBankBrand(bank).gradient).toMatch(/^from-(\w+)-700 to-\1-950$/)
+    }
+  })
+
+  it('ngân hàng chưa khai báo vẫn có gradient', () => {
+    expect(getBankBrand('Ngân Hàng Mới').gradient).toMatch(/^from-\w+-700 to-\w+-950$/)
+  })
+})
