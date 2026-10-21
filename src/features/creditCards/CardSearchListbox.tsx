@@ -54,10 +54,11 @@ export function CardSearchListbox({ id, cards, selectedIds, onPick, multiple = f
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActiveIndex((i) => Math.min(i + 1, filtered.length - 1))
+      // Tính từ chỉ số ĐÃ KẸP: sau khi lọc ngắn lại, chỉ số thô có thể vượt danh sách và phím mũi tên "kẹt"
+      setActiveIndex(Math.min(activeIndex + 1, filtered.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setActiveIndex((i) => Math.max(i - 1, 0))
+      setActiveIndex(Math.max(activeIndex - 1, 0))
     } else if (e.key === 'Enter' || (multiple && e.key === ' ' && query === '')) {
       e.preventDefault()
       const card = filtered[activeIndex]
@@ -78,7 +79,10 @@ export function CardSearchListbox({ id, cards, selectedIds, onPick, multiple = f
         <Input
           autoFocus
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setActiveIndex(0) // gõ lọc thì trỏ lại kết quả đầu, Enter không chọn nhầm mục cũ
+          }}
           onKeyDown={onKeyDown}
           placeholder="Tìm theo tên thẻ, ngân hàng hoặc 4 số cuối…"
           aria-label="Tìm thẻ"

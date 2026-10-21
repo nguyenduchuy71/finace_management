@@ -42,7 +42,8 @@ export function NetCashFlowCard({ totalIncome, totalExpense, transactionCount, i
             <div>
               <p className={cn('heading-display money', positive ? 'text-income' : 'text-expense')}>
                 {/* Số chạy chỉ để nhìn; trình đọc màn hình luôn nhận giá trị cuối, không đọc số trung gian */}
-                <span aria-hidden="true">{positive ? '+' : '–'}{formatVND(animatedNet)}</span>
+                {/* Dấu theo số đang chạy (đổi kỳ từ dư sang thiếu thì dấu đổi đúng lúc số qua 0) */}
+                <span aria-hidden="true">{animatedNet >= 0 ? '+' : '–'}{formatVND(animatedNet)}</span>
                 <span className="sr-only" data-testid="net-cash-flow">{positive ? '+' : '–'}{formatVND(net)}</span>
               </p>
               <p className="body-sm text-muted-foreground mt-2">
