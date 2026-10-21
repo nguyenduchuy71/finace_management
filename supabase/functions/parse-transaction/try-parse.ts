@@ -10,11 +10,13 @@
 //     -v "$PWD:/app" -w /app denoland/deno:2.1.4 run --allow-all try-parse.ts
 
 import { parsers } from './parsers.ts'
+import { normalizeInput } from './helpers.ts'
 
 const arg = Deno.args.join(' ').trim()
-const text = arg || new TextDecoder().decode(
+// Chuẩn hoá NFC giống edge function — text dán từ iOS thường là NFD.
+const text = normalizeInput(arg || new TextDecoder().decode(
   await new Response(Deno.stdin.readable).arrayBuffer(),
-).trim()
+))
 
 if (!text) {
   console.error('Cần truyền nội dung thông báo qua tham số hoặc stdin.')

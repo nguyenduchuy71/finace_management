@@ -12,6 +12,8 @@
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { parsers } from './parsers.ts'
+import { parseOwnerNames, withKind } from './internal-transfer.ts'
+import { normalizeInput } from './helpers.ts'
 import type { ParsedTransaction } from './types.ts'
 
 const supabase = createClient(
@@ -30,6 +32,9 @@ const SHORTCUT_SECRET = Deno.env.get('SHORTCUT_SECRET')
 // App single-user: mọi giao dịch thuộc về user này.
 // BẮT BUỘC có, nếu không row sẽ vô hình sau khi bật RLS.
 const DEFAULT_USER_ID = Deno.env.get('DEFAULT_USER_ID')
+// Tên chủ TK (phân tách ";") để nhận diện chuyển nội bộ — xem internal-transfer.ts.
+// Không set -> mọi giao dịch là 'normal' (chỉ thiếu nhãn, không sai số tiền).
+const OWNER_NAMES = parseOwnerNames(Deno.env.get('OWNER_NAMES'))
 
 /** Thông báo ngân hàng thật < 500 ký tự. Xem lý do ở chỗ dùng bên dưới. */
 const MAX_TEXT_LENGTH = 2000
@@ -147,7 +152,13 @@ async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Resp
 
 /** Lưu tin không ghi được thành giao dịch — nguồn mẫu để viết regex parser mới. */
 async function saveUnparsed(text: string, source: string | null, reason: string) {
-  await supabase.from('unparsed_messages').insert({ raw_text: text, source, reason })
+  // user_id bắt buộc (NOT NULL từ migration 20261021100000) — tin hiện trong hộp
+  // "Chưa phân loại" của user. Lỗi không chặn response cho Shortcut nhưng phải lộ
+  // ra log: trước đây bị nuốt im lặng, mất luôn mẫu để viết parser.
+  const { error } = await supabase
+    .from('unparsed_messages')
+    .insert({ raw_text: text, source, reason, user_id: DEFAULT_USER_ID })
+  if (error) console.error('saveUnparsed failed', error.code, error.message)
 }
 
 serve(async (req) => {
@@ -160,7 +171,7 @@ serve(async (req) => {
     }
 
     const body = await req.json()
-    const text = typeof body?.text === 'string' ? body.text.trim() : ''
+    const text = typeof body?.text === 'string' ? normalizeInput(body.text) : ''
     if (!text) {
       return json({ error: 'missing text' }, 400)
     }
@@ -203,7 +214,7 @@ serve(async (req) => {
         await saveUnparsed(text, source, 'invalid_parse')
         return json({ skipped: 'invalid_parse', bank: parsed.bank_name }, 422)
       }
-      return await insertTx(parsed, DEFAULT_USER_ID)
+      return await insertTx(withKind(parsed, OWNER_NAMES), DEFAULT_USER_ID)
     }
 
     // Không khớp bank nào -> lưu lại để bổ sung parser sau.

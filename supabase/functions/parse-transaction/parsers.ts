@@ -2,16 +2,10 @@
 //
 // THÊM PARSER MỚI: xem hướng dẫn ở cuối file.
 
-import type { ParsedTransaction, Parser } from './types.ts'
+import type { Parser } from './types.ts'
 import { inferYear, last4, parseVND, vnDate } from './helpers.ts'
-
-/**
- * Gom các field lặp lại ở mọi parser (currency, raw_text) về một chỗ.
- * Parser chỉ cần khai phần KHÁC NHAU giữa các bank.
- */
-type ParserResult = Omit<ParsedTransaction, 'currency' | 'raw_text'>
-const build = (text: string, r: ParserResult): ParsedTransaction =>
-  ({ ...r, currency: 'VND', raw_text: text })
+import { build } from './parser-build.ts'
+import { balanceNotificationParsers } from './parsers-balance-notifications.ts'
 
 // ---------------------------------------------------------------------------
 // LPBank — app notification (định dạng THẬT, xác nhận 07/09/2026)
@@ -251,13 +245,15 @@ export const parsers: Parser[] = [
   trySacombank,
   tryMoMo,
   tryBIDV,
+  // Push "biến động số dư" (BIDV/OCB/HDBank TK, Vietinbank, SHB SAHA, Cake, Sacombank Pay)
+  ...balanceNotificationParsers,
 ]
 
 // ---------------------------------------------------------------------------
 // CÁCH THÊM PARSER CHO BANK MỚI
 //
-// CHƯA CÓ parser: OCB, Eximbank, VIB, ACB, HSBC, KBank, Cake, Vietinbank,
-//                 BaoVietBank, ShinhanBank  (17/41 thẻ)
+// CHƯA CÓ parser: Eximbank, VIB, ACB, HSBC, KBank, BaoVietBank, ShinhanBank.
+// OCB/Cake/Vietinbank/Sacombank Pay/SHB SAHA/BIDV push: parsers-balance-notifications.ts
 // KHÔNG viết regex theo phỏng đoán — sai định dạng thì hoặc không khớp, hoặc
 // tệ hơn là bóc sai SỐ TIỀN mà không ai biết. Quy trình đúng:
 //

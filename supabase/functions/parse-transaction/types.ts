@@ -20,6 +20,11 @@ export interface ParsedTransaction {
   // Tên merchant tách riêng khỏi description, để classifyTransaction()
   // ở frontend phân loại chính xác hơn.
   merchant_name: string | null
+
+  // Loại dòng tiền (transactions.kind). Không set = 'normal', hoặc do
+  // detectInternalTransfer() ở index.ts suy từ nội dung. Parser chỉ set khi
+  // định dạng LUÔN mang một nghĩa (vd thông báo trả nợ thẻ Sacombank Pay).
+  kind?: 'normal' | 'internal_transfer'
 }
 
 export type Parser = (text: string) => ParsedTransaction | null

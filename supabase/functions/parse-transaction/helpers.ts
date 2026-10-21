@@ -3,6 +3,17 @@
 // Gom về đây để 10+ parser không phải lặp lại cùng một logic (DRY) — đặc biệt là
 // dựng chuỗi ngày ISO, trước đây mỗi parser tự nối chuỗi theo 9 cách khác nhau.
 
+/**
+ * Chuẩn hoá text đầu vào TRƯỚC mọi regex.
+ *
+ * Phần lớn thông báo iOS về dạng Unicode NFD (dấu tách rời: "ố" = o + U+0302 +
+ * U+0301), còn regex trong source là NFC -> "Số tiền" không khớp dù nhìn y hệt.
+ * Đo trên 99 tin thật (21/10/2026): chỉ 9 tin khớp parser khi chưa chuẩn hoá.
+ */
+export function normalizeInput(text: string): string {
+  return text.normalize('NFC').trim()
+}
+
 /** "1,234,567" hoặc "1.234.567" -> 1234567. Giữ dấu +/- nếu có. */
 export function parseVND(numStr: string): number {
   return parseFloat(numStr.replace(/[,.]/g, ''))
@@ -33,6 +44,16 @@ export function vnDate(
   const year = yy.length === 2 ? `20${yy}` : yy
   const p = (v: string) => v.padStart(2, '0')
   return `${year}-${p(mm)}-${p(dd)}T${p(hh)}:${p(min)}:${p(ss)}+07:00`
+}
+
+/**
+ * Thời điểm hiện tại theo giờ VN, cùng định dạng với vnDate().
+ *
+ * Cho thông báo KHÔNG ghi ngày giờ (BIDV push, SHB SAHA): push đến gần như tức
+ * thì sau giao dịch nên thời điểm nạp là xấp xỉ tốt nhất.
+ */
+export function nowVN(now = Date.now()): string {
+  return new Date(now + 7 * 3_600_000).toISOString().slice(0, 19) + '+07:00'
 }
 
 /**
