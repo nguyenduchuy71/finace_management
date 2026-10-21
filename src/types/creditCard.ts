@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { TransactionKindSchema } from './account'
 
 export const CreditCardSchema = z.object({
   id: z.string(),
@@ -27,6 +28,7 @@ export const CreditCardTransactionSchema = z.object({
   category: z.string().optional(),
   // MCC 4 chữ số do user gán tay (SMS ngân hàng không có); thiếu = chưa phân loại
   mcc: z.string().regex(/^\d{4}$/).optional(),
+  kind: TransactionKindSchema.optional(),
   type: z.enum(['purchase', 'payment', 'refund', 'fee']),
   status: z.enum(['pending', 'posted']),
   transactionDate: z.string().datetime(),

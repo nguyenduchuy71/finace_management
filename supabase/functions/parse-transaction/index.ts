@@ -7,11 +7,15 @@
 // Gọi từ Shortcuts: POST { "text": "<nội dung notification>", "source": "<tên bank>" }
 //   header bắt buộc: x-shortcut-secret. `source` tuỳ chọn — xem docs/ios-shortcut-setup.md
 //
-// Luồng: OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages
+// Luồng: OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages + gợi ý loại
 
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { parsers } from './parsers.ts'
+import { parseOwnerNames } from './internal-transfer.ts'
+import { normalizeInput } from './helpers.ts'
+import { secretMatches } from './shortcut-auth.ts'
+import { classifyUnparsed } from './classify-unparsed.ts'
+import { insertTransaction, isOtp, parseNotification, resolveRefs } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
 
 const supabase = createClient(
@@ -30,6 +34,9 @@ const SHORTCUT_SECRET = Deno.env.get('SHORTCUT_SECRET')
 // App single-user: mọi giao dịch thuộc về user này.
 // BẮT BUỘC có, nếu không row sẽ vô hình sau khi bật RLS.
 const DEFAULT_USER_ID = Deno.env.get('DEFAULT_USER_ID')
+// Tên chủ TK (phân tách ";") để nhận diện chuyển nội bộ — xem internal-transfer.ts.
+// Không set -> mọi giao dịch là 'normal' (chỉ thiếu nhãn, không sai số tiền).
+const OWNER_NAMES = parseOwnerNames(Deno.env.get('OWNER_NAMES'))
 
 /** Thông báo ngân hàng thật < 500 ký tự. Xem lý do ở chỗ dùng bên dưới. */
 const MAX_TEXT_LENGTH = 2000
@@ -38,77 +45,11 @@ const MAX_SOURCE_LENGTH = 50
 /** Shortcut gửi lại / automation chạy 2 lần trong khoảng này -> coi là trùng. */
 const DEDUP_WINDOW_MS = 10 * 60_000
 
-/**
- * So sánh secret theo thời gian hằng định.
- *
- * `!==` trên chuỗi thoát ngay tại byte đầu khác nhau -> về lý thuyết là oracle đo
- * thời gian từng byte. Qua Internet thì nhiễu che gần hết tín hiệu, nhưng đây là
- * sửa vài dòng nên không có lý do giữ `!==`.
- *
- * Hash SHA-256 trước rồi XOR toàn bộ 32 byte: vòng lặp luôn chạy đủ số vòng nên
- * thời gian không phụ thuộc vị trí byte khác nhau, và độ dài secret cũng không rò
- * (mọi input đều thành 32 byte). `crypto.subtle.timingSafeEqual` KHÔNG tồn tại
- * trong Deno 2.1.4 (đã kiểm tra runtime: undefined) nên tự so sánh.
- */
-async function secretMatches(received: string | null, expected: string): Promise<boolean> {
-  if (received === null) return false
-  const enc = new TextEncoder()
-  const [a, b] = await Promise.all([
-    crypto.subtle.digest('SHA-256', enc.encode(received)),
-    crypto.subtle.digest('SHA-256', enc.encode(expected)),
-  ])
-  const x = new Uint8Array(a)
-  const y = new Uint8Array(b)
-  let diff = 0
-  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i]
-  return diff === 0
-}
-
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
-}
-
-/**
- * Escape ký tự wildcard của LIKE trong `account_ref`.
- *
- * `account_ref` là 4 KÝ TỰ cuối của số thẻ trong SMS (không phải 4 chữ số) — bank
- * dùng nhiều kiểu mask khác nhau nên `%` hoặc `_` có thể lọt vào
- * (vd "5239...9%08" -> ref "9%08"). Không escape thì `.like('%9%08')` sẽ khớp nhầm
- * thẻ khác và gán giao dịch sai thẻ.
- */
-function escapeLike(s: string): string {
-  return s.replace(/([\\%_])/g, '\\$1')
-}
-
-/**
- * Tìm account_id / card_id từ (bank_name, account_ref).
- * Không khớp -> trả {} để insert với FK null. LƯU Ý: row FK null KHÔNG hiện
- * trong danh sách giao dịch (mọi query đều lọc theo account_id/card_id).
- * Dùng getUnlinkedCount() ở frontend để phát hiện.
- */
-async function resolveRefs(
-  p: ParsedTransaction,
-  userId: string,
-): Promise<{ account_id?: string; card_id?: string }> {
-  if (!p.account_ref) return {}
-
-  const isBank = p.source_type === 'bank'
-  const table = isBank ? 'accounts' : 'credit_cards'
-  const column = isBank ? 'account_number' : 'card_number'
-
-  const { data } = await supabase
-    .from(table)
-    .select('id')
-    .eq('user_id', userId)
-    .eq('bank_name', p.bank_name)
-    .like(column, `%${escapeLike(p.account_ref)}`)
-    .maybeSingle()
-
-  if (!data) return {}
-  return isBank ? { account_id: data.id } : { card_id: data.id }
 }
 
 /**
@@ -120,23 +61,31 @@ async function resolveRefs(
  * quán cách nhau 1 tiếng là 2 giao dịch thật có text y hệt nhau.
  */
 async function isDuplicate(text: string, userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('raw_text', text)
-    .gte('created_at', new Date(Date.now() - DEDUP_WINDOW_MS).toISOString())
-    .limit(1)
-  return (data?.length ?? 0) > 0
+  const since = new Date(Date.now() - DEDUP_WINDOW_MS).toISOString()
+  // Tin lặp có thể đã thành giao dịch, HOẶC đã vào hộp tin chưa phân loại
+  // (không kiểm bảng này thì hộp hiện 2 dòng cho cùng một thông báo).
+  const [tx, unparsed] = await Promise.all([
+    supabase.from('transactions').select('id')
+      .eq('user_id', userId).eq('raw_text', text).gte('created_at', since).limit(1),
+    supabase.from('unparsed_messages').select('id')
+      .eq('user_id', userId).eq('raw_text', text).gte('received_at', since).limit(1),
+  ])
+  return (tx.data?.length ?? 0) > 0 || (unparsed.data?.length ?? 0) > 0
 }
 
-/** Ghi giao dịch + resolve FK. Trả response cho Shortcut. */
-async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Response> {
-  const refs = await resolveRefs(parsed, userId)
-  const { error } = await supabase
-    .from('transactions')
-    .insert({ ...parsed, ...refs, user_id: userId })
-  if (error) throw error
+/**
+ * Ghi giao dịch + resolve FK. Chưa có TK/thẻ khớp -> KHÔNG ghi giao dịch mồ côi (dashboard
+ * đếm, danh sách không hiện) mà đưa vào hộp tin; tạo TK rồi chạy backfill-unparsed.ts.
+ */
+async function insertTx(
+  parsed: ParsedTransaction, userId: string, source: string | null,
+): Promise<Response> {
+  const refs = await resolveRefs(supabase, parsed, userId)
+  if (!refs.account_id && !refs.card_id) {
+    await saveUnparsed(parsed.raw_text, source, 'no_account', 'transaction')
+    return json({ skipped: 'no_account', bank: parsed.bank_name, account_ref: parsed.account_ref }, 200)
+  }
+  await insertTransaction(supabase, parsed, refs, userId)
 
   // KHÔNG vọng `raw_text` về response: nó chứa nguyên văn thông báo
   // (số TK, số dư, tên người chuyển). Chỉ trả field cần cho Shortcut debug.
@@ -145,9 +94,23 @@ async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Resp
   return json({ inserted }, 201)
 }
 
-/** Lưu tin không ghi được thành giao dịch — nguồn mẫu để viết regex parser mới. */
-async function saveUnparsed(text: string, source: string | null, reason: string) {
-  await supabase.from('unparsed_messages').insert({ raw_text: text, source, reason })
+/**
+ * Lưu tin không ghi được thành giao dịch: vào hộp "Chưa phân loại" của user
+ * (kèm gợi ý loại để ẩn quảng cáo) và là nguồn mẫu để viết regex parser mới.
+ */
+async function saveUnparsed(
+  text: string, source: string | null, reason: string, suggested = classifyUnparsed(text),
+) {
+  // user_id bắt buộc (NOT NULL từ migration 20261021100000) — tin hiện trong hộp
+  // "Chưa phân loại" của user. Lỗi không chặn response cho Shortcut nhưng phải lộ
+  // ra log: trước đây bị nuốt im lặng, mất luôn mẫu để viết parser.
+  const { error } = await supabase
+    .from('unparsed_messages')
+    .insert({
+      raw_text: text, source, reason, user_id: DEFAULT_USER_ID,
+      suggested_kind: suggested,
+    })
+  if (error) console.error('saveUnparsed failed', error.code, error.message)
 }
 
 serve(async (req) => {
@@ -160,7 +123,7 @@ serve(async (req) => {
     }
 
     const body = await req.json()
-    const text = typeof body?.text === 'string' ? body.text.trim() : ''
+    const text = typeof body?.text === 'string' ? normalizeInput(body.text) : ''
     if (!text) {
       return json({ error: 'missing text' }, 400)
     }
@@ -181,11 +144,8 @@ serve(async (req) => {
       return json({ error: 'text too long', max: MAX_TEXT_LENGTH }, 413)
     }
 
-    // Bỏ qua tin nhắn OTP / bảo mật, không phải giao dịch thật.
-    // Bao phủ mọi biến thể dấu của "ma xac thuc" (a/á/à/ả/ã/ạ, u/ư/ứ/ừ/ự...):
-    // bản cũ chỉ có dạng không dấu nên OTP tiếng Việt có dấu lọt xuống nhánh
-    // no_match và bị lưu NGUYÊN VĂN cả mã còn hiệu lực vào `unparsed_messages`.
-    if (/OTP|m[aáàảãạ]\s*x[aáàảãạ]c\s*th[uưúùủũụứừửữự]c/i.test(text)) {
+    // OTP / bảo mật: không phải giao dịch và KHÔNG lưu (mã còn hiệu lực).
+    if (isOtp(text)) {
       return json({ skipped: 'otp_or_security' }, 200)
     }
 
@@ -193,17 +153,15 @@ serve(async (req) => {
       return json({ skipped: 'duplicate' }, 200)
     }
 
-    for (const parser of parsers) {
-      const parsed = parser(text)
-      if (!parsed) continue
-
-      // Regex có thể khớp nhưng cho ra dữ liệu vô nghĩa (NaN amount, ngày không hợp lệ).
-      // Chặn ở đây để không ghi rác vào DB — trả 422 thay vì để Postgres báo 500.
-      if (!Number.isFinite(parsed.amount) || Number.isNaN(Date.parse(parsed.transaction_date))) {
-        await saveUnparsed(text, source, 'invalid_parse')
-        return json({ skipped: 'invalid_parse', bank: parsed.bank_name }, 422)
-      }
-      return await insertTx(parsed, DEFAULT_USER_ID)
+    const outcome = parseNotification(text, OWNER_NAMES)
+    if (outcome.status === 'parsed') {
+      return await insertTx(outcome.tx, DEFAULT_USER_ID, source)
+    }
+    // Regex khớp nhưng ra dữ liệu vô nghĩa -> không ghi rác vào DB, trả 422
+    // thay vì để Postgres báo 500.
+    if (outcome.status === 'invalid') {
+      await saveUnparsed(text, source, 'invalid_parse')
+      return json({ skipped: 'invalid_parse', bank: outcome.bank }, 422)
     }
 
     // Không khớp bank nào -> lưu lại để bổ sung parser sau.

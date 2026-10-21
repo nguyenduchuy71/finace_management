@@ -1,0 +1,92 @@
+import { toVietnamDate } from './dates'
+
+/**
+ * Đoán sẵn số tiền / thời điểm / đuôi TK-thẻ từ một tin chưa parse, để điền trước form
+ * "Ghi thành giao dịch". CHỈ là gợi ý — user luôn xác nhận; không đoán được thì để trống.
+ * Text đã chuẩn hoá NFC (service làm).
+ */
+export interface UnparsedSuggestion {
+  /** Giá trị tuyệt đối, VND. */
+  amount?: number
+  /** Chỉ có khi tin ghi dấu +/- rõ ràng. */
+  direction?: 'income' | 'expense'
+  /** "YYYY-MM-DDTHH:mm" giờ VN — đúng định dạng ô datetime-local. */
+  localDateTime: string
+  /** Ký tự cuối của số TK/thẻ để chọn sẵn nguồn tiền (so khớp bằng endsWith). */
+  ref?: string
+}
+
+// Số có dấu: "-48.750 đ", "+  VND 10,000", "Số tiền GD: -499,000 VND", "-10,000\n"
+// Bắt buộc đơn vị (VND trước/sau, "đ", hoặc hết dòng) để không nhận "+2.2%" hay "+10,000 điểm".
+// Cùng quy tắc với SIGNED_AMOUNT trong supabase/functions/parse-transaction/classify-unparsed.ts
+// (Deno, không import chéo được) — sửa một bên thì sửa cả bên kia.
+const NUM = /(\d{1,3}(?:[.,]\d{3})+|\d+)/.source
+const SIGNED = new RegExp(
+  `(?:^|[\\s:(])([+-])\\s*(?:VND\\s*${NUM}|${NUM}\\s*(?:VND|đ(?![a-zà-ỹ])|$))`, 'm',
+)
+// Số không dấu đi kèm đơn vị: "với số tiền 15.000đ", "thanh toán 5,000,000 VND".
+// Không có ranh giới trái thì "1234.567 VND" bị bắt thành 234567.
+const UNSIGNED = /(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d{4,})\s*(?:VND|đ(?![a-zà-ỹ]))/
+// Số dư / hạn mức / dư nợ không phải số tiền giao dịch — bỏ trước khi tìm số không dấu.
+const BALANCE = /(?:số dư|khả dụng|hạn mức|dư nợ)[^\d\n]{0,30}[\d.,]+\s*(?:VND|đ)?/gi
+// "20/10/2026 17:32", "20/10 11:30", "18/10/2026 11:30:51"
+const DATE_FIRST = /(\d{2})\/(\d{2})(?:\/(\d{4}))?\s+(\d{2}):(\d{2})/
+// "lúc 10:11 19/10/2026", "Thời gian giao dịch: 07:27 07/09/2026"
+const TIME_FIRST = /(\d{2}):(\d{2})\s+(\d{2})\/(\d{2})\/(\d{4})/
+// "Tài khoản: 104885084982", "TK 0349360265", "thẻ ••9526", "the 0702", "**0265", "800xx0300"
+// (`\b` của JS chỉ hiểu ASCII — đặt sau "thẻ" sẽ không bao giờ khớp.)
+const REF = /(?:tài khoản|\bTK\b|thẻ|\bthe\b)[^\d*x•\n]{0,20}([\d*x•]{4,})/i
+
+const pad = (n: string | number) => String(n).padStart(2, '0')
+
+export function suggestFromText(text: string, receivedAtISO: string): UnparsedSuggestion {
+  const received = toVietnamDate(receivedAtISO)
+  const out: UnparsedSuggestion = {
+    localDateTime: `${received.getFullYear()}-${pad(received.getMonth() + 1)}-${pad(received.getDate())}T${pad(received.getHours())}:${pad(received.getMinutes())}`,
+  }
+
+  const signed = text.match(SIGNED)
+  if (signed) {
+    out.amount = Number((signed[2] ?? signed[3]).replace(/[.,]/g, ''))
+    out.direction = signed[1] === '+' ? 'income' : 'expense'
+  } else {
+    const unsigned = text.replace(BALANCE, ' ').match(UNSIGNED)
+    if (unsigned) out.amount = Number(unsigned[1].replace(/[.,]/g, ''))
+  }
+
+  const tf = text.match(TIME_FIRST)
+  const df = tf ? null : text.match(DATE_FIRST)
+  let guessed: string | undefined
+  if (tf) {
+    const [, hh, mi, dd, mm, yyyy] = tf
+    guessed = `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+  } else if (df) {
+    const [, dd, mm, yyyy, hh, mi] = df
+    let year = yyyy ? Number(yyyy) : received.getFullYear()
+    // Cùng quy tắc inferYear (edge function, helpers.ts): tin không năm mà ra ngày ở tương lai
+    // quá 1 ngày thì thuộc năm trước (tin 31/12 nhận lúc 01/01).
+    if (!yyyy && Date.parse(vnLocalToISO(`${year}-${mm}-${dd}T${hh}:${mi}`)) > Date.parse(receivedAtISO) + 86_400_000) {
+      year -= 1
+    }
+    guessed = `${year}-${mm}-${dd}T${hh}:${mi}`
+  }
+  // Ngày không tồn tại (29/02 năm không nhuận, 31/04, 25:00) -> giữ thời điểm nhận tin
+  // thay vì đưa chuỗi hỏng vào ô datetime-local (ô sẽ trống, user không biết vì sao).
+  if (guessed && isRealVnDateTime(guessed)) out.localDateTime = guessed
+
+  const ref = text.match(REF)
+  if (ref) out.ref = ref[1].slice(-4)
+
+  return out
+}
+
+/** Chuỗi "YYYY-MM-DDTHH:mm" giờ VN có phải thời điểm có thật (Date không tự cuộn 29/02 -> 01/03). */
+function isRealVnDateTime(local: string): boolean {
+  const t = Date.parse(vnLocalToISO(local))
+  return !Number.isNaN(t) && new Date(t + 7 * 3_600_000).toISOString().slice(0, 16) === local
+}
+
+/** "YYYY-MM-DDTHH:mm" (giờ VN, từ ô datetime-local) -> ISO có offset cho RPC. */
+export function vnLocalToISO(local: string): string {
+  return `${local}:00+07:00`
+}

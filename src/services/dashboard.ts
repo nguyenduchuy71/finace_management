@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
-import { toApiError } from './mappers'
+import { toApiError } from './api-errors'
 
 export const CategoryBreakdownItemSchema = z.object({
   category: z.string(),

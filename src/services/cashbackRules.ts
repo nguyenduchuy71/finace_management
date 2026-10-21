@@ -6,7 +6,7 @@ import type { CashbackRuleInput } from '@/types/cashback'
 import type { ApiError } from '@/types/api'
 import type { CreditCardTransaction } from '@/types/creditCard'
 import { exportTransactions } from './exports'
-import { toApiError } from './mappers'
+import { toApiError } from './api-errors'
 
 interface CashbackTierRow {
   min_spend: number | string

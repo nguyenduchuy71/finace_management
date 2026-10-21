@@ -9,12 +9,16 @@
 //   echo '<noi dung thong bao>' | docker run --rm -i --entrypoint deno \
 //     -v "$PWD:/app" -w /app denoland/deno:2.1.4 run --allow-all try-parse.ts
 
-import { parsers } from './parsers.ts'
+import { isOtp, parseNotification } from './ingest.ts'
+import { parseOwnerNames } from './internal-transfer.ts'
+import { classifyUnparsed } from './classify-unparsed.ts'
+import { normalizeInput } from './helpers.ts'
 
 const arg = Deno.args.join(' ').trim()
-const text = arg || new TextDecoder().decode(
+// Chuẩn hoá NFC giống edge function — text dán từ iOS thường là NFD.
+const text = normalizeInput(arg || new TextDecoder().decode(
   await new Response(Deno.stdin.readable).arrayBuffer(),
-).trim()
+))
 
 if (!text) {
   console.error('Cần truyền nội dung thông báo qua tham số hoặc stdin.')
@@ -23,37 +27,37 @@ if (!text) {
 
 console.log(`\nInput (${text.length} ký tự):\n  ${text}\n`)
 
-// Cùng thứ tự kiểm tra như edge function để kết quả khớp production
-if (/OTP|Ma xac thuc|xac thuc OTP|OTP for/i.test(text)) {
+// Cùng logic với edge function (ingest.ts) để kết quả khớp production.
+// OWNER_NAMES lấy từ env nếu có (nhận diện chuyển nội bộ).
+if (isOtp(text)) {
   console.log('=> BỎ QUA: nhận diện là tin OTP/bảo mật, không phải giao dịch.')
   Deno.exit(0)
 }
 
-for (const parser of parsers) {
-  const r = parser(text)
-  if (!r) continue
-
-  console.log(`=> KHỚP parser: ${r.bank_name}`)
-  console.table({
-    bank_name: r.bank_name,
-    amount: r.amount,
-    'amount hợp lệ': Number.isFinite(r.amount) ? 'OK' : 'LỖI (NaN)',
-    transaction_date: r.transaction_date,
-    'ngày hợp lệ': Number.isNaN(Date.parse(r.transaction_date)) ? 'LỖI' : 'OK',
-    source_type: r.source_type,
-    account_ref: r.account_ref ?? '(null)',
-    merchant_name: r.merchant_name ?? '(null)',
-    description: r.description,
-  })
-
-  console.log(
-    `\nKiểm tra tiếp: account_ref='${r.account_ref}' phải khớp 4 ký tự cuối của\n` +
-    `  ${r.source_type === 'bank' ? 'accounts.account_number' : 'credit_cards.card_number'}\n` +
-    `trong DB, nếu không giao dịch sẽ KHÔNG hiện trong danh sách.`,
-  )
+const outcome = parseNotification(text, parseOwnerNames(Deno.env.get('OWNER_NAMES')))
+if (outcome.status === 'invalid') {
+  console.log(`=> KHỚP parser ${outcome.bank} nhưng ra dữ liệu hỏng (NaN/0 số tiền hoặc ngày) -> invalid_parse`)
+  Deno.exit(0)
+}
+if (outcome.status === 'no_match') {
+  console.log(`=> KHÔNG parser nào khớp. Gợi ý loại cho hộp tin: ${classifyUnparsed(text)}`)
   Deno.exit(0)
 }
 
-console.log('=> KHÔNG parser nào khớp.')
-console.log('   Trên production, thông báo này sẽ được lưu vào `unparsed_messages`.')
-console.log('   Cần viết parser mới trong parsers.ts (xem hướng dẫn ở cuối file đó).')
+const r = outcome.tx
+console.log(`=> KHỚP parser: ${r.bank_name}`)
+console.table({
+  bank_name: r.bank_name,
+  amount: r.amount,
+  transaction_date: r.transaction_date,
+  source_type: r.source_type,
+  account_ref: r.account_ref ?? '(null)',
+  merchant_name: r.merchant_name ?? '(null)',
+  kind: r.kind,
+  description: r.description,
+})
+console.log(
+  `\nKiểm tra tiếp: account_ref='${r.account_ref}' phải khớp 4 ký tự cuối của DUY NHẤT một\n` +
+  `  ${r.source_type === 'bank' ? 'accounts.account_number' : 'credit_cards.card_number'} (bank_name='${r.bank_name}')\n` +
+  `trong DB, nếu không tin sẽ vào hộp "Chưa phân loại" (reason no_account) thay vì thành giao dịch.`,
+)

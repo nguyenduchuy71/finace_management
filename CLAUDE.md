@@ -72,7 +72,7 @@ Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER
 ```
 /              → redirect to /accounts
 /dashboard     → DashboardPage
-/accounts      → BankAccountsPage
+/accounts      → BankAccountsPage ("Giao dịch ngân hàng": ?view=inbox|recorded — hộp tin chưa phân loại / giao dịch theo TK)
 /credit-cards  → CreditCardsPage
 ```
 
@@ -86,7 +86,8 @@ All routes wrapped in `<AppShell>` (header + layout + chat button/panel).
 src/
 ├── pages/               # DashboardPage, BankAccountsPage, CreditCardsPage
 ├── features/
-│   ├── accounts/        # AccountTabs
+│   ├── accounts/        # AccountTabs, RecordedTransactionsView, AccountFormDialog, DeleteAccountDialog
+│   ├── unparsed/        # UnparsedInbox, UnparsedMessageItem, ResolveUnparsedDialog, UnparsedCountBadge
 │   ├── transactions/    # TransactionList, TransactionRow, Skeleton, EmptyState
 │   ├── creditCards/     # CreditCardSelector, CardFormDialog, DeleteCardDialog, BillingCycleGroup, BillingCycleInfoCard,
 │   │                    #   CreditCardTransactionRow (chọn MCC), CashbackSummary / CashbackRulesEditor / CashbackRuleForm, BankLogo
@@ -104,8 +105,9 @@ src/
 │                        #   useDashboardStats, useBudgetAlerts, useDebounced, useAuth
 ├── lib/supabase.ts      # Supabase client singleton
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
-├── services/            # supabase-js: accounts, creditCards, credit-card-mutations, cashbackRules, dashboard, exports
-│                        #   mappers (snake_case→camelCase + Zod), transactionQuery (filter/keyset)
+├── services/            # supabase-js: accounts, account-mutations, creditCards, credit-card-mutations, cashbackRules,
+│                        #   dashboard, exports, unparsed-messages; mappers (snake_case→camelCase + Zod),
+│                        #   api-errors (toApiError), query-cursor (keyset cursor, sanitizeSearch), transactionQuery (filter)
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, credit-card-form.ts, cashback.ts, cashback-form.ts,
 │                        #   form-fields.ts (moneyAmountField), budget.ts, categories.ts
@@ -137,7 +139,15 @@ card_cashback_rules  id, user_id, card_id → credit_cards (cascade), mcc text|N
                unique nulls not distinct (card_id, mcc)   -- rate_percent + min_cycle_spend = BẬC NỀN
 card_cashback_rule_tiers  id, user_id, rule_id → card_cashback_rules (cascade), min_spend bigint (>0),
                rate_percent numeric(5,2) 0..100, unique (rule_id, min_spend) — bậc THÊM, tối đa 5/rule
-unparsed_messages  tin không ghi được (source, reason) — chỉ service_role đọc được
+unparsed_messages  tin không ghi được: user_id NOT NULL, raw_text (thường là NFD), source, reason,
+               suggested_kind (máy gợi ý: transaction|card_reminder|promo|unknown), kind (user chốt:
+               normal|internal_transfer|cashback|card_reminder|promo), resolved, transaction_id → transactions
+               RLS chính chủ: select + update CHỈ cột (resolved, kind, transaction_id); insert chỉ edge function.
+               Trigger khoá tin đã resolved (bỏ resolved rồi resolve lại = giao dịch thứ 2)
+
+transactions.kind  'normal'|'internal_transfer'|'cashback' — internal_transfer (chuyển giữa TK/thẻ của mình,
+               gồm trả nợ thẻ) KHÔNG tính vào get_dashboard_stats
+accounts       unique (user_id, bank_name, account_number), check mask '^\*{4}[^\s*]{4}$', user insert/delete được
 
 transactions.mcc  text|NULL, 4 chữ số — USER gán tay (SMS ngân hàng VN không có MCC)
 ```
@@ -149,7 +159,11 @@ trần: FK `transactions.card_id` là `on delete set null` nên giao dịch thà
 `save_cashback_rule(p_card_id, p_rule_id, p_mcc, p_rate, p_min, p_cap, p_tiers jsonb)` → id rule: lưu rule **và thay toàn bộ bậc**
 trong một transaction (bậc tăng dần chặt, bậc đầu > `p_min`, ≤ 5 bậc, sai → `22023`; rule lạ → `P0002`). **Ghi rule hoàn tiền luôn
 qua RPC này**; vì nó thay toàn bộ bậc nên mọi lời gọi phải gửi đủ danh sách bậc hiện có.
-Cả ba RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**.
+`delete_bank_account(p_account_id)` → như `delete_credit_card` cho TK. `resolve_unparsed(p_msg_id, p_kind, p_tx jsonb)` →
+id giao dịch|null: kind normal/internal_transfer/cashback cần `p_tx` {amount ≠0 nguyên, transaction_date ISO **có offset**,
+account_id XOR card_id, description?, merchant_name?, category? ∈ 6 Category}; bank_name/source_type lấy từ TK/thẻ;
+card_reminder/promo không có p_tx. Lỗi 22023 (tham số / đã xử lý), P0002 (không thấy).
+Cả năm RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**.
 
 **RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
 `transactions` insert/update kiểm thêm `card_id`/`account_id` **thuộc chính user**; `card_cashback_rules`
@@ -177,9 +191,20 @@ Form thẻ (`credit-card-form.ts`) vì thế **ép `card_number` dạng `****xxx
 
 iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>" }` + header
 `x-shortcut-secret`. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
-Luồng: OTP → chống trùng (cùng `raw_text` trong 10 phút) → 12 regex parser → `unparsed_messages`
-(kèm `source`, `reason`). Bank chưa có parser: lấy mẫu thật từ `unparsed_messages` rồi viết regex.
-12 parser: LPBank (app + SMS), SHB, HDBank, MSB, VPBank, WOORIVN, UOB, Sacombank, MoMo, BIDV, OCB (chỉ mẫu trả nợ thẻ).
+Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP → chống trùng (cùng `raw_text` trong 10 phút)
+→ 19 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, secret `OWNER_NAMES`) → resolve TK/thẻ
+(phải khớp DUY NHẤT) → insert; **không khớp TK/thẻ thì KHÔNG ghi giao dịch mồ côi** mà vào hộp tin (`reason = no_account`);
+chống trùng kiểm cả `transactions` lẫn `unparsed_messages`;
+không khớp → `unparsed_messages` kèm `source`, `reason`, `user_id`, `suggested_kind` (`classify-unparsed.ts`, ưu tiên recall:
+giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolve FK/insert) dùng chung với `backfill-unparsed.ts`
+(chạy tay, dry-run mặc định). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
+Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
+(`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
+(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check: `shortcut-auth.ts`.
+**`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
+đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
+Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.
+Thứ tự deploy với migration 20261021100000: db push rồi deploy function ngay (function cũ không ghi user_id).
 
 **Giới hạn `text` 2000 ký tự (`MAX_TEXT_LENGTH`) — không được bỏ.** Regex parser chạy đồng bộ
 và có độ phức tạp phi tuyến với input dài (đo thật: 203KB = 8.665ms trước khi neo regex SHB).
@@ -188,7 +213,7 @@ dùng `[^\n]{0,N}?` để chặn backtracking.
 
 Secret so sánh bằng hash SHA-256 + XOR toàn bộ (constant-time), không dùng `!==`.
 Response **không** trả `raw_text` về client.
-Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /app denoland/deno:2.1.4 test --allow-all parsers.test.ts`
+Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /app denoland/deno:2.1.4 test --allow-all` (mọi file test)
 
 ## State Management (`src/stores/`)
 
@@ -223,6 +248,8 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 | `useDashboardStats()` | Current + previous month stats (month-over-month delta) |
 | `useBudgetAlerts(breakdown, budgets)` | `{ alerts, warningCount, overbudgetCount }` — fires Sonner toasts |
 | `useDebounced(value, delayMs)` | Debounced value |
+| `useUnparsedMessages(includePromo)` / `useUnparsedCount()` / `useResolveUnparsed()` | Hộp tin chưa phân loại (200 tin mới nhất, không phân trang) |
+| `useCreateAccount()` / `useUpdateAccount(a)` / `useDeleteAccount()` / `useAccountTransactionCount(id)` | CRUD tài khoản ngân hàng |
 
 ---
 
@@ -280,7 +307,7 @@ CATEGORY_TAXONOMY                   // Record<Category, string[]> keyword map
 
 ### CSV (`csv.ts`)
 ```typescript
-formatTransactionForCSV(tx, accountOrCard?, overrides?)  → CSVTransactionRow
+formatTransactionForCSV(tx, accountOrCard?, overrides?)  → CSVTransactionRow   // có cột 'Dòng tiền' (Nội bộ/Cashback)
 downloadCSV(csvString, filename)                         // UTF-8 BOM download
 ```
 
@@ -335,7 +362,10 @@ Cổng 54321/54322 phải trống (các stack Supabase của dự án khác dùn
 - Sau khi thêm test, **phá code có chủ đích** (mutation thủ công) để chắc test thật sự bắt được lỗi; khôi phục bằng đúng đường dẫn
   (một lần khôi phục nhầm đường dẫn đã để sót một file thừa).
 
-**RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql` và `card-cashback-tiers-rls.sql` chạy trên Postgres 17 tạm
+Integration hộp tin seed `unparsed_messages` bằng service_role **local**: thêm `VITE_TEST_SERVICE_ROLE_KEY` (SERVICE_ROLE_KEY của
+`supabase status -o env`) vào `.env.test.local` — file chỉ nạp ở mode test, không vào bundle.
+
+**RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
 
 ---

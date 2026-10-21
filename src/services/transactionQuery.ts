@@ -1,6 +1,6 @@
 import type { PostgrestFilterBuilder } from '@supabase/postgrest-js'
 import type { Category } from '@/types/categories'
-import { decodeCursor, sanitizeSearch } from './mappers'
+import { decodeCursor, sanitizeSearch } from './query-cursor'
 
 export interface TransactionFilters {
   search?: string
@@ -91,7 +91,7 @@ export function countOption(cursor: string | undefined): { count?: 'exact' } {
  * lớn payload, và gửi PII về browser mà không dùng đến là rủi ro không cần thiết.
  */
 export const TX_COLUMNS =
-  'id, account_id, card_id, amount, description, merchant_name, category, mcc, status, transaction_date'
+  'id, account_id, card_id, amount, description, merchant_name, category, mcc, kind, status, transaction_date'
 
 /** Cắt row dư, tính nextCursor. */
 export function paginate<T extends { transaction_date: string; id: string }>(

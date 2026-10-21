@@ -2,16 +2,11 @@
 //
 // THÊM PARSER MỚI: xem hướng dẫn ở cuối file.
 
-import type { ParsedTransaction, Parser } from './types.ts'
-import { inferYear, last4, parseVND, vnDate } from './helpers.ts'
-
-/**
- * Gom các field lặp lại ở mọi parser (currency, raw_text) về một chỗ.
- * Parser chỉ cần khai phần KHÁC NHAU giữa các bank.
- */
-type ParserResult = Omit<ParsedTransaction, 'currency' | 'raw_text'>
-const build = (text: string, r: ParserResult): ParsedTransaction =>
-  ({ ...r, currency: 'VND', raw_text: text })
+import type { Parser } from './types.ts'
+import { last4, nowVN, parseVND, vnDate } from './helpers.ts'
+import { build } from './parser-build.ts'
+import { balanceNotificationParsers } from './parsers-balance-notifications.ts'
+import { cardSmsParsers } from './parsers-card-sms.ts'
 
 // ---------------------------------------------------------------------------
 // LPBank — app notification (định dạng THẬT, xác nhận 07/09/2026)
@@ -58,107 +53,6 @@ const tryLPBankSMS: Parser = (text) => {
   })
 }
 
-// SHB — "THE MASTERCARD CASHBACK 3826 SU DUNG -2,007,000 VND TAI HKD DAI DUONG
-//        NGAY 03/09/26 19:35."
-const trySHB: Parser = (text) => {
-  // Dùng [^\n]{0,40}? thay vì .*? — KHÔNG phải style, là sửa ReDoS:
-  // `.*?` không neo khiến engine thử lại ở MỌI vị trí bắt đầu rồi đi hết phần
-  // đuôi tìm "NGAY" (không bao giờ tới) -> O(N²). Đo thật: payload 203KB mất
-  // 8.669ms; sau khi giới hạn độ dài còn 0ms. Tên thẻ thật < 40 ký tự,
-  // merchant < 60, nên giới hạn không làm mất giao dịch hợp lệ (đã so khớp
-  // output trên notification thật: y hệt bản cũ).
-  const m = text.match(
-    /THE\s+[^\n]{0,40}?(\d{4})\s+SU DUNG\s*([-+][\d,.]+)\s*VND\s*TAI\s*([^\n]{1,60}?)\s*NGAY\s*(\d{2})\/(\d{2})\/(\d{2})\s*(\d{2}):(\d{2})/,
-  )
-  if (!m) return null
-  const [, card, amountStr, merchant, dd, mm, yy, hh, min] = m
-  return build(text, {
-    bank_name: 'SHB',
-    amount: parseVND(amountStr),
-    transaction_date: vnDate(yy, mm, dd, hh, min),
-    description: merchant.trim(),
-    source_type: 'credit_card',
-    account_ref: card,
-    merchant_name: merchant.trim(),
-  })
-}
-
-// HDBank — "The 5858 thuc hien GD: 10,005,000 VND tai MEGAPAY*..., MGD: 651219,
-//           ngay 22/08/2026 10:49:27."
-const tryHDBank: Parser = (text) => {
-  const m = text.match(
-    /The\s*(\d{4})\s*thuc hien GD:\s*([\d,.]+)\s*VND\s*tai\s*(.+?),\s*MGD.*?ngay\s*(\d{2})\/(\d{2})\/(\d{4})\s*(\d{2}):(\d{2}):(\d{2})/,
-  )
-  if (!m) return null
-  const [, card, amountStr, merchant, dd, mm, yyyy, hh, min, ss] = m
-  return build(text, {
-    bank_name: 'HDBank',
-    amount: -parseVND(amountStr), // định dạng này luôn là chi tiêu
-    transaction_date: vnDate(yyyy, mm, dd, hh, min, ss),
-    description: merchant.trim(),
-    source_type: 'credit_card',
-    account_ref: card,
-    merchant_name: merchant.trim(),
-  })
-}
-
-// MSB — "The TD MSB 7230 thuc hien GD 3,520,000 VND luc 14:13 07/08/2026 tai MNAUMY."
-const tryMSB: Parser = (text) => {
-  const m = text.match(
-    /MSB\s*(\d{4})\s*thuc hien GD\s*([\d,.]+)\s*VND\s*luc\s*(\d{2}):(\d{2})\s*(\d{2})\/(\d{2})\/(\d{4})\s*tai\s*(.+?)\./,
-  )
-  if (!m) return null
-  const [, card, amountStr, hh, min, dd, mm, yyyy, merchant] = m
-  return build(text, {
-    bank_name: 'MSB',
-    amount: -parseVND(amountStr),
-    transaction_date: vnDate(yyyy, mm, dd, hh, min),
-    description: merchant.trim(),
-    source_type: 'credit_card',
-    account_ref: card,
-    merchant_name: merchant.trim(),
-  })
-}
-
-// VPBank — "The VPBank 5239...9808 vua chi tieu -5,061,000VND ND:MEGAPAY*...
-//           vao luc 13:17 24/08."  (SMS KHÔNG có năm -> suy bằng inferYear)
-const tryVPBank: Parser = (text) => {
-  if (!text.includes('VPBank')) return null
-  const m = text.match(
-    /VPBank\s*(\S+)\s*(?:vua chi tieu|tang)\s*([-+][\d,.]+)VND\s*ND:(.+?)\s*vao luc\s*(\d{2}):(\d{2})\s*(\d{2})\/(\d{2})/,
-  )
-  if (!m) return null
-  const [, cardStr, amountStr, merchant, hh, min, dd, mm] = m
-  return build(text, {
-    bank_name: 'VPBank',
-    amount: parseVND(amountStr),
-    transaction_date: vnDate(inferYear(mm, dd, hh, min), mm, dd, hh, min),
-    description: merchant.trim(),
-    source_type: 'credit_card',
-    account_ref: last4(cardStr),
-    merchant_name: merchant.trim(),
-  })
-}
-
-// WOORIVN — "Giao dich thanh cong So the 4074***2789 16-08-26/10:03/3,006,000 VND
-//            /NL-ALEPAY*KMPHONG1, VN,..."
-const tryWOORIVN: Parser = (text) => {
-  const m = text.match(
-    /So the\s*(\S+)\s*(\d{2})-(\d{2})-(\d{2})\/(\d{2}):(\d{2})\/([\d,.]+)\s*VND\s*\/(.+?),/,
-  )
-  if (!m) return null
-  const [, cardStr, dd, mm, yy, hh, min, amountStr, merchant] = m
-  return build(text, {
-    bank_name: 'WOORIVN',
-    amount: -parseVND(amountStr),
-    transaction_date: vnDate(yy, mm, dd, hh, min),
-    description: merchant.trim(),
-    source_type: 'credit_card',
-    account_ref: last4(cardStr),
-    merchant_name: merchant.trim(),
-  })
-}
-
 // UOB — "Nhan tien vao Tai khoan/Credited to Account: *0568.
 //        So tien/Amount: VND 4,827,000. Ngay/Date: 18/07/26 18:10."
 const tryUOB: Parser = (text) => {
@@ -199,14 +93,14 @@ const trySacombank: Parser = (text) => {
 
 // MoMo — "Bạn đã thực hiện thanh toán thành công cho KAI COFFEE với số tiền 39.000đ."
 // Không có mốc giờ trong text -> dùng giờ nhận.
-const tryMoMo: Parser = (text) => {
+const tryMoMo: Parser = (text, now) => {
   const m = text.match(/thanh toán thành công cho\s*(.+?)\s*với số tiền\s*([\d.]+)đ/)
   if (!m) return null
   const [, merchant, amountStr] = m
   return build(text, {
     bank_name: 'MoMo',
     amount: -parseVND(amountStr),
-    transaction_date: new Date().toISOString(),
+    transaction_date: nowVN(now),
     description: merchant.trim(),
     source_type: 'bank', // ví điện tử, coi như tài khoản
     account_ref: null, // MoMo không có số thẻ/TK trong text
@@ -234,28 +128,6 @@ const tryBIDV: Parser = (text) => {
   })
 }
 
-// OCB — push app OCB OMNI (định dạng THẬT, xác nhận 20/10/2026; mới có mẫu TRẢ NỢ thẻ)
-// "Thông báo biến động số dư\n20/10 11:29 Thẻ tín dụng: 35-9586 Số tiền: +100,000 VND
-//  Hạn mức khả dụng: 48,853,000  Nội dung: THANH TOAN THE TIN DUNG"
-// Text KHÔNG có năm -> suy bằng inferYear. Dấu +/- là bắt buộc: thiếu dấu thì không
-// suy được vào/ra, để rơi xuống no_match thay vì đoán. Chưa có mẫu chi tiêu thẻ OCB.
-const tryOCB: Parser = (text) => {
-  const m = text.match(
-    /(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})\s+Thẻ tín dụng:\s*\d{2}-(\d{4})\s+Số tiền:\s*([-+](?:\d{1,3}(?:[.,]\d{3})+|\d+))\s*VND[^\n]{0,60}?Nội dung:\s*([^\n]{1,100})/,
-  )
-  if (!m) return null
-  const [, dd, mm, hh, min, card, amountStr, desc] = m
-  return build(text, {
-    bank_name: 'OCB',
-    amount: parseVND(amountStr),
-    transaction_date: vnDate(inferYear(mm, dd, hh, min), mm, dd, hh, min),
-    description: desc.trim(),
-    source_type: 'credit_card',
-    account_ref: card,
-    merchant_name: null,
-  })
-}
-
 /**
  * Thứ tự QUAN TRỌNG: parser chạy lần lượt, cái nào khớp trước thì thắng.
  * Đặt định dạng CỤ THỂ hơn lên trước định dạng tổng quát
@@ -264,23 +136,22 @@ const tryOCB: Parser = (text) => {
 export const parsers: Parser[] = [
   tryLPBankApp,
   tryLPBankSMS,
-  trySHB,
-  tryHDBank,
-  tryMSB,
-  tryVPBank,
-  tryWOORIVN,
+  ...cardSmsParsers, // SHB, HDBank, MSB, VPBank, WOORIVN
   tryUOB,
   trySacombank,
   tryMoMo,
   tryBIDV,
-  tryOCB,
+  // Push "biến động số dư" (BIDV/OCB/HDBank TK, Vietinbank, SHB SAHA, Cake, Sacombank Pay)
+  ...balanceNotificationParsers,
 ]
 
 // ---------------------------------------------------------------------------
 // CÁCH THÊM PARSER CHO BANK MỚI
 //
-// CHƯA CÓ parser: Eximbank, VIB, ACB, HSBC, KBank, Cake, Vietinbank,
-//                 BaoVietBank, ShinhanBank  (OCB mới chỉ có mẫu trả nợ thẻ)
+// CHƯA CÓ parser: Eximbank, VIB, ACB, HSBC, KBank, BaoVietBank, ShinhanBank.
+// OCB/Cake/Vietinbank/Sacombank Pay/SHB SAHA/BIDV push: parsers-balance-notifications.ts
+// SHB/HDBank/MSB/VPBank/WOORIVN (giao dịch thẻ): parsers-card-sms.ts. Parser mới đặt vào file theo nhóm,
+// và chèn vào mảng `parsers` ĐÚNG vị trí (cụ thể trước tổng quát).
 // KHÔNG viết regex theo phỏng đoán — sai định dạng thì hoặc không khớp, hoặc
 // tệ hơn là bóc sai SỐ TIỀN mà không ai biết. Quy trình đúng:
 //

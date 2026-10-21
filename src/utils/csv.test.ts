@@ -284,3 +284,28 @@ describe('CSV Utilities', () => {
     })
   })
 })
+
+describe('formatTransactionForCSV — cột Dòng tiền', () => {
+  const bankTx: Transaction = {
+    id: 'k1', accountId: 'a1', amount: -199000, description: 'THANH TOAN THE TIN DUNG',
+    type: 'expense', status: 'posted', transactionDate: '2026-10-20T04:30:00Z',
+  }
+  const cardTx: CreditCardTransaction = {
+    id: 'k2', cardId: 'c1', amount: 50000, description: 'Hoàn tiền', merchantName: 'Hoàn tiền',
+    type: 'payment', status: 'posted', transactionDate: '2026-10-20T04:30:00Z',
+  }
+
+  it('nội bộ / cashback có nhãn; thường hoặc thiếu kind để trống', () => {
+    expect(formatTransactionForCSV({ ...bankTx, kind: 'internal_transfer' })['Dòng tiền']).toBe('Nội bộ')
+    expect(formatTransactionForCSV({ ...cardTx, kind: 'cashback' })['Dòng tiền']).toBe('Cashback')
+    expect(formatTransactionForCSV({ ...bankTx, kind: 'normal' })['Dòng tiền']).toBe('')
+    expect(formatTransactionForCSV(bankTx)['Dòng tiền']).toBe('')
+  })
+
+  it('có ở cả file TK lẫn thẻ, đứng ngay sau cột Loại (Papa.unparse lấy tiêu đề theo thứ tự key)', () => {
+    for (const row of [formatTransactionForCSV(bankTx), formatTransactionForCSV(cardTx)]) {
+      const keys = Object.keys(row)
+      expect(keys.indexOf('Dòng tiền')).toBe(keys.indexOf('Loại') + 1)
+    }
+  })
+})

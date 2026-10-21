@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import { mapCreditCard, toApiError, type CreditCardRow } from './mappers'
+import { mapCreditCard, type CreditCardRow } from './mappers'
+import { toApiError } from './api-errors'
 import type { CardFormValues } from '@/types/credit-card-form'
 
 /** Giá trị form (camelCase, đã chuẩn hoá) -> cột của bảng `credit_cards`. */

@@ -1,6 +1,6 @@
 import { formatVND } from './currency'
 import { formatDisplayDate } from './dates'
-import type { Transaction } from '@/types/account'
+import { TRANSACTION_KIND_LABEL, type Transaction } from '@/types/account'
 import type { CreditCardTransaction } from '@/types/creditCard'
 import type { BankAccount } from '@/types/account'
 import type { CreditCard } from '@/types/creditCard'
@@ -11,6 +11,11 @@ export interface CSVTransactionRow {
   'Mô tả': string
   'Số tiền': string
   'Loại': string
+  /**
+   * Nội bộ / Cashback / trống. Tổng quan KHÔNG tính giao dịch "Nội bộ" vào thu/chi — thiếu cột này thì
+   * tổng CSV không đối chiếu được với dashboard. Có ở cả file TK lẫn thẻ.
+   */
+  'Dòng tiền': string
   'Tài khoản': string
   'Danh mục': string
   /**
@@ -68,6 +73,8 @@ export function formatTransactionForCSV(
     'Mô tả': neutralizeFormula(tx.description),
     'Số tiền': formatVND(Math.abs(tx.amount)),
     'Loại': typeLabel,
+    // Hằng số trong code (không phải dữ liệu) -> không cần neutralizeFormula.
+    'Dòng tiền': TRANSACTION_KIND_LABEL[tx.kind ?? 'normal'],
     'Tài khoản': neutralizeFormula(accountName),
     'Danh mục': neutralizeFormula(category),
     // `cardId` chỉ có ở CreditCardTransaction: dùng nó để phân biệt giao dịch thẻ với giao dịch tài khoản.

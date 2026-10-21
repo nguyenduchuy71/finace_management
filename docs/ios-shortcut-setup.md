@@ -8,7 +8,7 @@ Thông báo app (iOS 27+) ─┐
 SMS (trigger Message)    ├─► Automation (1 cái / bank) ─► Shortcut "FM Gửi giao dịch"
 Email (trigger Email)    ┘        gắn source="<bank>"        POST {text, source}
                                                                     │
-     edge function: OTP? → trùng 10 phút? → 12 regex parser → (không khớp) unparsed_messages
+     edge function: NFC → OTP? → trùng 10 phút? → 19 regex parser → (không khớp / chưa có TK) unparsed_messages
 ```
 
 | Kênh | Trigger trong Shortcuts | Dùng khi |
@@ -42,7 +42,7 @@ Kiểm tra: không header → `401`; đúng secret + `{"text":"ping"}` → `200 
 Giao dịch chỉ hiện trong danh sách khi gắn được vào `accounts`/`credit_cards`:
 
 - `bank_name` phải **trùng chính xác** với tên parser đặt (`LPBank`, `SHB`, `HDBank`, `MSB`,
-  `VPBank`, `WOORIVN`, `UOB`, `Sacombank`, `MoMo`, `BIDV`, `OCB`).
+  `VPBank`, `WOORIVN`, `UOB`, `Sacombank`, `MoMo`, `BIDV`, `OCB`, `Vietinbank`, `Cake`).
 - `account_number`/`card_number` phải **kết thúc bằng 4 ký tự cuối** in trong thông báo
   (vd thông báo ghi `4074***2789` → số thẻ lưu kết thúc bằng `2789`).
 
@@ -117,21 +117,33 @@ select source, reason, received_at, raw_text
 from unparsed_messages where not resolved order by received_at desc;
 ```
 
-Hoặc chạy `supabase/functions/parse-transaction/inspect-unparsed.sh`.
+Hoặc chạy `supabase/functions/parse-transaction/inspect-unparsed.sh`, hoặc xem tab
+**Giao dịch ngân hàng → Chưa phân loại** trên web.
+
+> ⚠️ **Luôn gắn `source`** trong Dictionary của mọi automation. Đo 21/10/2026: 100% tin trong
+> `unparsed_messages` có `source = null`, nên vài định dạng (tài khoản `800xx0300`, "Thông báo ghi có
+> Tài khoản **0265", "Số dư tài khoản của bạn vừa tăng") **không biết là bank nào** và chưa viết
+> parser được (`bank_name` sai thì giao dịch không gắn được tài khoản).
 
 ### OCB (push app OCB OMNI)
 
 OCB không gửi SMS thẻ tín dụng nữa → tạo automation trigger **Notification** của app OCB OMNI, `source: "OCB"`.
-Parser hiện chỉ phủ mẫu **trả nợ thẻ** ("Thông báo biến động số dư … Thẻ tín dụng: 35-9586 Số tiền: +100,000 VND …").
-Thẻ trong DB: `bank_name = OCB`, `card_number` kết thúc đúng 4 số cuối (vd `****9586`). Tin chi tiêu OCB có định dạng
-khác sẽ vào `unparsed_messages` — lấy mẫu thật rồi thêm parser.
+Parser phủ mẫu "Thông báo biến động số dư" của **tài khoản** (`Tài khoản: …`) và **thẻ tín dụng** (`Thẻ tín dụng: 35-9586`).
+Thẻ/TK trong DB: `bank_name = OCB`, số kết thúc đúng 4 số cuối (vd thẻ `****9586`, TK `****0265`).
+Dấu +/- là bắt buộc: thiếu dấu thì không đoán, tin vào hộp "Chưa phân loại".
 
-## 6. Bank chưa có parser
+## 6. Tin chưa đọc được
 
-ACB, VIB, HSBC, Eximbank, Cake, KBank, Vietinbank, BaoVietBank, ShinhanBank:
-thông báo vào `unparsed_messages` (`reason = no_match`, `source` = tên bank). Copy
-`raw_text` thật vào `parsers.test.ts`, viết parser trong `parsers.ts` (hướng dẫn ở
-cuối file), deploy lại. **Không viết regex theo phỏng đoán** — sai thì bóc nhầm số tiền.
+Tin không khớp parser vào `unparsed_messages` kèm `suggested_kind` (giao dịch / nhắc thẻ /
+quảng cáo / chưa rõ). User xử lý ở tab **Chưa phân loại**: ghi thành giao dịch (chọn TK/thẻ,
+loại chi-thu thường / chuyển nội bộ / cashback) hoặc đánh dấu nhắc thẻ / quảng cáo.
+
+Đã có parser push "biến động số dư": BIDV (SmartBanking), Vietinbank, OCB (TK + thẻ tín dụng),
+SHB SAHA, HDBank (TK), Cake (thẻ tín dụng), Sacombank Pay (trả nợ thẻ) —
+`parsers-balance-notifications.ts`. Chưa có: ACB, VIB, HSBC, Eximbank, KBank, BaoVietBank,
+ShinhanBank. Viết parser mới: copy `raw_text` thật vào test, viết regex (hướng dẫn cuối
+`parsers.ts`), deploy lại. **Không viết regex theo phỏng đoán** — sai thì bóc nhầm số tiền.
+Sau khi deploy parser mới, chạy `backfill-unparsed.ts` (dry-run trước) để ghi lại các tin cũ.
 
 ## Xử lý sự cố
 
@@ -142,3 +154,6 @@ cuối file), deploy lại. **Không viết regex theo phỏng đoán** — sai 
 | `no_match` với bank đã có parser | Thông báo ẩn nội dung ("Bạn có 1 thông báo mới") — bật hiển thị nội dung trong app ngân hàng; hoặc bank đổi định dạng — so `raw_text` với mẫu trong `parsers.test.ts` |
 | Có trong dashboard, không có trong danh sách | `bank_name` trong DB khác tên parser, hoặc số thẻ/TK không kết thúc bằng 4 ký tự trong thông báo |
 | Ghi 2 lần | Bank bật cả SMS và app cùng lúc — tắt automation của một kênh |
+| Tin có dấu tiếng Việt không khớp parser dù nhìn giống mẫu | iOS gửi Unicode NFD; edge function đã chuẩn hoá NFC (`normalizeInput`) — test thủ công bằng `try-parse.ts` (cũng chuẩn hoá) |
+| Trả nợ thẻ từ TK ngân hàng tính là chi; chuyển giữa TK của mình hiện ở cả thu lẫn chi | **Giới hạn đã biết khi chưa đặt `OWNER_NAMES`** (production hiện chưa đặt). Bật: `supabase secrets set OWNER_NAMES="TEN CHU TK"` (bỏ dấu không bắt buộc, nhiều tên phân tách `;`). Giao dịch cũ: sửa tay hoặc ghi lại qua hộp tin |
+| Trả nợ thẻ / chuyển giữa TK của mình làm phồng thu-chi | Giao dịch phải là `kind = internal_transfer`. Tự gắn khi nội dung có "THANH TOAN THE TIN DUNG", hoặc tên trong secret `OWNER_NAMES` là người gửi (tiền vào) / người nhận (tiền ra) |
