@@ -1,6 +1,6 @@
 import type { PostgrestFilterBuilder } from '@supabase/postgrest-js'
 import type { Category } from '@/types/categories'
-import { decodeCursor, sanitizeSearch } from './mappers'
+import { decodeCursor, sanitizeSearch } from './query-cursor'
 
 export interface TransactionFilters {
   search?: string

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import { mapAccount, toApiError, type AccountRow } from './mappers'
+import { mapAccount, type AccountRow } from './mappers'
+import { toApiError } from './api-errors'
 import type { AccountFormValues } from '@/types/account-form'
 
 /** Giá trị form (camelCase, đã chuẩn hoá) -> cột của bảng `accounts`. */

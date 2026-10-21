@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
-import { toApiError } from './mappers'
+import { toApiError } from './api-errors'
 import {
   UnparsedMessageSchema, type ResolveKind, type ResolveTxInput, type UnparsedMessage,
 } from '@/types/unparsed'
