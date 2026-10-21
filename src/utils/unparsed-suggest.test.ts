@@ -1,0 +1,64 @@
+import { describe, expect, it } from 'vitest'
+import { suggestFromText, vnLocalToISO } from './unparsed-suggest'
+
+// 21/10/2026 09:30 giờ VN
+const RECEIVED = '2026-10-21T02:30:00.000Z'
+
+describe('suggestFromText', () => {
+  it('tin có dấu, ngày giờ đủ năm, đuôi TK (mẫu chưa có parser)', () => {
+    const s = suggestFromText(
+      '-10,000 VND\nTài khoản: 800xx0300\nSố dư: 0 VND\nND: CK 24/7 cho 0349000265-NGUYEN VAN AN chuyen tien',
+      RECEIVED,
+    )
+    expect(s).toEqual({ amount: 10000, direction: 'expense', localDateTime: '2026-10-21T09:30', ref: '0300' })
+  })
+
+  it('"+  VND 10,000" và mask **0265', () => {
+    const s = suggestFromText(
+      'Thông báo ghi có\nTài khoản **0265 thay đổi +  VND 10,000.\nSố dư khả dụng: VND 97,600.',
+      RECEIVED,
+    )
+    expect(s.amount).toBe(10000)
+    expect(s.direction).toBe('income')
+    expect(s.ref).toBe('0265')
+  })
+
+  it('ngày thiếu năm lấy năm của thời điểm nhận', () => {
+    const s = suggestFromText(
+      'Thông báo biến động số dư\n20/10 11:30 Tài khoản: 0349000265 Số tiền: -199.000 VND',
+      RECEIVED,
+    )
+    expect(s.localDateTime).toBe('2026-10-20T11:30')
+    expect(s.amount).toBe(199000)
+    expect(s.direction).toBe('expense')
+  })
+
+  it('giờ trước ngày ("lúc 10:11 19/10/2026") và thẻ ••9526', () => {
+    const s = suggestFromText('-48.750 đ\nTài khoản tín dụng, thẻ ••9526\nTại Grab, lúc 10:11 19/10/2026', RECEIVED)
+    expect(s).toEqual({ amount: 48750, direction: 'expense', localDateTime: '2026-10-19T10:11', ref: '9526' })
+  })
+
+  it('số tiền không dấu -> không đoán chiều', () => {
+    const s = suggestFromText('Bạn đã thực hiện thanh toán thành công cho QUÁN X với số tiền 15.000đ.', RECEIVED)
+    expect(s.amount).toBe(15000)
+    expect(s.direction).toBeUndefined()
+    expect(s.ref).toBeUndefined()
+  })
+
+  it('không nhầm % lãi suất / "điểm" là số tiền', () => {
+    expect(suggestFromText('+2.2% lãi suất khi bạn quay lại', RECEIVED).amount).toBeUndefined()
+    expect(suggestFromText('Thưởng +10,000 điểm', RECEIVED).amount).toBeUndefined()
+  })
+
+  it('không có gì -> chỉ thời điểm nhận', () => {
+    expect(suggestFromText('Thông báo VPBank\nQuý khách có thông báo biến động số dư mới', RECEIVED))
+      .toEqual({ localDateTime: '2026-10-21T09:30' })
+  })
+})
+
+describe('vnLocalToISO', () => {
+  it('gắn offset +07:00 để RPC nhận', () => {
+    expect(vnLocalToISO('2026-10-19T16:35')).toBe('2026-10-19T16:35:00+07:00')
+    expect(new Date(vnLocalToISO('2026-10-19T16:35')).toISOString()).toBe('2026-10-19T09:35:00.000Z')
+  })
+})

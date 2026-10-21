@@ -11,6 +11,13 @@ export const BankAccountSchema = z.object({
   lastUpdated: z.string().datetime(),
 })
 
+/**
+ * Loại dòng tiền (`transactions.kind`). internal_transfer = chuyển giữa TK/thẻ của chính
+ * mình (gồm trả nợ thẻ) — dashboard không tính vào thu/chi. Không có = 'normal'.
+ */
+export const TransactionKindSchema = z.enum(['normal', 'internal_transfer', 'cashback'])
+export type TransactionKind = z.infer<typeof TransactionKindSchema>
+
 export const TransactionSchema = z.object({
   id: z.string(),
   accountId: z.string(),
@@ -18,6 +25,7 @@ export const TransactionSchema = z.object({
   description: z.string(),
   merchantName: z.string().optional(),
   category: z.string().optional(),
+  kind: TransactionKindSchema.optional(),
   type: z.enum(['income', 'expense']),
   status: z.enum(['pending', 'posted']),
   transactionDate: z.string().datetime(),

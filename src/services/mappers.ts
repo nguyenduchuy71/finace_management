@@ -21,6 +21,7 @@ export interface TransactionRow {
   merchant_name: string | null
   category: string | null
   mcc?: string | null
+  kind?: 'normal' | 'internal_transfer' | 'cashback'
   status: 'pending' | 'posted'
 }
 
@@ -75,6 +76,7 @@ export function mapTransaction(row: TransactionRow) {
     description: row.description ?? '',
     merchantName: row.merchant_name ?? undefined,
     category: row.category ?? undefined,
+    kind: row.kind,
     type: amount >= 0 ? 'income' : 'expense',
     status: row.status,
     transactionDate: toISO(row.transaction_date),
@@ -91,6 +93,7 @@ export function mapCreditCardTransaction(row: TransactionRow) {
     merchantName: row.merchant_name ?? row.description ?? '',
     category: row.category ?? undefined,
     mcc: row.mcc ?? undefined,
+    kind: row.kind,
     // Parser chỉ suy được purchase; tiền vào thẻ = thanh toán dư nợ.
     type: amount > 0 ? 'payment' : 'purchase',
     status: row.status,
@@ -151,12 +154,14 @@ const ERROR_MESSAGES: Record<string, string> = {
  * CreditCardTransactionList đang hiển thị trực tiếp field này). Chi tiết kỹ thuật
  * đẩy vào console cho dev, và `details` không còn được truyền đi.
  */
-export function toApiError(e: PostgrestError): ApiError {
+export function toApiError(e: PostgrestError, overrides?: Record<string, string>): ApiError {
   const code = e.code ?? 'SUPABASE_ERROR'
   console.error('[supabase]', code, e.message, e.details ?? '')
   return {
     code,
-    message: ERROR_MESSAGES[code] ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.',
+    // `overrides`: thông điệp riêng của từng RPC cho mã dùng chung (vd P0002 ở
+    // resolve_unparsed không phải "không tìm thấy thẻ").
+    message: overrides?.[code] ?? ERROR_MESSAGES[code] ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.',
   }
 }
 
