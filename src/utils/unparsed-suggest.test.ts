@@ -72,3 +72,16 @@ describe('suggestFromText — số không dấu', () => {
     expect(suggestFromText('Thanh toán 1234.567 VND', RECEIVED).amount).not.toBe(234567)
   })
 })
+
+describe('suggestFromText — năm của tin không ghi năm', () => {
+  const OCB = (ddmm: string) => `Thông báo biến động số dư\n${ddmm} 23:58\nTài khoản: 0349000265\nSố tiền: -10.000 VND`
+  it('tin 31/12 nhận ngay sau giao thừa thuộc năm cũ (khớp inferYear của server)', () => {
+    expect(suggestFromText(OCB('31/12'), '2026-12-31T17:01:00Z').localDateTime).toBe('2026-12-31T23:58')
+  })
+  it('tin trong năm không bị lùi nhầm', () => {
+    expect(suggestFromText(OCB('20/10'), RECEIVED).localDateTime).toBe('2026-10-20T23:58')
+  })
+  it('tin có năm giữ nguyên năm của tin', () => {
+    expect(suggestFromText('Thời gian: 20/10/2027 17:32\nTài khoản: 1', RECEIVED).localDateTime).toBe('2027-10-20T17:32')
+  })
+})

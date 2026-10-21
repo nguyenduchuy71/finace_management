@@ -18,6 +18,8 @@ export interface UnparsedSuggestion {
 
 // Số có dấu: "-48.750 đ", "+  VND 10,000", "Số tiền GD: -499,000 VND", "-10,000\n"
 // Bắt buộc đơn vị (VND trước/sau, "đ", hoặc hết dòng) để không nhận "+2.2%" hay "+10,000 điểm".
+// Cùng quy tắc với SIGNED_AMOUNT trong supabase/functions/parse-transaction/classify-unparsed.ts
+// (Deno, không import chéo được) — sửa một bên thì sửa cả bên kia.
 const NUM = /(\d{1,3}(?:[.,]\d{3})+|\d+)/.source
 const SIGNED = new RegExp(
   `(?:^|[\\s:(])([+-])\\s*(?:VND\\s*${NUM}|${NUM}\\s*(?:VND|đ(?![a-zà-ỹ])|$))`, 'm',
@@ -59,7 +61,13 @@ export function suggestFromText(text: string, receivedAtISO: string): UnparsedSu
     out.localDateTime = `${yyyy}-${mm}-${dd}T${hh}:${mi}`
   } else if (df) {
     const [, dd, mm, yyyy, hh, mi] = df
-    out.localDateTime = `${yyyy ?? received.getFullYear()}-${mm}-${dd}T${hh}:${mi}`
+    let year = yyyy ? Number(yyyy) : received.getFullYear()
+    // Cùng quy tắc inferYear (edge function, helpers.ts): tin không năm mà ra ngày ở tương lai
+    // quá 1 ngày thì thuộc năm trước (tin 31/12 nhận lúc 01/01).
+    if (!yyyy && Date.parse(vnLocalToISO(`${year}-${mm}-${dd}T${hh}:${mi}`)) > Date.parse(receivedAtISO) + 86_400_000) {
+      year -= 1
+    }
+    out.localDateTime = `${year}-${mm}-${dd}T${hh}:${mi}`
   }
 
   const ref = text.match(REF)

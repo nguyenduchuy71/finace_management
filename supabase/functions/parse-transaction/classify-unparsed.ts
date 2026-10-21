@@ -14,6 +14,8 @@ const CARD_REMINDER = /Tong du no|Dư nợ cuối kỳ|thanh to[aá]n t[oố]i t
 
 // Số tiền CÓ DẤU kèm đơn vị: "-48.750 đ", "+10,000 VND", "+  VND 10,000", "-10,000\n".
 // Loại "+2,2%/năm" (có %) và "+10,000 điểm" (đ là chữ cái đầu của từ khác).
+// Cùng quy tắc với SIGNED trong src/utils/unparsed-suggest.ts (khác runtime, không import chéo
+// được) — sửa một bên thì sửa cả bên kia.
 const SIGNED_AMOUNT =
   /(?:^|[\s:(])[+-]\s*(?:VND\s*\d[\d.,]{2,}|\d[\d.,]{2,}\s*(?:VND|đ(?![a-zà-ỹ])|\n))/im
 

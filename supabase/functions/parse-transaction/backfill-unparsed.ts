@@ -14,6 +14,7 @@
 //   - parse được nhưng CHƯA có TK/thẻ khớp -> giữ trong hộp, suggested_kind = 'transaction'
 //     (ghi giao dịch mồ côi thì dashboard đếm mà danh sách không hiện). Tạo TK rồi chạy lại.
 //   - không parse được -> chỉ cập nhật suggested_kind.
+// Chạy song song với web an toàn: tin bị user xử lý giữa chừng -> xoá giao dịch vừa tạo (lostRace).
 // Chạy lại nhiều lần an toàn: tin đã resolved bị bỏ qua; nếu giao dịch cùng raw_text đã
 // tồn tại (lần trước insert xong nhưng update tin lỗi) thì liên kết thay vì insert lần 2.
 
@@ -42,7 +43,7 @@ const { data: rows, error } = await db
   .order('received_at')
 if (error) throw error
 
-const stats = { total: rows.length, inserted: 0, linkedExisting: 0, waitingAccount: 0, reclassified: {} as Record<string, number> }
+const stats = { total: rows.length, inserted: 0, linkedExisting: 0, lostRace: 0, waitingAccount: 0, reclassified: {} as Record<string, number> }
 const waiting: string[] = []
 
 for (const r of rows as Row[]) {
@@ -70,10 +71,19 @@ for (const r of rows as Row[]) {
   else stats.inserted++
   if (!apply) continue
 
-  const txId = existing ?? await insertTransaction(db, tx, refs, r.user_id)
-  await update(r.id, {
-    resolved: true, kind: tx.kind ?? 'normal', transaction_id: txId, suggested_kind: 'transaction',
+  const inserted = existing ? null : await insertTransaction(db, tx, refs, r.user_id)
+  const claimed = await claimMessage(r.id, {
+    resolved: true, kind: tx.kind ?? 'normal', transaction_id: existing ?? inserted, suggested_kind: 'transaction',
+  }).catch(async (e) => {
+    if (inserted) await removeTransaction(inserted)
+    throw e
   })
+  // User xử lý tin này trên web trong lúc script chạy: giao dịch vừa tạo là thừa.
+  if (!claimed) {
+    if (inserted) await removeTransaction(inserted)
+    stats.inserted -= inserted ? 1 : 0
+    stats.lostRace++
+  }
 }
 
 console.log(apply ? 'ĐÃ GHI' : 'DRY-RUN (thêm --apply để ghi)', JSON.stringify(stats, null, 2))
@@ -84,6 +94,22 @@ if (waiting.length) {
 
 async function update(id: string, patch: Record<string, unknown>) {
   const { error } = await db.from('unparsed_messages').update(patch).eq('id', id)
+  if (error) throw error
+}
+
+/**
+ * Đánh dấu tin CHỈ KHI còn chưa xử lý. Lọc `resolved = false` thay vì update theo id: tin
+ * đã được user xử lý thì 0 dòng (trigger guard_unparsed_update không chạy) -> trả false.
+ */
+async function claimMessage(id: string, patch: Record<string, unknown>): Promise<boolean> {
+  const { data, error } = await db
+    .from('unparsed_messages').update(patch).eq('id', id).eq('resolved', false).select('id')
+  if (error) throw error
+  return data.length > 0
+}
+
+async function removeTransaction(id: string) {
+  const { error } = await db.from('transactions').delete().eq('id', id)
   if (error) throw error
 }
 
