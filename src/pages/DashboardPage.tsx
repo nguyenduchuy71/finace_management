@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import { DashboardDatePicker } from '@/features/dashboard/DashboardDatePicker'
 import { StatCard } from '@/features/dashboard/StatCard'
+import { NetCashFlowCard } from '@/features/dashboard/NetCashFlowCard'
 import { StatCardSkeleton } from '@/features/dashboard/StatCardSkeleton'
 import { SourceSubtotals } from '@/features/dashboard/SourceSubtotals'
 import { CategoryChartSkeleton } from '@/features/dashboard/CategoryChartSkeleton'
@@ -27,59 +28,67 @@ export function DashboardPage() {
       {/* Date range picker — prominent at top, independent of main filter store */}
       <DashboardDatePicker />
 
-      {/* Stats grid — 3 columns on lg, 1 column on mobile */}
-      {/* Col 1: Income, Col 2: Expenses, Col 3: Chart (placeholder, filled in 04-02) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Income card */}
-        {isLoading ? (
-          <StatCardSkeleton />
-        ) : (
-          <StatCard
-            variant="income"
-            amount={data?.totalIncome ?? 0}
-            transactionCount={data?.transactionCount ?? 0}
-            delta={incomeDelta}
-            deltaLoading={deltaLoading}
-            isError={isError}
-            onRetry={refetch}
-          >
-            {data && (
-              <SourceSubtotals
-                variant="income"
-                bankAmount={data.bankIncome}
-                ccAmount={data.ccIncome}
-              />
-            )}
-          </StatCard>
-        )}
+      {/* Bento: hero Dòng tiền ròng (2x2 trên lg) + Thu/Chi xếp dọc bên phải + biểu đồ full hàng.
+          Skeleton cùng ô lưới với nội dung thật để không nhảy layout. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="sm:col-span-2 lg:row-span-2">
+          {isLoading ? (
+            <StatCardSkeleton tall />
+          ) : (
+            <NetCashFlowCard
+              totalIncome={data?.totalIncome ?? 0}
+              totalExpense={data?.totalExpense ?? 0}
+              transactionCount={data?.transactionCount ?? 0}
+              isError={isError}
+              onRetry={refetch}
+            />
+          )}
+        </div>
 
-        {/* Expense card */}
-        {isLoading ? (
-          <StatCardSkeleton />
-        ) : (
-          <StatCard
-            variant="expense"
-            amount={data?.totalExpense ?? 0}
-            transactionCount={data?.transactionCount ?? 0}
-            delta={expenseDelta}
-            deltaLoading={deltaLoading}
-            isError={isError}
-            onRetry={refetch}
-          >
-            {data && (
-              <SourceSubtotals
-                variant="expense"
-                bankAmount={data.bankExpense}
-                ccAmount={data.ccExpense}
-              />
-            )}
-          </StatCard>
-        )}
+        <div className="lg:col-span-2">
+          {isLoading ? (
+            <StatCardSkeleton />
+          ) : (
+            <StatCard
+              variant="income"
+              amount={data?.totalIncome ?? 0}
+              transactionCount={data?.transactionCount ?? 0}
+              delta={incomeDelta}
+              deltaLoading={deltaLoading}
+              isError={isError}
+              onRetry={refetch}
+            >
+              {data && (
+                <SourceSubtotals variant="income" bankAmount={data.bankIncome} ccAmount={data.ccIncome} />
+              )}
+            </StatCard>
+          )}
+        </div>
+
+        <div className="lg:col-span-2">
+          {isLoading ? (
+            <StatCardSkeleton />
+          ) : (
+            <StatCard
+              variant="expense"
+              amount={data?.totalExpense ?? 0}
+              transactionCount={data?.transactionCount ?? 0}
+              delta={expenseDelta}
+              deltaLoading={deltaLoading}
+              isError={isError}
+              onRetry={refetch}
+            >
+              {data && (
+                <SourceSubtotals variant="expense" bankAmount={data.bankExpense} ccAmount={data.ccExpense} />
+              )}
+            </StatCard>
+          )}
+        </div>
 
         {/* CategoryChart is lazy-loaded (recharts chunk deferred until dashboard mount).
             CategoryChartSkeleton is shown while the recharts chunk loads.
             CRITICAL: useMemo dep [categoryBreakdown] only — see CategoryChart comment. */}
-        <div className="sm:col-span-2 lg:col-span-1">
+        <div className="sm:col-span-2 lg:col-span-4">
           {isLoading ? (
             <CategoryChartSkeleton />
           ) : (

@@ -130,9 +130,30 @@ describe('DashboardPage', () => {
         expect(screen.getByText('Tổng thu')).toBeInTheDocument()
       }, { timeout: 5000 })
 
-      // VND amounts render in tabular-nums spans — verify they contain digits
-      const amountElements = document.querySelectorAll('[class*="tabular-nums"]')
-      expect(amountElements.length).toBeGreaterThan(0)
+      // Số tiền thật (đ + nhóm nghìn), không dò theo class CSS
+      expect(screen.getByText('đ 10.000.000', { selector: 'p' })).toBeInTheDocument()
+      expect(screen.getByText('đ 5.000.000', { selector: 'p' })).toBeInTheDocument()
+      // Dòng tiền ròng = thu − chi
+      expect(screen.getByTestId('net-cash-flow')).toHaveTextContent('+đ 5.000.000')
+      expect(screen.getByText('Đã chi', { exact: false })).toHaveTextContent('Đã chi 50% số thu')
+    })
+
+    it('chi vượt thu: dòng tiền ròng âm, màu chi', async () => {
+      vi.mocked(dashboardService.getDashboardStats).mockResolvedValue({
+        ...STATS, totalIncome: 1_000_000, totalExpense: 3_000_000,
+      })
+      renderDashboardPage()
+      const net = await screen.findByTestId('net-cash-flow')
+      expect(net).toHaveTextContent('–đ 2.000.000')
+      expect(net.className).toContain('text-expense')
+      expect(screen.getByText('Kỳ này chi vượt thu')).toBeInTheDocument()
+    })
+
+    it('xếp hạng danh mục theo số chi giảm dần', async () => {
+      renderDashboardPage()
+      const list = await screen.findByRole('list', { name: 'Xếp hạng chi tiêu theo danh mục' })
+      const names = [...list.querySelectorAll('li')].map((li) => li.querySelector('.truncate')?.textContent)
+      expect(names).toEqual(['Khác', 'Ăn uống', 'Mua sắm'])
     })
 
     it('shows zero state message when no transactions', async () => {
