@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { AlertCircle, SearchX } from 'lucide-react'
+import { AlertCircle, Receipt, SearchX } from 'lucide-react'
+import { EmptyState } from '@/components/empty-state/EmptyState'
 import { useMultiCardTransactions } from '@/hooks/useMultiCardTransactions'
 import { useCreditCards } from '@/hooks/useCreditCards'
 import { useNow } from '@/hooks/useNow'
@@ -46,13 +47,11 @@ export function MultiCardTransactionList() {
 
   if (allTransactions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-        <SearchX className="h-10 w-10 mb-3 opacity-40" />
-        <p className="font-medium">{hasActiveFilters ? 'Không có giao dịch phù hợp' : 'Các thẻ đã chọn chưa có giao dịch'}</p>
-        <p className="text-sm mt-1">
-          {hasActiveFilters ? 'Thử điều chỉnh bộ lọc hoặc xóa bộ lọc.' : 'Chọn thêm thẻ hoặc xem "Tất cả thẻ".'}
-        </p>
-      </div>
+      <EmptyState
+        icon={hasActiveFilters ? SearchX : Receipt}
+        title={hasActiveFilters ? 'Không có giao dịch phù hợp' : 'Các thẻ đã chọn chưa có giao dịch'}
+        description={hasActiveFilters ? 'Thử điều chỉnh bộ lọc hoặc xóa bộ lọc.' : 'Chọn thêm thẻ hoặc xem "Tất cả thẻ".'}
+      />
     )
   }
 

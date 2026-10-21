@@ -30,7 +30,7 @@ export function DashboardPage() {
 
       {/* Bento: hero Dòng tiền ròng (2x2 trên lg) + Thu/Chi xếp dọc bên phải + biểu đồ full hàng.
           Skeleton cùng ô lưới với nội dung thật để không nhảy layout. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300">
         <div className="sm:col-span-2 lg:row-span-2">
           {isLoading ? (
             <StatCardSkeleton tall />

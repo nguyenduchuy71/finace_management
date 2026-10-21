@@ -7,7 +7,8 @@ import { groupTransactionsByCycle, computeCurrentCycle } from '@/utils/billingCy
 import { BillingCycleGroup } from './BillingCycleGroup'
 import { CreditCardTransactionListSkeleton } from './CreditCardTransactionListSkeleton'
 import { LoadMoreFooter } from '@/features/transactions/LoadMoreFooter'
-import { AlertCircle, SearchX } from 'lucide-react'
+import { AlertCircle, Receipt, SearchX } from 'lucide-react'
+import { EmptyState } from '@/components/empty-state/EmptyState'
 
 export function CreditCardTransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -60,17 +61,13 @@ export function CreditCardTransactionList() {
 
   if (allTransactions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-        <SearchX className="h-10 w-10 mb-3 opacity-40" />
-        <p className="font-medium">
-          {hasActiveFilters ? 'Không có giao dịch phù hợp' : 'Chưa có giao dịch thẻ'}
-        </p>
-        <p className="text-sm mt-1">
-          {hasActiveFilters
-            ? 'Thử điều chỉnh bộ lọc hoặc xóa bộ lọc.'
-            : 'Giao dịch thẻ tín dụng sẽ xuất hiện ở đây.'}
-        </p>
-      </div>
+      <EmptyState
+        icon={hasActiveFilters ? SearchX : Receipt}
+        title={hasActiveFilters ? 'Không có giao dịch phù hợp' : 'Chưa có giao dịch thẻ'}
+        description={hasActiveFilters
+          ? 'Thử điều chỉnh bộ lọc hoặc xóa bộ lọc.'
+          : 'Giao dịch thẻ tín dụng sẽ xuất hiện ở đây.'}
+      />
     )
   }
 

@@ -8,6 +8,8 @@ import type { UnparsedMessage } from '@/types/unparsed'
 import { toast } from 'sonner'
 import { ResolveUnparsedDialog } from './ResolveUnparsedDialog'
 import { UnparsedMessageItem } from './UnparsedMessageItem'
+import { EmptyState } from '@/components/empty-state/EmptyState'
+import { CheckCheck } from 'lucide-react'
 
 /**
  * Thông báo ngân hàng mà parser chưa đọc được. User ghi thành giao dịch, hoặc đánh dấu
@@ -57,12 +59,11 @@ export function UnparsedInbox() {
           <Button className="mt-4" variant="outline" onClick={() => refetch()}>Thử lại</Button>
         </div>
       ) : messages.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="font-medium">Không còn tin nào cần phân loại</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Thông báo mới mà hệ thống chưa đọc được sẽ hiện ở đây.
-          </p>
-        </div>
+        <EmptyState
+          bordered tone="success" icon={CheckCheck}
+          title="Không còn tin nào cần phân loại"
+          description="Thông báo mới mà hệ thống chưa đọc được sẽ hiện ở đây."
+        />
       ) : (
         <>
           <ul className="space-y-3">

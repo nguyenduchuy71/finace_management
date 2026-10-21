@@ -7,7 +7,8 @@ import { FilterBar } from '@/components/filters/FilterBar'
 import { Button } from '@/components/ui/button'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useFilterStore } from '@/stores/filterStore'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Landmark, Pencil, Plus, Trash2 } from 'lucide-react'
+import { EmptyState } from '@/components/empty-state/EmptyState'
 
 /** Form đang thêm TK mới, hoặc sửa một TK (theo id); null = đóng. Xem CreditCardsPage. */
 type FormMode = { kind: 'create' } | { kind: 'edit'; accountId: string } | null
@@ -52,13 +53,12 @@ export function RecordedTransactionsView() {
           <Button className="mt-4" variant="outline" onClick={() => refetch()}>Thử lại</Button>
         </div>
       ) : !isLoading && accounts.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="font-medium">Chưa có tài khoản ngân hàng nào</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Thêm tài khoản để giao dịch từ thông báo ngân hàng tự động gắn vào đúng tài khoản.
-          </p>
-          <Button className="mt-4" onClick={openCreate}><Plus className="h-4 w-4" /> Thêm tài khoản đầu tiên</Button>
-        </div>
+        <EmptyState
+          bordered icon={Landmark}
+          title="Chưa có tài khoản ngân hàng nào"
+          description="Thêm tài khoản để giao dịch từ thông báo ngân hàng tự động gắn vào đúng tài khoản."
+          action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Thêm tài khoản đầu tiên</Button>}
+        />
       ) : (
         <>
           <AccountTabs />

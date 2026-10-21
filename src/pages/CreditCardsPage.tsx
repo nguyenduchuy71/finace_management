@@ -14,6 +14,7 @@ import { useCreditCards } from '@/hooks/useCreditCards'
 import { useFilterStore } from '@/stores/filterStore'
 import { CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { EmptyState } from '@/components/empty-state/EmptyState'
 
 /** Form đang thêm thẻ mới, hoặc sửa một thẻ (theo id); null = đóng. */
 type FormMode = { kind: 'create' } | { kind: 'edit'; cardId: string } | null
@@ -84,15 +85,12 @@ export function CreditCardsPage() {
           <Button className="mt-4" variant="outline" onClick={() => refetch()}>Thử lại</Button>
         </div>
       ) : !isLoading && cards.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center">
-          <p className="font-medium">Chưa có thẻ tín dụng nào</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Thêm thẻ để giao dịch từ tin nhắn ngân hàng tự động gắn vào đúng thẻ.
-          </p>
-          <Button className="mt-4" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> Thêm thẻ đầu tiên
-          </Button>
-        </div>
+        <EmptyState
+          bordered icon={CreditCard}
+          title="Chưa có thẻ tín dụng nào"
+          description="Thêm thẻ để giao dịch từ tin nhắn ngân hàng tự động gắn vào đúng thẻ."
+          action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Thêm thẻ đầu tiên</Button>}
+        />
       ) : (
         <Tabs value={view} onValueChange={(v) => setParams(v === 'card' ? {} : { view: v }, { replace: true })}>
           <TabsList>
