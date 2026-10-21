@@ -6,10 +6,7 @@
     "sfo1"
   ],
   "git": {
-    "deploymentEnabled": {
-      "main": true,
-      "preview": true
-    }
+    "deploymentEnabled": false
   },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

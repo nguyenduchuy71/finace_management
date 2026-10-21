@@ -1,21 +1,25 @@
 name: CI
 
-# Vercel đã bật Git Integration (xem `git.deploymentEnabled` trong vercel.json)
-# nên Vercel TỰ deploy khi push. Workflow này CHỈ kiểm tra chất lượng code —
-# cố tình KHÔNG deploy để tránh deploy 2 lần và tốn build minutes.
+# Kiểm tra rồi MỚI deploy Vercel.
 #
-# Vai trò: chặn code không compile / test vỡ trước khi merge vào main.
+# Git Integration của Vercel đã TẮT (`git.deploymentEnabled` trong vercel.json): trước đây
+# Vercel tự deploy ngay khi push, song song với CI — code vỡ test vẫn lên production.
+# Giờ deploy là job `deploy` chạy SAU `verify` (needs) bằng Vercel CLI:
+#   - push vào main  -> deploy PRODUCTION
+#   - pull request   -> deploy PREVIEW (bỏ qua PR từ fork: không đọc được secrets)
+#
+# Secrets cần có (Settings > Secrets and variables > Actions > Secrets):
+#   VERCEL_TOKEN       — vercel.com/account/tokens
+#   VERCEL_ORG_ID      — `.vercel/project.json` sau khi chạy `vercel link`, khoá "orgId"
+#   VERCEL_PROJECT_ID  — cùng file, khoá "projectId"
+# Biến VITE_* của bản deploy lấy từ Environment Variables của project trên Vercel (`vercel pull`),
+# KHÔNG lấy từ GitHub.
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
-# Push liên tiếp vào cùng 1 PR -> huỷ run cũ, chỉ chạy run mới nhất
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -24,7 +28,11 @@ jobs:
   verify:
     name: Lint · Test · Build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    # Push liên tiếp vào cùng 1 PR/nhánh -> huỷ lần kiểm tra cũ (không áp cho job deploy).
+    concurrency:
+      group: verify-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout
@@ -40,36 +48,92 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Non-blocking: hiện còn 20 lỗi lint CÓ SẴN (chủ yếu `any` trong file test cũ
-      # và react-refresh trong component shadcn). Bật `continue-on-error` để CI không
-      # đỏ ngay từ ngày đầu. Sau khi dọn hết, xoá dòng continue-on-error để thành gate thật.
+      # Gate thật: CLAUDE.md yêu cầu lint sạch (0 lỗi/cảnh báo).
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
-      # Gate thật: unit test không cần Docker, chạy nhanh
+      # Unit test không cần Docker. Integration test KHÔNG chạy ở CI: cần cả stack Supabase
+      # local và seed (supabase/seeds/* bị .gitignore vì chứa dữ liệu thẻ thật).
       - name: Unit tests
         run: npm test -- --run
 
       # Gate thật: chạy ĐÚNG lệnh build của Vercel (tsc -b && vite build).
-      # tsconfig.app.json include cả `src` nên bước này type-check luôn file test —
-      # lỗi type trong test cũng làm Vercel build fail, phải bắt ở đây.
+      # tsconfig.app.json include cả `src` nên bước này type-check luôn file test.
       - name: Build
         run: npm run build
         env:
-          # Lấy từ GitHub thay vì hardcode:
-          #   - vars.VITE_SUPABASE_URL      -> Settings > Secrets and variables > Actions > Variables
-          #   - secrets.VITE_SUPABASE_ANON_KEY -> ... > Secrets
-          #
-          # Anon key vốn nằm trong bundle JS của browser nên KHÔNG phải bí mật thật,
-          # nhưng để ở Secrets thì giá trị bị che trong log và xoay vòng key không
-          # phải sửa file này. URL để ở Variables cho dễ đọc khi debug CI.
-          #
-          # `||` fallback: fork PR không đọc được secrets của repo gốc, thiếu fallback
-          # thì build fail ở fork vì lý do không liên quan tới code.
-          #
-          # ⚠️ Đã kiểm chứng: build VẪN PASS kể cả khi 2 biến này rỗng (supabase.ts
-          # không được đánh giá lúc build). Nên build xanh KHÔNG đảm bảo app chạy được —
-          # quên set biến trên Vercel thì deploy thành công nhưng app trắng màn hình.
+          # Build chỉ để kiểm tra; bản deploy thật build lại trong job `deploy` với biến của Vercel.
+          # `||` fallback: fork PR không đọc được secrets của repo gốc.
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'http://127.0.0.1:54321' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'build-time-placeholder' }}
+
+      # Edge function parse-transaction: test parser (Deno), cùng phiên bản Deno với lệnh test local.
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+
+      - name: Edge function — type check & parser tests
+        working-directory: supabase/functions/parse-transaction
+        run: |
+          deno check index.ts ingest.ts backfill-unparsed.ts try-parse.ts
+          deno test --allow-all
+
+  deploy:
+    name: Deploy Vercel (${{ github.event_name == 'push' && 'production' || 'preview' }})
+    needs: verify
+    # Fork PR không có secrets -> bỏ qua thay vì fail.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Không huỷ giữa chừng một lần deploy; các lần deploy cùng môi trường chạy lần lượt.
+    concurrency:
+      group: deploy-${{ github.event_name == 'push' && 'production' || github.ref }}
+      cancel-in-progress: false
+    environment:
+      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ENV: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Check Vercel secrets
+        run: |
+          for v in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!v}" ]; then echo "::error::Thiếu secret $v (xem đầu file ci.yml)"; exit 1; fi
+          done
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@62.5.0
+
+      # Lấy cấu hình + Environment Variables (VITE_*) của môi trường tương ứng từ Vercel.
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment="$VERCEL_ENV" --token="$VERCEL_TOKEN"
+
+      # Build trên runner (dùng buildCommand trong vercel.json), rồi upload bản đã build.
+      - name: Build
+        run: |
+          args=(); [ "$VERCEL_ENV" = production ] && args+=(--prod)
+          vercel build "${args[@]}" --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        id: deploy
+        run: |
+          args=(); [ "$VERCEL_ENV" = production ] && args+=(--prod)
+          url=$(vercel deploy --prebuilt "${args[@]}" --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed ($VERCEL_ENV): $url" >> "$GITHUB_STEP_SUMMARY"
