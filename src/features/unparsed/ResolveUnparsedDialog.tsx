@@ -6,6 +6,7 @@ import {
 import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCreditCards } from '@/hooks/useCreditCards'
 import { useResolveUnparsed } from '@/hooks/useUnparsedMessages'
@@ -24,8 +25,6 @@ const KIND_HINT: Record<(typeof TX_RESOLVE_KINDS)[number], string> = {
   internal_transfer: 'Chuyển giữa TK/thẻ của bạn (kể cả trả nợ thẻ) — KHÔNG tính vào thu/chi.',
   cashback: 'Tiền hoàn từ ngân hàng — tính là thu.',
 }
-const SELECT_CLASS = 'border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm'
-
 /** Thân form trong DialogContent: Radix huỷ khi đóng nên state tự reset mỗi lần mở. */
 function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
   message: UnparsedMessage
@@ -80,13 +79,13 @@ function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="resolve-kind" label="Loại" hint={KIND_HINT[form.kind]}>
-          <select {...field('kind', 'resolve-kind')} className={SELECT_CLASS}>
+          <NativeSelect {...field('kind', 'resolve-kind')}>
             {TX_RESOLVE_KINDS.map((k) => <option key={k} value={k}>{RESOLVE_KIND_LABEL[k]}</option>)}
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="resolve-source" label="Tài khoản / thẻ" error={errors.source}
           hint={accounts.length === 0 ? 'Chưa có tài khoản ngân hàng — thêm ở mục "Đã ghi nhận".' : undefined}>
-          <select {...field('source', 'resolve-source')} className={SELECT_CLASS}>
+          <NativeSelect {...field('source', 'resolve-source')}>
             <option value="">— Chọn —</option>
             <optgroup label="Tài khoản ngân hàng">
               {accounts.map((a) => <option key={a.id} value={`account:${a.id}`}>{a.bankName} {a.accountNumber}</option>)}
@@ -94,13 +93,13 @@ function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
             <optgroup label="Thẻ tín dụng">
               {cards.map((c) => <option key={c.id} value={`card:${c.id}`}>{c.bankName} {c.cardName} {c.cardNumber}</option>)}
             </optgroup>
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="resolve-direction" label="Chiều tiền" error={errors.direction}>
-          <select {...field('direction', 'resolve-direction')} className={SELECT_CLASS}>
+          <NativeSelect {...field('direction', 'resolve-direction')}>
             <option value="expense">Tiền ra (chi)</option>
             <option value="income">Tiền vào (thu)</option>
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="resolve-amount" label="Số tiền (đ)" error={errors.amount}>
           <Input {...field('amount', 'resolve-amount')} inputMode="numeric" placeholder="84.000" />

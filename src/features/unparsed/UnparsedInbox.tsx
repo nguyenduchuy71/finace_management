@@ -10,6 +10,17 @@ import { ResolveUnparsedDialog } from './ResolveUnparsedDialog'
 import { UnparsedMessageItem } from './UnparsedMessageItem'
 import { EmptyState } from '@/components/empty-state/EmptyState'
 import { CheckCheck } from 'lucide-react'
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+
+type MarkKind = 'card_reminder' | 'promo'
+
+const MARK_LABEL: Record<MarkKind, string> = {
+  card_reminder: 'nhắc thanh toán thẻ',
+  promo: 'quảng cáo (bỏ qua)',
+}
 
 /**
  * Thông báo ngân hàng mà parser chưa đọc được. User ghi thành giao dịch, hoặc đánh dấu
@@ -20,15 +31,15 @@ export function UnparsedInbox() {
   const { data, isLoading, isError, refetch } = useUnparsedMessages(includePromo)
   const resolve = useResolveUnparsed()
   const [recording, setRecording] = useState<UnparsedMessage | null>(null)
+  // Không hoàn tác được (DB khoá tin đã xử lý) — bấm nhầm là mất giao dịch khỏi hộp, nên phải xác nhận.
+  const [marking, setMarking] = useState<{ message: UnparsedMessage; kind: MarkKind } | null>(null)
 
   const messages = data?.data ?? []
 
-  function mark(message: UnparsedMessage, kind: 'card_reminder' | 'promo') {
-    // Không hoàn tác được (DB khoá tin đã xử lý) — bấm nhầm là mất giao dịch khỏi hộp.
-    const label = kind === 'promo' ? 'quảng cáo (bỏ qua)' : 'nhắc thanh toán thẻ'
-    if (!window.confirm(`Đánh dấu tin này là ${label}? Tin sẽ rời khỏi hộp và không hoàn tác được.`)) return
+  function confirmMark() {
+    if (!marking) return
     resolve.mutate(
-      { messageId: message.id, kind },
+      { messageId: marking.message.id, kind: marking.kind },
       { onError: (err) => toast.error((err as unknown as ApiError).message ?? 'Không cập nhật được tin.') },
     )
   }
@@ -39,9 +50,9 @@ export function UnparsedInbox() {
         <p className="text-sm text-muted-foreground">
           Thông báo ngân hàng chưa tự đọc được. Ghi thành giao dịch hoặc bỏ qua.
         </p>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
           <input
-            type="checkbox" checked={includePromo}
+            type="checkbox" checked={includePromo} className="size-4 cursor-pointer accent-primary"
             onChange={(e) => setIncludePromo(e.target.checked)}
           />
           Hiện cả tin quảng cáo
@@ -70,7 +81,7 @@ export function UnparsedInbox() {
             {messages.map((m) => (
               <UnparsedMessageItem
                 key={m.id} message={m} disabled={resolve.isPending}
-                onRecord={() => setRecording(m)} onMark={(kind) => mark(m, kind)}
+                onRecord={() => setRecording(m)} onMark={(kind) => setMarking({ message: m, kind })}
               />
             ))}
           </ul>
@@ -81,6 +92,27 @@ export function UnparsedInbox() {
           )}
         </>
       )}
+
+      <AlertDialog open={marking !== null} onOpenChange={(open) => { if (!open) setMarking(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Đánh dấu là {marking ? MARK_LABEL[marking.kind] : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tin sẽ rời khỏi hộp và không hoàn tác được. Nếu đây là giao dịch thật, hãy chọn
+              "Ghi thành giao dịch" thay vì đánh dấu.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {marking && (
+            <p className="line-clamp-3 whitespace-pre-line break-words rounded-lg bg-muted/60 p-3 text-xs">
+              {marking.message.rawText}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Huỷ</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMark}>Đánh dấu</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ResolveUnparsedDialog message={recording} onOpenChange={(open) => { if (!open) setRecording(null) }} />
     </div>

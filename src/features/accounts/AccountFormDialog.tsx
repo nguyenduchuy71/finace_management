@@ -6,6 +6,7 @@ import {
 import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { useCreateAccount, useUpdateAccount } from '@/hooks/useAccountMutations'
 import { useFilterStore } from '@/stores/filterStore'
 import {
@@ -100,10 +101,10 @@ function AccountFormBody({ account, onDone, setBusy }: {
           <Input {...fieldProps('accountNumber')} placeholder="****4982" />
         </FormField>
         <FormField id="acc-type" label="Loại tài khoản" error={errors.accountType}>
-          <select {...fieldProps('accountType')} className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm">
+          <NativeSelect {...fieldProps('accountType')}>
             <option value="checking">Thanh toán</option>
             <option value="savings">Tiết kiệm</option>
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="acc-balance" label="Số dư (đ)" error={errors.balance}
           hint="Chỉ để tham khảo, không tự cập nhật. Có thể để trống">

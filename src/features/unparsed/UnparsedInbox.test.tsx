@@ -69,16 +69,19 @@ describe('UnparsedInbox', () => {
   })
 
   it('đánh dấu nhắc thẻ cần xác nhận; huỷ thì không gọi RPC', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     renderInbox()
     const item = (await screen.findByText(/Tong du no/)).closest('li')!
     const btn = within(item).getByRole('button', { name: 'Nhắc thanh toán thẻ' })
 
     fireEvent.click(btn)
-    expect(confirm).toHaveBeenCalledTimes(1)
+    const dialog = await screen.findByRole('alertdialog')
+    expect(within(dialog).getByText('Đánh dấu là nhắc thanh toán thẻ?')).toBeInTheDocument()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Huỷ' }))
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
     expect(resolveUnparsed).not.toHaveBeenCalled()
 
     fireEvent.click(btn)
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Đánh dấu' }))
     await waitFor(() => expect(resolveUnparsed).toHaveBeenCalledWith('m2', 'card_reminder', undefined))
   })
 

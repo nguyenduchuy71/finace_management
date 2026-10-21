@@ -6,6 +6,7 @@ import {
 import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { useCreateCreditCard, useUpdateCreditCard } from '@/hooks/useCreditCardMutations'
 import { useFilterStore } from '@/stores/filterStore'
 import {
@@ -122,14 +123,11 @@ function CardFormBody({ card, onDone, setBusy }: {
           <Input {...fieldProps('cardNumber')} placeholder="****x265" />
         </FormField>
         <FormField id="card-type" label="Loại thẻ" error={errors.cardType}>
-          <select
-            {...fieldProps('cardType')}
-            className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-          >
+          <NativeSelect {...fieldProps('cardType')}>
             {Object.entries(CARD_TYPE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
-          </select>
+          </NativeSelect>
         </FormField>
         <FormField id="card-statement" label="Ngày sao kê (1-31)" error={errors.statementDate}>
           <Input {...fieldProps('statementDate')} inputMode="numeric" />
