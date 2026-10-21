@@ -70,3 +70,4 @@ coverage/
 *.tsbuildinfo
 .vscode/*
 supabase/seeds/*
+supabase/functions/parse-transaction/.claude/*
