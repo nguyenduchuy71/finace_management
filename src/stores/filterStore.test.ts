@@ -7,6 +7,7 @@ const DEFAULT_STATE = {
   // (trước đây hardcode id của mock data)
   accountId: null,
   cardId: null,
+  cardIds: [] as string[],
   dateFrom: null,
   dateTo: null,
   searchQuery: '',
@@ -137,6 +138,7 @@ describe('filterStore', () => {
       useFilterStore.setState({
         accountId: 'tcb-saving-001',
         cardId: 'tcb-visa-001',
+        cardIds: ['tcb-visa-001', 'vp-001'],
         dateFrom: '2026-01-01',
         dateTo: '2026-01-31',
         searchQuery: 'test',
@@ -148,6 +150,7 @@ describe('filterStore', () => {
       const state = useFilterStore.getState()
       expect(state.accountId).toBeNull()
       expect(state.cardId).toBeNull()
+      expect(state.cardIds).toEqual([])
       expect(state.dateFrom).toBeNull()
       expect(state.dateTo).toBeNull()
       expect(state.searchQuery).toBe('')

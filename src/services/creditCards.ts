@@ -23,8 +23,13 @@ export async function getCreditCards() {
   }
 }
 
+/** Nhiều thẻ một lúc: `cardIds` rỗng = TẤT CẢ thẻ của user (RLS giới hạn về chính user). */
+export interface MultiCardSelection {
+  cardIds: readonly string[]
+}
+
 export async function getCreditCardTransactions(
-  cardId: string,
+  card: string | MultiCardSelection,
   cursor?: string,
   limit = 20,
   filters?: TransactionFilters
@@ -34,10 +39,13 @@ export async function getCreditCardTransactions(
     return { data: [], nextCursor: null, total: 0 }
   }
 
-  const base = supabase
-    .from('transactions')
-    .select(TX_COLUMNS, countOption(cursor))
-    .eq('card_id', cardId)
+  const query = supabase.from('transactions').select(TX_COLUMNS, countOption(cursor))
+  // Keyset (transaction_date, id) của applyTransactionFilters vẫn đúng khi gộp nhiều thẻ: thứ tự toàn cục.
+  const base = typeof card === 'string'
+    ? query.eq('card_id', card)
+    : card.cardIds.length > 0
+      ? query.in('card_id', [...card.cardIds])
+      : query.not('card_id', 'is', null)
 
   const { data, error, count } = await applyTransactionFilters(base, cursor, limit, filters)
   if (error) throw toApiError(error)

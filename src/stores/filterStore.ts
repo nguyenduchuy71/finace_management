@@ -5,6 +5,8 @@ import type { Category } from '@/types/categories'
 interface FilterState {
   accountId: string | null
   cardId: string | null
+  /** Mục "Nhiều thẻ" của trang thẻ; rỗng = tất cả thẻ. Độc lập với `cardId` (mục "Từng thẻ"). */
+  cardIds: string[]
   dateFrom: string | null  // ISO date string "YYYY-MM-DD"
   dateTo: string | null
   searchQuery: string
@@ -13,6 +15,7 @@ interface FilterState {
   // Actions
   setAccountId: (id: string | null) => void
   setCardId: (id: string | null) => void
+  setCardIds: (ids: string[]) => void
   setDateRange: (from: string | null, to: string | null) => void
   setSearchQuery: (q: string) => void
   setTxType: (type: FilterState['txType']) => void
@@ -23,6 +26,7 @@ interface FilterState {
 const defaultState = {
   accountId: null,   // AccountTabs tự chọn tài khoản đầu tiên sau khi load từ Supabase
   cardId: null,
+  cardIds: [] as string[],
   dateFrom: null,
   dateTo: null,
   searchQuery: '',
@@ -34,6 +38,7 @@ export const useFilterStore = create<FilterState>()((set) => ({
   ...defaultState,
   setAccountId: (accountId) => set({ accountId }),
   setCardId: (cardId) => set({ cardId }),
+  setCardIds: (cardIds) => set({ cardIds }),
   setDateRange: (dateFrom, dateTo) => set({ dateFrom, dateTo }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setTxType: (txType) => set({ txType }),

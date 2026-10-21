@@ -6,7 +6,7 @@ import { useFilterStore } from '@/stores/filterStore'
 import { groupTransactionsByCycle, computeCurrentCycle } from '@/utils/billingCycle'
 import { BillingCycleGroup } from './BillingCycleGroup'
 import { CreditCardTransactionListSkeleton } from './CreditCardTransactionListSkeleton'
-import { Button } from '@/components/ui/button'
+import { LoadMoreFooter } from '@/features/transactions/LoadMoreFooter'
 import { AlertCircle, SearchX } from 'lucide-react'
 
 export function CreditCardTransactionList() {
@@ -80,25 +80,12 @@ export function CreditCardTransactionList() {
         <BillingCycleGroup key={group.cycleKey} group={group} />
       ))}
 
-      {hasNextPage && (
-        <div className="pt-2 flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="w-full sm:w-auto min-h-[44px]"
-          >
-            {isFetchingNextPage ? 'Đang tải...' : 'Xem thêm'}
-          </Button>
-        </div>
-      )}
-
-      {!hasNextPage && allTransactions.length > 0 && (
-        <p className="text-center text-xs text-muted-foreground py-4">
-          Đã hiển thị tất cả {allTransactions.length} giao dịch
-        </p>
-      )}
+      <LoadMoreFooter
+        hasNextPage={Boolean(hasNextPage)}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={() => fetchNextPage()}
+        loadedCount={allTransactions.length}
+      />
     </div>
   )
 }

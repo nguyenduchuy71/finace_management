@@ -7,7 +7,7 @@ import { useFilterParams } from '@/stores/filterStore'
 import { TransactionRow } from './TransactionRow'
 import { TransactionListSkeleton } from './TransactionListSkeleton'
 import { TransactionEmptyState } from './TransactionEmptyState'
-import { Button } from '@/components/ui/button'
+import { LoadMoreFooter } from './LoadMoreFooter'
 import { AlertCircle } from 'lucide-react'
 
 export function TransactionList() {
@@ -58,25 +58,12 @@ export function TransactionList() {
         </section>
       ))}
 
-      {hasNextPage && (
-        <div className="pt-2 flex justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="w-full sm:w-auto min-h-[44px]"
-          >
-            {isFetchingNextPage ? 'Đang tải...' : 'Xem thêm'}
-          </Button>
-        </div>
-      )}
-
-      {!hasNextPage && allTransactions.length > 0 && (
-        <p className="text-center text-xs text-muted-foreground py-4">
-          Đã hiển thị tất cả {allTransactions.length} giao dịch
-        </p>
-      )}
+      <LoadMoreFooter
+        hasNextPage={Boolean(hasNextPage)}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={() => fetchNextPage()}
+        loadedCount={allTransactions.length}
+      />
     </div>
   )
 }
