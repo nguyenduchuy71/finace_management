@@ -104,6 +104,39 @@ describe('computeCurrentCycle — ngày sao kê 29-31 và tháng ngắn', () => 
 })
 
 describe('groupTransactionsByCycle', () => {
+  const tx = (id: string, transactionDate: string): CreditCardTransaction => ({
+    id, cardId: 'c', amount: -1, description: 'x', merchantName: 'x', type: 'purchase', status: 'posted', transactionDate,
+  })
+
+  it('giao dịch không có ranh giới chu kỳ vào chu kỳ CHỨA ngày giao dịch, không dồn vào kỳ hiện tại', () => {
+    // Sao kê ngày 15, hôm nay 20/10 (VN) -> kỳ hiện tại 16/10..15/11
+    const current = computeCurrentCycle(15, '2026-10-20T03:00:00Z')
+    const groups = groupTransactionsByCycle([
+      tx('now', '2026-10-18T03:00:00Z'),
+      tx('sep', '2026-09-04T03:00:00Z'), // kỳ 16/08..15/09
+      tx('oct-early', '2026-10-02T03:00:00Z'), // kỳ 16/09..15/10
+    ], current, 15)
+    expect(groups.map((g) => [g.isCurrentCycle, g.transactions.map((t) => t.id)])).toEqual([
+      [true, ['now']],
+      [false, ['oct-early']],
+      [false, ['sep']],
+    ])
+    expect(formatCycleDateRange(groups[2].cycleStartISO, groups[2].cycleEndISO))
+      .toEqual({ startDisplay: '16/08/2026', endDisplay: '15/09/2026' })
+  })
+
+  it('ranh giới theo giờ VN: 23:30 ngày sao kê (VN) thuộc kỳ cũ, 00:00 hôm sau thuộc kỳ mới', () => {
+    const current = computeCurrentCycle(15, '2026-10-20T03:00:00Z')
+    const groups = groupTransactionsByCycle([
+      tx('last-minute', '2026-10-15T16:30:00Z'), // 23:30 15/10 VN
+      tx('first-minute', '2026-10-15T17:00:00Z'), // 00:00 16/10 VN
+    ], current, 15)
+    expect(groups.map((g) => [g.isCurrentCycle, g.transactions[0].id])).toEqual([
+      [true, 'first-minute'],
+      [false, 'last-minute'],
+    ])
+  })
+
   it('pending transaction (no billingCycleStart) → assigned to currentCycle group', () => {
     const currentCycle = computeCurrentCycle(15, '2026-03-03T00:00:00Z')
 
@@ -119,7 +152,7 @@ describe('groupTransactionsByCycle', () => {
       // billingCycleStart and billingCycleEnd intentionally omitted (pending)
     }
 
-    const groups = groupTransactionsByCycle([pendingTx], currentCycle)
+    const groups = groupTransactionsByCycle([pendingTx], currentCycle, 15)
 
     expect(groups.length).toBe(1)
     expect(groups[0].isCurrentCycle).toBe(true)
@@ -143,7 +176,7 @@ describe('groupTransactionsByCycle', () => {
       billingCycleEnd: '2026-02-15T17:00:00Z',
     }
 
-    const groups = groupTransactionsByCycle([postedTx], currentCycle)
+    const groups = groupTransactionsByCycle([postedTx], currentCycle, 15)
 
     expect(groups[0].cycleKey).toBe('2026-01-15T17:00:00Z')
     expect(groups[0].isCurrentCycle).toBe(false)
