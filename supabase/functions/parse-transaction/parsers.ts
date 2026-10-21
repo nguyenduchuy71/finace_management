@@ -3,7 +3,7 @@
 // THÊM PARSER MỚI: xem hướng dẫn ở cuối file.
 
 import type { Parser } from './types.ts'
-import { inferYear, last4, parseVND, vnDate } from './helpers.ts'
+import { inferYear, last4, nowVN, parseVND, vnDate } from './helpers.ts'
 import { build } from './parser-build.ts'
 import { balanceNotificationParsers } from './parsers-balance-notifications.ts'
 
@@ -116,7 +116,7 @@ const tryMSB: Parser = (text) => {
 
 // VPBank — "The VPBank 5239...9808 vua chi tieu -5,061,000VND ND:MEGAPAY*...
 //           vao luc 13:17 24/08."  (SMS KHÔNG có năm -> suy bằng inferYear)
-const tryVPBank: Parser = (text) => {
+const tryVPBank: Parser = (text, now) => {
   if (!text.includes('VPBank')) return null
   const m = text.match(
     /VPBank\s*(\S+)\s*(?:vua chi tieu|tang)\s*([-+][\d,.]+)VND\s*ND:(.+?)\s*vao luc\s*(\d{2}):(\d{2})\s*(\d{2})\/(\d{2})/,
@@ -126,7 +126,7 @@ const tryVPBank: Parser = (text) => {
   return build(text, {
     bank_name: 'VPBank',
     amount: parseVND(amountStr),
-    transaction_date: vnDate(inferYear(mm, dd, hh, min), mm, dd, hh, min),
+    transaction_date: vnDate(inferYear(mm, dd, hh, min, now), mm, dd, hh, min),
     description: merchant.trim(),
     source_type: 'credit_card',
     account_ref: last4(cardStr),
@@ -193,14 +193,14 @@ const trySacombank: Parser = (text) => {
 
 // MoMo — "Bạn đã thực hiện thanh toán thành công cho KAI COFFEE với số tiền 39.000đ."
 // Không có mốc giờ trong text -> dùng giờ nhận.
-const tryMoMo: Parser = (text) => {
+const tryMoMo: Parser = (text, now) => {
   const m = text.match(/thanh toán thành công cho\s*(.+?)\s*với số tiền\s*([\d.]+)đ/)
   if (!m) return null
   const [, merchant, amountStr] = m
   return build(text, {
     bank_name: 'MoMo',
     amount: -parseVND(amountStr),
-    transaction_date: new Date().toISOString(),
+    transaction_date: nowVN(now),
     description: merchant.trim(),
     source_type: 'bank', // ví điện tử, coi như tài khoản
     account_ref: null, // MoMo không có số thẻ/TK trong text

@@ -27,4 +27,8 @@ export interface ParsedTransaction {
   kind?: 'normal' | 'internal_transfer'
 }
 
-export type Parser = (text: string) => ParsedTransaction | null
+/**
+ * `now` = thời điểm nhận thông báo (ms). Dùng cho tin không ghi ngày/năm; mặc định
+ * Date.now(). Script backfill truyền `received_at` để tin cũ không bị gán ngày hôm nay.
+ */
+export type Parser = (text: string, now?: number) => ParsedTransaction | null

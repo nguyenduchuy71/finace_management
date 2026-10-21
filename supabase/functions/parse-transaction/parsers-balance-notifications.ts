@@ -9,7 +9,8 @@
 //   (JS `\s` gồm cả U+2008), không dùng dấu cách cứng.
 // - Khoảng trống giữa hai field dùng `[\s\S]{0,N}?` có cận trên — không `.*?`
 //   không neo (xem MAX_TEXT_LENGTH trong index.ts).
-// - Tin không có ngày giờ -> `nowVN()`: push đến gần như tức thì sau giao dịch.
+// - Tin không có ngày giờ -> `nowVN(now)`: push đến gần như tức thì sau giao dịch
+//   (`now` = thời điểm nhận, xem type Parser).
 
 import type { Parser } from './types.ts'
 import { inferYear, last4, nowVN, parseVND, vnDate } from './helpers.ts'
@@ -20,7 +21,7 @@ const desc = (s: string) => s.trim()
 // BIDV — push SmartBanking, KHÔNG có thời gian giao dịch (khác tryBIDV cũ):
 // "Thông báo BIDV\nTài khoản thanh toán: 1440243946 Số tiền GD: -499,000 VND
 //  Số dư cuối: 545,832 VND Nội dung giao dịch: MB-TKThe ..."
-const tryBIDVAccount: Parser = (text) => {
+const tryBIDVAccount: Parser = (text, now) => {
   const m = text.match(
     /Tài khoản thanh toán:\s*(\d+)\s+Số tiền GD:\s*([-+][\d,.]+)\s*VND\s+Số dư cuối:[\s\S]{0,40}?Nội dung giao dịch:\s*([^\n]{1,300})/,
   )
@@ -29,7 +30,7 @@ const tryBIDVAccount: Parser = (text) => {
   return build(text, {
     bank_name: 'BIDV',
     amount: parseVND(amountStr),
-    transaction_date: nowVN(),
+    transaction_date: nowVN(now),
     description: desc(content),
     source_type: 'bank',
     account_ref: last4(acct),
@@ -65,14 +66,14 @@ const tryVietinbank: Parser = (text) => {
 const OCB_HEAD = /Thông báo biến động số dư\s+(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})\s+/.source
 const OCB_TAIL = /\s+Số tiền:\s*([-+][\d.,]+)\s*VND[\s\S]{0,80}?Nội dung:\s*([^\n]{1,300})/.source
 
-const tryOCBAccount: Parser = (text) => {
+const tryOCBAccount: Parser = (text, now) => {
   const m = text.match(new RegExp(`${OCB_HEAD}Tài khoản:\\s*(\\d+)${OCB_TAIL}`))
   if (!m) return null
   const [, dd, mm, hh, min, acct, amountStr, content] = m
   return build(text, {
     bank_name: 'OCB',
     amount: parseVND(amountStr),
-    transaction_date: vnDate(inferYear(mm, dd, hh, min), mm, dd, hh, min),
+    transaction_date: vnDate(inferYear(mm, dd, hh, min, now), mm, dd, hh, min),
     description: desc(content),
     source_type: 'bank',
     account_ref: last4(acct),
@@ -80,14 +81,14 @@ const tryOCBAccount: Parser = (text) => {
   })
 }
 
-const tryOCBCard: Parser = (text) => {
+const tryOCBCard: Parser = (text, now) => {
   const m = text.match(new RegExp(`${OCB_HEAD}Thẻ tín dụng:\\s*\\d{2}-(\\d{4})${OCB_TAIL}`))
   if (!m) return null
   const [, dd, mm, hh, min, ref, amountStr, content] = m
   return build(text, {
     bank_name: 'OCB',
     amount: parseVND(amountStr),
-    transaction_date: vnDate(inferYear(mm, dd, hh, min), mm, dd, hh, min),
+    transaction_date: vnDate(inferYear(mm, dd, hh, min, now), mm, dd, hh, min),
     description: desc(content),
     source_type: 'credit_card',
     account_ref: ref,
@@ -97,7 +98,7 @@ const tryOCBCard: Parser = (text) => {
 
 // SHB SAHA — "SHB SAHA\nPhát sinh -10,000 VND\nTài khoản 0349360265\nNGUYEN DUC HUY chuyen tien"
 // Không có ngày giờ.
-const trySHBSaha: Parser = (text) => {
+const trySHBSaha: Parser = (text, now) => {
   const m = text.match(
     /^SHB SAHA\s+Phát sinh\s+([-+][\d,.]+)\s*VND\s+Tài khoản\s+(\d+)\s+([^\n]{1,300})/,
   )
@@ -106,7 +107,7 @@ const trySHBSaha: Parser = (text) => {
   return build(text, {
     bank_name: 'SHB',
     amount: parseVND(amountStr),
-    transaction_date: nowVN(),
+    transaction_date: nowVN(now),
     description: desc(content),
     source_type: 'bank',
     account_ref: last4(acct),

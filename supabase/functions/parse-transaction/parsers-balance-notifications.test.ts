@@ -194,3 +194,11 @@ Deno.test('balance: mẫu dạng NFD khớp sau normalizeInput, không khớp n�
   // chứng minh test có ý nghĩa: ít nhất một mẫu NFD thô không khớp
   assert(cases.some((c) => matching(c.text.normalize('NFD')).length === 0))
 })
+
+Deno.test('balance: tin không có ngày dùng thời điểm nhận được truyền vào (backfill)', () => {
+  const receivedAt = Date.UTC(2026, 9, 19, 9, 35, 0) // 16:35 giờ VN
+  for (const c of cases.filter((c) => c.nowDate)) {
+    const r = parsers.map((p) => p(c.text, receivedAt)).find((x) => x !== null)!
+    assertEquals(r.transaction_date, '2026-10-19T16:35:00+07:00', c.name)
+  }
+})

@@ -62,8 +62,9 @@ export function nowVN(now = Date.now()): string {
  * Lấy năm hiện tại; nếu ra ngày ở tương lai quá 1 ngày thì tin nhắn thuộc năm
  * trước (bắt được lỗi quanh giao thừa: SMS 31/12 nhận ngày 01/01).
  */
-export function inferYear(mm: string, dd: string, hh: string, min: string): string {
-  const now = Date.now()
+export function inferYear(
+  mm: string, dd: string, hh: string, min: string, now = Date.now(),
+): string {
   let year = new Date(now).getFullYear()
   const candidate = new Date(vnDate(String(year), mm, dd, hh, min))
   if (candidate.getTime() > now + 86_400_000) year -= 1

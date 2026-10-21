@@ -7,13 +7,14 @@
 // Gọi từ Shortcuts: POST { "text": "<nội dung notification>", "source": "<tên bank>" }
 //   header bắt buộc: x-shortcut-secret. `source` tuỳ chọn — xem docs/ios-shortcut-setup.md
 //
-// Luồng: OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages
+// Luồng: OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages + gợi ý loại
 
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { parsers } from './parsers.ts'
-import { parseOwnerNames, withKind } from './internal-transfer.ts'
+import { parseOwnerNames } from './internal-transfer.ts'
 import { normalizeInput } from './helpers.ts'
+import { classifyUnparsed } from './classify-unparsed.ts'
+import { insertTransaction, parseNotification, resolveRefs } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
 
 const supabase = createClient(
@@ -77,46 +78,6 @@ function json(body: unknown, status: number): Response {
 }
 
 /**
- * Escape ký tự wildcard của LIKE trong `account_ref`.
- *
- * `account_ref` là 4 KÝ TỰ cuối của số thẻ trong SMS (không phải 4 chữ số) — bank
- * dùng nhiều kiểu mask khác nhau nên `%` hoặc `_` có thể lọt vào
- * (vd "5239...9%08" -> ref "9%08"). Không escape thì `.like('%9%08')` sẽ khớp nhầm
- * thẻ khác và gán giao dịch sai thẻ.
- */
-function escapeLike(s: string): string {
-  return s.replace(/([\\%_])/g, '\\$1')
-}
-
-/**
- * Tìm account_id / card_id từ (bank_name, account_ref).
- * Không khớp -> trả {} để insert với FK null. LƯU Ý: row FK null KHÔNG hiện
- * trong danh sách giao dịch (mọi query đều lọc theo account_id/card_id).
- * Dùng getUnlinkedCount() ở frontend để phát hiện.
- */
-async function resolveRefs(
-  p: ParsedTransaction,
-  userId: string,
-): Promise<{ account_id?: string; card_id?: string }> {
-  if (!p.account_ref) return {}
-
-  const isBank = p.source_type === 'bank'
-  const table = isBank ? 'accounts' : 'credit_cards'
-  const column = isBank ? 'account_number' : 'card_number'
-
-  const { data } = await supabase
-    .from(table)
-    .select('id')
-    .eq('user_id', userId)
-    .eq('bank_name', p.bank_name)
-    .like(column, `%${escapeLike(p.account_ref)}`)
-    .maybeSingle()
-
-  if (!data) return {}
-  return isBank ? { account_id: data.id } : { card_id: data.id }
-}
-
-/**
  * Cùng nguyên văn thông báo đã ghi trong DEDUP_WINDOW_MS -> trùng.
  *
  * Chỉ bắt được lần gửi LẶP của cùng 1 thông báo. Cùng giao dịch về qua 2 kênh
@@ -137,11 +98,8 @@ async function isDuplicate(text: string, userId: string): Promise<boolean> {
 
 /** Ghi giao dịch + resolve FK. Trả response cho Shortcut. */
 async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Response> {
-  const refs = await resolveRefs(parsed, userId)
-  const { error } = await supabase
-    .from('transactions')
-    .insert({ ...parsed, ...refs, user_id: userId })
-  if (error) throw error
+  const refs = await resolveRefs(supabase, parsed, userId)
+  await insertTransaction(supabase, parsed, refs, userId)
 
   // KHÔNG vọng `raw_text` về response: nó chứa nguyên văn thông báo
   // (số TK, số dư, tên người chuyển). Chỉ trả field cần cho Shortcut debug.
@@ -150,14 +108,20 @@ async function insertTx(parsed: ParsedTransaction, userId: string): Promise<Resp
   return json({ inserted }, 201)
 }
 
-/** Lưu tin không ghi được thành giao dịch — nguồn mẫu để viết regex parser mới. */
+/**
+ * Lưu tin không ghi được thành giao dịch: vào hộp "Chưa phân loại" của user
+ * (kèm gợi ý loại để ẩn quảng cáo) và là nguồn mẫu để viết regex parser mới.
+ */
 async function saveUnparsed(text: string, source: string | null, reason: string) {
   // user_id bắt buộc (NOT NULL từ migration 20261021100000) — tin hiện trong hộp
   // "Chưa phân loại" của user. Lỗi không chặn response cho Shortcut nhưng phải lộ
   // ra log: trước đây bị nuốt im lặng, mất luôn mẫu để viết parser.
   const { error } = await supabase
     .from('unparsed_messages')
-    .insert({ raw_text: text, source, reason, user_id: DEFAULT_USER_ID })
+    .insert({
+      raw_text: text, source, reason, user_id: DEFAULT_USER_ID,
+      suggested_kind: classifyUnparsed(text),
+    })
   if (error) console.error('saveUnparsed failed', error.code, error.message)
 }
 
@@ -204,17 +168,15 @@ serve(async (req) => {
       return json({ skipped: 'duplicate' }, 200)
     }
 
-    for (const parser of parsers) {
-      const parsed = parser(text)
-      if (!parsed) continue
-
-      // Regex có thể khớp nhưng cho ra dữ liệu vô nghĩa (NaN amount, ngày không hợp lệ).
-      // Chặn ở đây để không ghi rác vào DB — trả 422 thay vì để Postgres báo 500.
-      if (!Number.isFinite(parsed.amount) || Number.isNaN(Date.parse(parsed.transaction_date))) {
-        await saveUnparsed(text, source, 'invalid_parse')
-        return json({ skipped: 'invalid_parse', bank: parsed.bank_name }, 422)
-      }
-      return await insertTx(withKind(parsed, OWNER_NAMES), DEFAULT_USER_ID)
+    const outcome = parseNotification(text, OWNER_NAMES)
+    if (outcome.status === 'parsed') {
+      return await insertTx(outcome.tx, DEFAULT_USER_ID)
+    }
+    // Regex khớp nhưng ra dữ liệu vô nghĩa -> không ghi rác vào DB, trả 422
+    // thay vì để Postgres báo 500.
+    if (outcome.status === 'invalid') {
+      await saveUnparsed(text, source, 'invalid_parse')
+      return json({ skipped: 'invalid_parse', bank: outcome.bank }, 422)
     }
 
     // Không khớp bank nào -> lưu lại để bổ sung parser sau.
