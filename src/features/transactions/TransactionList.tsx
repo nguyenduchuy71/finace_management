@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useNow } from '@/hooks/useNow'
+import { formatDayLabel, groupByDay } from '@/utils/group-by-day'
+import { DayGroupHeader } from './DayGroupHeader'
 import { useFilterParams } from '@/stores/filterStore'
 import { TransactionRow } from './TransactionRow'
 import { TransactionListSkeleton } from './TransactionListSkeleton'
@@ -22,6 +25,9 @@ export function TransactionList() {
     () => data?.pages.flatMap((page) => page.data) ?? [],
     [data]
   )
+  const dayGroups = useMemo(() => groupByDay(allTransactions), [allTransactions])
+  // "Hôm nay"/"Hôm qua" tự đổi khi tab mở qua nửa đêm
+  const now = useNow()
 
   if (isLoading) return <TransactionListSkeleton count={7} />
 
@@ -42,9 +48,14 @@ export function TransactionList() {
   }
 
   return (
-    <div className="space-y-2">
-      {allTransactions.map((tx) => (
-        <TransactionRow key={tx.id} transaction={tx} />
+    <div className="space-y-4">
+      {dayGroups.map((g) => (
+        <section key={g.dayKey} aria-label={formatDayLabel(g.dayKey, now)}>
+          <DayGroupHeader label={formatDayLabel(g.dayKey, now)} income={g.income} expense={g.expense} />
+          <ul className="divide-y overflow-hidden rounded-xl border bg-card">
+            {g.items.map((tx) => <TransactionRow key={tx.id} transaction={tx} />)}
+          </ul>
+        </section>
       ))}
 
       {hasNextPage && (

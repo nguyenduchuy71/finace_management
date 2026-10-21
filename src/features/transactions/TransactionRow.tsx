@@ -33,7 +33,7 @@ function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
   }, [tx.category, tx.merchantName, tx.type, override])
 
   return (
-    <div className="flex items-center justify-between section-padding-x py-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors duration-200">
+    <li className="flex items-center justify-between section-padding-x py-3 hover:bg-muted/50 transition-colors duration-200">
       {/* Left: icon + description + date */}
       <div className="flex items-center gap-3 min-w-0">
         <div
@@ -86,7 +86,7 @@ function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
 
       {/* Right: amount — heading-label weight with tabular nums for alignment */}
       <span
-        className={`shrink-0 heading-label ml-4 tabular-nums ${
+        className={`shrink-0 heading-label ml-4 money ${
           isIncome
             ? 'text-income'
             : 'text-expense'
@@ -94,7 +94,7 @@ function TransactionRowImpl({ transaction: tx }: TransactionRowProps) {
       >
         {isIncome ? '+' : '–'}{formatVND(Math.abs(tx.amount))}
       </span>
-    </div>
+    </li>
   )
 }
 

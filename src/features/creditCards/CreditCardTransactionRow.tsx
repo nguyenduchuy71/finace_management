@@ -28,57 +28,55 @@ export function CreditCardTransactionRow({ transaction: tx }: CreditCardTransact
   const hasUnknownMcc = Boolean(tx.mcc) && getMccLabel(tx.mcc) === undefined
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-card hover:bg-accent/30 transition-colors">
-      {/* Left: icon + merchant + date + status badge */}
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-expense-soft text-expense">
-          <ShoppingBag className="h-4 w-4" />
-        </div>
-        <div className="min-w-0">
+    <li className="flex gap-3 p-3 hover:bg-muted/50 transition-colors duration-200">
+      <div className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-expense-soft text-expense">
+        <ShoppingBag className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {/* Tên + số tiền cùng một hàng: số tiền không bao giờ tranh chỗ với ô chọn MCC bên dưới */}
+        <div className="flex items-baseline justify-between gap-3">
           <p className="font-medium text-sm text-foreground truncate">{tx.merchantName}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <p className="text-xs text-muted-foreground">{formatDisplayDate(tx.transactionDate)}</p>
-            <TransactionKindBadge kind={tx.kind} />
-            <Badge
-              variant={isPending ? 'secondary' : 'default'}
-              className="text-xs px-1.5 py-0"
-            >
-              {isPending ? 'Chờ xử lý' : 'Đã hạch toán'}
-            </Badge>
-          </div>
-          {/* MCC do user tự gán — dùng để tính hoàn tiền theo rule của thẻ */}
-          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-            <select
-              aria-label={`Phân loại MCC cho ${merchantLabel}`}
+          <span className="shrink-0 font-semibold text-sm money text-expense">
+            –{formatVND(Math.abs(tx.amount))}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+          <p className="text-xs text-muted-foreground">{formatDisplayDate(tx.transactionDate)}</p>
+          <TransactionKindBadge kind={tx.kind} />
+          <Badge
+            variant={isPending ? 'secondary' : 'default'}
+            className="text-xs px-1.5 py-0"
+          >
+            {isPending ? 'Chờ xử lý' : 'Đã hạch toán'}
+          </Badge>
+        </div>
+        {/* MCC do user tự gán — dùng để tính hoàn tiền theo rule của thẻ */}
+        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+          <select
+            aria-label={`Phân loại MCC cho ${merchantLabel}`}
+            aria-busy={updateMcc.isPending}
+            value={tx.mcc ?? ''}
+            onChange={(e) => setMcc(e.target.value || null)}
+            className="border-input h-8 w-full max-w-[15rem] rounded-md border bg-transparent px-2 text-xs aria-busy:opacity-60 sm:w-auto"
+          >
+            <option value="">Chưa phân loại MCC</option>
+            {hasUnknownMcc && <option value={tx.mcc}>{tx.mcc}</option>}
+            {MCC_OPTIONS.map((o) => (
+              <option key={o.code} value={o.code}>{formatMcc(o.code)}</option>
+            ))}
+          </select>
+          {suggestion && (
+            <button
+              type="button"
               aria-busy={updateMcc.isPending}
-              value={tx.mcc ?? ''}
-              onChange={(e) => setMcc(e.target.value || null)}
-              className="border-input h-7 max-w-[15rem] rounded-md border bg-transparent px-2 text-xs aria-busy:opacity-60"
+              onClick={() => setMcc(suggestion)}
+              className="text-xs text-primary underline-offset-2 hover:underline aria-busy:opacity-50"
             >
-              <option value="">Chưa phân loại MCC</option>
-              {hasUnknownMcc && <option value={tx.mcc}>{tx.mcc}</option>}
-              {MCC_OPTIONS.map((o) => (
-                <option key={o.code} value={o.code}>{formatMcc(o.code)}</option>
-              ))}
-            </select>
-            {suggestion && (
-              <button
-                type="button"
-                aria-busy={updateMcc.isPending}
-                onClick={() => setMcc(suggestion)}
-                className="text-xs text-primary underline-offset-2 hover:underline aria-busy:opacity-50"
-              >
-                Gợi ý: {formatMcc(suggestion)}
-              </button>
-            )}
-          </div>
+              Gợi ý: {formatMcc(suggestion)}
+            </button>
+          )}
         </div>
       </div>
-
-      {/* Right: amount (always expense for credit card) */}
-      <span className="shrink-0 font-semibold text-sm ml-4 tabular-nums text-expense">
-        –{formatVND(Math.abs(tx.amount))}
-      </span>
-    </div>
+    </li>
   )
 }
