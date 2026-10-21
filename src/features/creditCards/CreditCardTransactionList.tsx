@@ -36,8 +36,10 @@ export function CreditCardTransactionList() {
     [statementDate, now]
   )
   const cycleGroups = useMemo(
-    () => currentCycle ? groupTransactionsByCycle(allTransactions, currentCycle) : [],
-    [allTransactions, currentCycle]
+    () => currentCycle && statementDate !== undefined
+      ? groupTransactionsByCycle(allTransactions, currentCycle, statementDate)
+      : [],
+    [allTransactions, currentCycle, statementDate]
   )
 
   const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all')

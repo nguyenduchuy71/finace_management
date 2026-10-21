@@ -111,19 +111,16 @@ export function computeCurrentCycle(
 }
 
 /**
- * Group an array of credit card transactions by their billing cycle.
+ * Nhóm giao dịch thẻ theo chu kỳ sao kê, mới nhất trước.
  *
- * Pending transactions (no billingCycleStart) are assigned to the currentCycle.
- * Posted transactions are grouped by their billingCycleStart key.
- * Groups are returned sorted newest-first.
- *
- * @param transactions - Array of CreditCardTransaction
- * @param currentCycle - The current billing cycle (from computeCurrentCycle)
- * @returns Array of BillingCycleGroupData sorted by cycleKey descending
+ * Giao dịch có `billingCycleStart/End` dùng đúng ranh giới đó. Còn lại (mọi giao dịch đọc từ DB —
+ * mapper không có cột này) vào chu kỳ CHỨA ngày giao dịch, tính từ `statementDay` của thẻ.
+ * Bản cũ dồn hết vào chu kỳ hiện tại nên cả lịch sử hiện dưới nhãn "Chu kỳ hiện tại".
  */
 export function groupTransactionsByCycle(
   transactions: CreditCardTransaction[],
-  currentCycle: BillingCycle
+  currentCycle: BillingCycle,
+  statementDay: number
 ): BillingCycleGroupData[] {
   const groups = new Map<string, BillingCycleGroupData>()
 
@@ -138,10 +135,10 @@ export function groupTransactionsByCycle(
       cycleStartISO = tx.billingCycleStart
       cycleEndISO = tx.billingCycleEnd
     } else {
-      // Pending transaction — assign to current cycle
-      cycleKey = currentCycle.startISO
-      cycleStartISO = currentCycle.startISO
-      cycleEndISO = currentCycle.endISO
+      const own = computeCurrentCycle(statementDay, tx.transactionDate)
+      cycleKey = own.startISO
+      cycleStartISO = own.startISO
+      cycleEndISO = own.endISO
     }
 
     const isCurrentCycle = cycleKey === currentCycle.startISO

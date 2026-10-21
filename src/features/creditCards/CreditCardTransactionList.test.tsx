@@ -78,18 +78,22 @@ describe('CreditCardTransactionList', () => {
 
   // Trước đây `now` chốt một lần lúc mount: tab mở qua mốc cắt vẫn hiện chu kỳ cũ, trong khi
   // BillingCycleInfoCard (cùng trang) đã sang chu kỳ mới -> hai khối hiện hai chu kỳ khác nhau.
-  it('tab mở qua mốc cắt sao kê: khoảng ngày chuyển sang chu kỳ mới', async () => {
+  it('tab mở qua mốc cắt sao kê: kỳ cũ thôi là "hiện tại", giao dịch vẫn ở đúng kỳ của nó', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-04-09T16:30:00Z'))
     renderList()
+    expect(screen.getByText('Chu kỳ hiện tại')).toBeInTheDocument()
     expect(screen.getByText('10/03/2026 – 09/04/2026')).toBeInTheDocument()
 
     await act(async () => {
       vi.setSystemTime(new Date('2026-04-09T17:05:00Z'))
       await vi.advanceTimersByTimeAsync(60_000)
     })
-    expect(screen.getByText('10/04/2026 – 09/05/2026')).toBeInTheDocument()
-    expect(screen.queryByText('10/03/2026 – 09/04/2026')).not.toBeInTheDocument()
+    // Giao dịch 01/04 thuộc kỳ 10/03–09/04 dù đồng hồ đã sang kỳ mới — không bị kéo sang kỳ 10/04–09/05
+    expect(screen.getByText('10/03/2026 – 09/04/2026')).toBeInTheDocument()
+    expect(screen.queryByText('10/04/2026 – 09/05/2026')).not.toBeInTheDocument()
+    expect(screen.getByText('Chu kỳ trước')).toBeInTheDocument()
+    expect(screen.queryByText('Chu kỳ hiện tại')).not.toBeInTheDocument()
   })
 
   it('giữa chu kỳ: đồng hồ chạy mà khoảng ngày không đổi', async () => {
