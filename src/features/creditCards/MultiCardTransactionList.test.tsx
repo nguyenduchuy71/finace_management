@@ -99,7 +99,7 @@ describe('Mục "Nhiều thẻ"', () => {
     const u = userEvent.setup()
     renderView()
     const label = 'Phân loại MCC cho SHOPEE'
-    await screen.findByRole('combobox', { name: label })
+    await screen.findByRole('button', { name: label })
     await pickMcc(u, label, '5411', /5411 · Siêu thị/)
     // Lời gọi lưu còn treo mà ô đã đổi: patch cache dưới khoá ['creditCardTransactions', 'multi', ...]
     await waitFor(() => expect(screen.getByLabelText(label)).toHaveTextContent('5411 · Siêu thị'))

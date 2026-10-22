@@ -24,6 +24,8 @@ export function useListboxKeyboard(count: number, onSelect: (index: number) => v
   }, [activeIndex])
 
   function onKeyDown(e: React.KeyboardEvent) {
+    // Đang ghép chữ bằng bộ gõ (Telex/VNI trên macOS, IME): Enter là để chốt chữ, không phải chọn mục.
+    if (e.nativeEvent.isComposing) return
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       // Tính từ chỉ số ĐÃ KẸP: sau khi lọc ngắn lại, chỉ số thô có thể vượt danh sách và phím mũi tên "kẹt"

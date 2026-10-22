@@ -33,6 +33,14 @@ describe('toCardTxPatch', () => {
     expect(patchOf({ merchantName: 'WinMart+ Q1' })).toEqual({ ok: true, patch: { merchantName: 'WinMart+ Q1' } })
   })
 
+  // merchant_name NULL -> mapper hiện mô tả làm merchant; chỉ gửi description thì tên đang thấy mất.
+  it('đổi mô tả: ghi kèm merchant đang hiển thị', () => {
+    const fallback = initialCardTxForm({ ...tx, merchantName: 'WINMART HCM', description: 'WINMART HCM' })
+    expect(toCardTxPatch({ ...fallback, description: 'Đi chợ' }, fallback)).toEqual({
+      ok: true, patch: { merchantName: 'WINMART HCM', description: 'Đi chợ' },
+    })
+  })
+
   it('đổi số tiền: gửi số có dấu theo chiều; nhận nhóm nghìn', () => {
     expect(patchOf({ amount: '200.000' })).toEqual({ ok: true, patch: { amount: -200_000 } })
   })

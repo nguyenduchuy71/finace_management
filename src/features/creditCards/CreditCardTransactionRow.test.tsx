@@ -67,6 +67,27 @@ describe('CreditCardTransactionRow — MCC', () => {
     await waitFor(() => expect(updateCardTransactionMcc).toHaveBeenCalledWith('tx-1', '1234'))
   })
 
+  it('bàn phím: ô tìm là combobox, mũi tên + Enter chọn mục đang trỏ', async () => {
+    const u = userEvent.setup()
+    renderRow()
+    await u.click(picker())
+    const input = screen.getByRole('combobox', { name: 'Tìm MCC' })
+    expect(input).toHaveFocus()
+    await u.type(input, '581')
+    await u.keyboard('{ArrowDown}{Enter}') // 5811 -> 5812
+    await waitFor(() => expect(updateCardTransactionMcc).toHaveBeenCalledWith('tx-1', '5812'))
+  })
+
+  it('Enter khi bộ gõ đang ghép chữ (IME) không chọn mục', async () => {
+    const u = userEvent.setup()
+    renderRow()
+    await u.click(picker())
+    const input = screen.getByRole('combobox', { name: 'Tìm MCC' })
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true })
+    expect(updateCardTransactionMcc).not.toHaveBeenCalled()
+    expect(screen.getByRole('listbox')).toBeInTheDocument()
+  })
+
   it('chọn lại "Chưa phân loại" thì gửi null', async () => {
     const u = userEvent.setup()
     renderRow({ ...base, mcc: '5411' })
