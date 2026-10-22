@@ -1,12 +1,12 @@
 import { Badge } from '@/components/ui/badge'
-import { NativeSelect } from '@/components/ui/native-select'
 import { useUpdateTransactionMcc } from '@/hooks/useUpdateTransactionMcc'
 import { formatVND } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/dates'
-import { MCC_OPTIONS, formatMcc, getMccLabel, suggestMcc } from '@/utils/mcc'
+import { formatMcc, suggestMcc } from '@/utils/mcc'
 import { ArrowDownLeft, ShoppingBag } from 'lucide-react'
 import type { CreditCard, CreditCardTransaction } from '@/types/creditCard'
 import { BankLogo } from './BankLogo'
+import { MccPicker } from './MccPicker'
 import { TransactionKindBadge } from '@/components/ui/TransactionKindBadge'
 
 interface CreditCardTransactionRowProps {
@@ -30,8 +30,6 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
   const merchantLabel = tx.merchantName || tx.description || 'giao dịch'
   // Gợi ý chỉ hiện khi chưa phân loại và KHÔNG tự lưu: khớp từ khoá có thể sai (vd GrabFood).
   const suggestion = tx.mcc ? null : suggestMcc(tx.merchantName)
-  // MCC lạ (đặt từ nơi khác, không nằm trong danh sách rút gọn) vẫn phải hiển thị được.
-  const hasUnknownMcc = Boolean(tx.mcc) && getMccLabel(tx.mcc) === undefined
 
   return (
     <li className="flex gap-3 p-3 hover:bg-muted/50 transition-colors duration-200">
@@ -67,20 +65,14 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
         </div>
         {/* MCC do user tự gán — dùng để tính hoàn tiền theo rule của thẻ */}
         <div className="flex flex-wrap items-center gap-2 mt-1.5">
-          <NativeSelect
-            size="sm"
+          <MccPicker
             aria-label={`Phân loại MCC cho ${merchantLabel}`}
             aria-busy={updateMcc.isPending}
             value={tx.mcc ?? ''}
-            onChange={(e) => setMcc(e.target.value || null)}
+            onChange={(code) => setMcc(code || null)}
+            noneLabel="Chưa phân loại MCC"
             className="max-w-[15rem] sm:w-60"
-          >
-            <option value="">Chưa phân loại MCC</option>
-            {hasUnknownMcc && <option value={tx.mcc}>{tx.mcc}</option>}
-            {MCC_OPTIONS.map((o) => (
-              <option key={o.code} value={o.code}>{formatMcc(o.code)}</option>
-            ))}
-          </NativeSelect>
+          />
           {suggestion && (
             <button
               type="button"

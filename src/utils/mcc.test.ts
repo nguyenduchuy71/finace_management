@@ -1,23 +1,46 @@
 import { describe, it, expect } from 'vitest'
-import { MCC_OPTIONS, formatMcc, getMccLabel, suggestMcc } from './mcc'
+import { COMMON_MCC_OPTIONS, MCC_OPTIONS, formatMcc, getMccLabel, suggestMcc } from './mcc'
+import { MCC_KEYWORDS } from './mcc-keywords'
 
 describe('MCC_OPTIONS', () => {
-  it('đúng 16 mã đã duyệt, không trùng, mỗi mã là 4 chữ số', () => {
-    expect(MCC_OPTIONS).toHaveLength(16)
+  it('danh sách đầy đủ: ~1000 mã 4 chữ số, không trùng, sắp theo mã', () => {
+    expect(MCC_OPTIONS.length).toBeGreaterThan(990)
     const codes = MCC_OPTIONS.map((o) => o.code)
-    expect(new Set(codes).size).toBe(16)
+    expect(new Set(codes).size).toBe(codes.length)
     for (const c of codes) expect(c).toMatch(/^\d{4}$/)
-    expect(codes).toEqual([
-      '5411', '5812', '5814', '5541', '4121', '4111', '5311', '5651',
-      '5732', '5942', '5912', '8011', '4899', '7832', '4900', '4814',
-    ])
+    expect(codes).toEqual([...codes].sort())
   })
 
-  it('mỗi mục có nhãn và ít nhất một từ khoá không dấu, chữ thường', () => {
-    for (const o of MCC_OPTIONS) {
-      expect(o.label.length).toBeGreaterThan(0)
-      expect(o.keywords.length).toBeGreaterThan(0)
-      for (const k of o.keywords) expect(k).toBe(k.toLowerCase())
+  it('mã mới hơn bộ dữ liệu gốc đã được bổ sung', () => {
+    for (const c of ['5262', '5552', '6050', '6536', '6537', '6538', '6540', '7280', '7322', '9406']) {
+      expect(getMccLabel(c), c).toBeTruthy()
+    }
+  })
+
+  it('16 mã ban đầu giữ nguyên nhãn (rule và giao dịch cũ hiển thị như trước)', () => {
+    expect(Object.fromEntries(['5411', '5812', '5814', '5541', '4121', '4111', '5311', '5651',
+      '5732', '5942', '5912', '8011', '4899', '7832', '4900', '4814'].map((c) => [c, getMccLabel(c)]))).toEqual({
+      '5411': 'Siêu thị', '5812': 'Nhà hàng', '5814': 'Đồ ăn nhanh / cafe', '5541': 'Xăng dầu',
+      '4121': 'Taxi / xe công nghệ', '4111': 'Giao thông công cộng', '5311': 'Bách hóa / Trung tâm thương mại',
+      '5651': 'Quần áo', '5732': 'Điện tử', '5942': 'Sách / Văn phòng phẩm', '5912': 'Nhà thuốc',
+      '8011': 'Y tế', '4899': 'Giải trí / Streaming', '7832': 'Rạp phim', '4900': 'Điện nước', '4814': 'Viễn thông',
+    })
+  })
+
+  it('mọi mục có nhãn; mọi mã có từ khoá đều nằm trong danh sách', () => {
+    for (const o of MCC_OPTIONS) expect(o.label.length, o.code).toBeGreaterThan(0)
+    for (const code of Object.keys(MCC_KEYWORDS)) expect(getMccLabel(code), code).toBeDefined()
+    expect(COMMON_MCC_OPTIONS.length).toBe(Object.keys(MCC_KEYWORDS).length)
+  })
+
+  it('từ khoá: không dấu, chữ thường, không thừa khoảng trắng, không trùng giữa các mã', () => {
+    const seen = new Map<string, string>()
+    for (const o of COMMON_MCC_OPTIONS) {
+      for (const k of o.keywords) {
+        expect(k).toMatch(/^[a-z0-9&.!]+( [a-z0-9&.!]+)*$/)
+        expect(seen.get(k), `"${k}" trùng ở ${seen.get(k)} và ${o.code}`).toBeUndefined()
+        seen.set(k, o.code)
+      }
     }
   })
 })
@@ -29,10 +52,10 @@ describe('getMccLabel / formatMcc', () => {
   })
 
   it('mã lạ hoặc rỗng: không ném lỗi', () => {
-    expect(getMccLabel('9999')).toBeUndefined()
+    expect(getMccLabel('1234')).toBeUndefined()
     expect(getMccLabel(null)).toBeUndefined()
     expect(getMccLabel(undefined)).toBeUndefined()
-    expect(formatMcc('9999')).toBe('9999')
+    expect(formatMcc('1234')).toBe('1234')
   })
 })
 
@@ -99,7 +122,7 @@ describe('suggestMcc', () => {
   // từ khoá khác (của mục khác) che mất — "apple" che "apple music", "tien dien" che
   // "nap tien dien thoai". Test cũ chỉ kiểm mã trả về nằm trong danh sách, đúng theo cấu trúc.
   it('mỗi từ khoá gợi ý đúng mục chứa nó', () => {
-    for (const o of MCC_OPTIONS) {
+    for (const o of COMMON_MCC_OPTIONS) {
       for (const k of o.keywords) {
         expect(suggestMcc(k), `từ khoá "${k}"`).toBe(o.code)
       }

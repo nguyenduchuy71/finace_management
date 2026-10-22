@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
@@ -19,6 +19,7 @@ import {
 import { CashbackRulesEditor } from './CashbackRulesEditor'
 import type { CashbackRule } from '@/types/cashback'
 import type { CreditCard } from '@/types/creditCard'
+import { pickMcc } from '@/test/mcc-picker-helpers'
 
 const card: CreditCard = {
   id: 'card-1', bankName: 'SHB', cardName: 'SHB Visa', cardNumber: '****x265', cardType: 'visa',
@@ -84,7 +85,7 @@ describe('CashbackRulesEditor — thêm rule', () => {
     renderEditor()
     await u.click(await screen.findByRole('button', { name: 'Thêm rule' }))
 
-    setField('Áp dụng cho', '5812')
+    await pickMcc(u, 'Áp dụng cho', '5812', /5812 · Nhà hàng/)
     setField('Hoàn (%)', '5,5')
     setField(/Chi tối thiểu/, '3.000.000')
     setField(/Trần hoàn/, '200.000')
@@ -128,37 +129,41 @@ describe('CashbackRulesEditor — thêm rule', () => {
     vi.mocked(listCashbackRules).mockResolvedValue([food, base])
     renderEditor()
     await u.click(await screen.findByRole('button', { name: 'Thêm rule' }))
-    const select = screen.getByLabelText('Áp dụng cho') as HTMLSelectElement
-    const opt = (text: RegExp) => within(select).getByRole('option', { name: text }) as HTMLOptionElement
+    await u.click(screen.getByLabelText('Áp dụng cho'))
+    const opt = (text: RegExp) => screen.getByRole('option', { name: text })
 
-    expect(opt(/5812/).disabled).toBe(true)
-    expect(opt(/Mọi giao dịch còn lại/).disabled).toBe(true)
-    expect(opt(/5411/).disabled).toBe(false)
+    expect(opt(/5812/)).toHaveAttribute('aria-disabled', 'true')
+    expect(opt(/Mọi giao dịch còn lại/)).toHaveAttribute('aria-disabled', 'true')
+    expect(opt(/5411/)).not.toHaveAttribute('aria-disabled')
+
+    // Bấm mục bị khoá: không chọn, popover vẫn mở
+    await u.click(opt(/5812/))
+    expect(screen.getByLabelText('Áp dụng cho')).toHaveTextContent('Giao thông công cộng')
   })
 
-  // Mục '' (rule mặc định) bị khoá nhưng vẫn là giá trị ban đầu của <select>: user bấm Thêm mà không
-  // chọn gì thì nhận lỗi trùng không nói rõ phải đổi gì.
+  // Mục '' (rule mặc định) bị khoá nhưng vẫn là giá trị ban đầu: user bấm Thêm mà không chọn gì thì
+  // nhận lỗi trùng không nói rõ phải đổi gì. Chọn sẵn trong nhóm HAY GẶP (sắp theo mã), không phải 0742.
   it('rule mặc định đã có: form mới chọn sẵn nhóm đầu tiên còn trống, không phải mục bị khoá', async () => {
     const u = userEvent.setup()
     vi.mocked(listCashbackRules).mockResolvedValue([base])
     renderEditor()
     await u.click(await screen.findByRole('button', { name: 'Thêm rule' }))
-    expect(screen.getByLabelText('Áp dụng cho')).toHaveValue('5411') // 5411 là mã đầu tiên trong danh sách
+    expect(screen.getByLabelText('Áp dụng cho')).toHaveTextContent('4111 · Giao thông công cộng')
   })
 
   it('nhóm đầu tiên cũng đã có rule: chọn sẵn nhóm trống kế tiếp', async () => {
     const u = userEvent.setup()
-    vi.mocked(listCashbackRules).mockResolvedValue([base, { ...food, id: 'r-5411', mcc: '5411' }])
+    vi.mocked(listCashbackRules).mockResolvedValue([base, { ...food, id: 'r-4111', mcc: '4111' }])
     renderEditor()
     await u.click(await screen.findByRole('button', { name: 'Thêm rule' }))
-    expect(screen.getByLabelText('Áp dụng cho')).toHaveValue('5812')
+    expect(screen.getByLabelText('Áp dụng cho')).toHaveTextContent('4112 · Tàu hoả chở khách')
   })
 
   it('chưa có rule nào: chọn sẵn rule mặc định như trước', async () => {
     const u = userEvent.setup()
     renderEditor()
     await u.click(await screen.findByRole('button', { name: 'Thêm rule' }))
-    expect(screen.getByLabelText('Áp dụng cho')).toHaveValue('')
+    expect(screen.getByLabelText('Áp dụng cho')).toHaveTextContent('Mọi giao dịch còn lại (mặc định)')
   })
 
   it('gợi ý của ô được nối aria-describedby, và nhường chỗ cho lỗi khi có', async () => {
@@ -213,8 +218,10 @@ describe('CashbackRulesEditor — sửa và xoá', () => {
     renderEditor()
     await u.click(await screen.findByRole('button', { name: 'Sửa rule 5812 · Nhà hàng' }))
 
-    expect(screen.getByLabelText('Áp dụng cho')).toHaveValue('5812')
-    expect((within(screen.getByLabelText('Áp dụng cho')).getByRole('option', { name: /5812/ }) as HTMLOptionElement).disabled).toBe(false)
+    expect(screen.getByLabelText('Áp dụng cho')).toHaveTextContent('5812 · Nhà hàng')
+    await u.click(screen.getByLabelText('Áp dụng cho'))
+    expect(screen.getByRole('option', { name: /5812/ })).not.toHaveAttribute('aria-disabled')
+    await u.keyboard('{Escape}')
     expect(screen.getByLabelText('Hoàn (%)')).toHaveValue('5')
     expect(screen.getByLabelText(/Chi tối thiểu/)).toHaveValue('3000000')
 

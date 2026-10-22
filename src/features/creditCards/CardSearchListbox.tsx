@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Check, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { useListboxKeyboard } from '@/hooks/useListboxKeyboard'
 import { cn } from '@/lib/utils'
 import type { CreditCard } from '@/types/creditCard'
 import { BankLogo } from './BankLogo'
@@ -26,8 +27,6 @@ interface CardSearchListboxProps {
  */
 export function CardSearchListbox({ id, cards, selectedIds, onPick, multiple = false }: CardSearchListboxProps) {
   const [query, setQuery] = useState('')
-  const [rawActiveIndex, setActiveIndex] = useState(0)
-  const listRef = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
@@ -39,38 +38,11 @@ export function CardSearchListbox({ id, cards, selectedIds, onPick, multiple = f
     )
   }, [cards, query])
 
-  // Kẹp con trỏ vào trong mảng thay vì reset bằng useEffect: sau khi lọc,
-  // activeIndex cũ có thể vượt quá độ dài danh sách mới. Tính lúc render tránh
-  // được một vòng render thừa (và cảnh báo cascading render của eslint).
-  const activeIndex = Math.min(rawActiveIndex, Math.max(filtered.length - 1, 0))
-
-  // Giữ mục đang trỏ luôn nằm trong tầm nhìn khi di chuyển bằng bàn phím
-  useEffect(() => {
-    listRef.current
-      ?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)
-      ?.scrollIntoView?.({ block: 'nearest' })
-  }, [activeIndex])
-
-  function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      // Tính từ chỉ số ĐÃ KẸP: sau khi lọc ngắn lại, chỉ số thô có thể vượt danh sách và phím mũi tên "kẹt"
-      setActiveIndex(Math.min(activeIndex + 1, filtered.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActiveIndex(Math.max(activeIndex - 1, 0))
-    } else if (e.key === 'Enter' || (multiple && e.key === ' ' && query === '')) {
-      e.preventDefault()
-      const card = filtered[activeIndex]
-      if (card) onPick(card.id)
-    } else if (e.key === 'Home') {
-      e.preventDefault()
-      setActiveIndex(0)
-    } else if (e.key === 'End') {
-      e.preventDefault()
-      setActiveIndex(filtered.length - 1)
-    }
-  }
+  const { activeIndex, setActiveIndex, listRef, onKeyDown } = useListboxKeyboard(
+    filtered.length,
+    (i) => onPick(filtered[i].id),
+    multiple && query === '',
+  )
 
   return (
     <>

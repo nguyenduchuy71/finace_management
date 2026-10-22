@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
@@ -18,6 +18,7 @@ import { useFilterStore } from '@/stores/filterStore'
 import { MultiCardPicker } from './MultiCardPicker'
 import { MultiCardTransactionList } from './MultiCardTransactionList'
 import type { CreditCard, CreditCardTransaction } from '@/types/creditCard'
+import { pickMcc } from '@/test/mcc-picker-helpers'
 
 const mkCard = (id: string, bankName: string, cardName: string, last4: string): CreditCard => ({
   id, bankName, cardName, cardNumber: `****${last4}`, cardType: 'visa', currency: 'VND', creditLimit: 0,
@@ -95,11 +96,13 @@ describe('Mục "Nhiều thẻ"', () => {
   it('gán MCC ngay trên dòng của mục nhiều thẻ: cập nhật tức thì (optimistic) và gọi service', async () => {
     let resolveSave!: () => void
     vi.mocked(updateCardTransactionMcc).mockReturnValue(new Promise<void>((r) => { resolveSave = r }))
+    const u = userEvent.setup()
     renderView()
-    const select = await screen.findByRole('combobox', { name: 'Phân loại MCC cho SHOPEE' })
-    fireEvent.change(select, { target: { value: '5411' } })
+    const label = 'Phân loại MCC cho SHOPEE'
+    await screen.findByRole('combobox', { name: label })
+    await pickMcc(u, label, '5411', /5411 · Siêu thị/)
     // Lời gọi lưu còn treo mà ô đã đổi: patch cache dưới khoá ['creditCardTransactions', 'multi', ...]
-    await waitFor(() => expect(select).toHaveValue('5411'))
+    await waitFor(() => expect(screen.getByLabelText(label)).toHaveTextContent('5411 · Siêu thị'))
     expect(updateCardTransactionMcc).toHaveBeenCalledWith('t2', '5411')
     resolveSave()
   })
