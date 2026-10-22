@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 
-vi.mock('@/services/creditCards', () => ({ updateCardTransactionMcc: vi.fn() }))
-vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('@/services/creditCards', () => ({ updateCardTransactionMcc: vi.fn(), updateCardTransaction: vi.fn() }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
-import { updateCardTransactionMcc } from '@/services/creditCards'
+import { updateCardTransaction, updateCardTransactionMcc } from '@/services/creditCards'
 import { CreditCardTransactionRow } from './CreditCardTransactionRow'
 import type { CreditCardTransaction } from '@/types/creditCard'
 import { pickMcc } from '@/test/mcc-picker-helpers'
@@ -31,6 +31,7 @@ const picker = () => screen.getByLabelText(LABEL)
 beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(updateCardTransactionMcc).mockResolvedValue()
+  vi.mocked(updateCardTransaction).mockResolvedValue()
 })
 
 describe('CreditCardTransactionRow — MCC', () => {
@@ -131,5 +132,79 @@ describe('CreditCardTransactionRow — dấu số tiền', () => {
     const amount = screen.getByText('+đ 5.000.000')
     expect(amount.className).toContain('text-income')
     expect(screen.queryByText('–đ 5.000.000')).not.toBeInTheDocument()
+  })
+})
+
+describe('CreditCardTransactionRow — sửa giao dịch', () => {
+  const openEdit = async (u: ReturnType<typeof userEvent.setup>) => {
+    await u.click(screen.getByRole('button', { name: 'Sửa giao dịch WINMART HCM' }))
+    return screen.getByRole('dialog', { name: 'Sửa giao dịch' })
+  }
+
+  it('mở dialog điền sẵn giá trị của giao dịch', async () => {
+    const u = userEvent.setup()
+    renderRow({ ...base, mcc: '5411', category: 'Mua sắm' })
+    await openEdit(u)
+    expect(screen.getByLabelText('Nơi giao dịch')).toHaveValue('WINMART HCM')
+    expect(screen.getByLabelText('Số tiền (đ)')).toHaveValue('150000')
+    expect(screen.getByLabelText('Chiều tiền')).toHaveValue('expense')
+    expect(screen.getByLabelText('Thời điểm')).toHaveValue('2026-03-08T17:00')
+    expect(screen.getByLabelText('Danh mục')).toHaveValue('Mua sắm')
+    expect(screen.getByLabelText('MCC')).toHaveTextContent('5411 · Siêu thị')
+  })
+
+  it('lưu chỉ gửi trường đã đổi, đúng giao dịch, rồi đóng dialog', async () => {
+    const u = userEvent.setup()
+    renderRow()
+    await openEdit(u)
+    fireEvent.change(screen.getByLabelText('Số tiền (đ)'), { target: { value: '200.000' } })
+    fireEvent.change(screen.getByLabelText('Nơi giao dịch'), { target: { value: 'WinMart+ Q1' } })
+    fireEvent.change(screen.getByLabelText('Danh mục'), { target: { value: 'Ăn uống' } })
+    await u.click(screen.getByRole('button', { name: 'Lưu' }))
+
+    await waitFor(() => expect(updateCardTransaction).toHaveBeenCalledWith('tx-1', {
+      amount: -200_000, merchantName: 'WinMart+ Q1', category: 'Ăn uống',
+    }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('đổi MCC trong dialog', async () => {
+    const u = userEvent.setup()
+    renderRow()
+    await openEdit(u)
+    await pickMcc(u, 'MCC', '7011', /7011 · Khách sạn/)
+    await u.click(screen.getByRole('button', { name: 'Lưu' }))
+    await waitFor(() => expect(updateCardTransaction).toHaveBeenCalledWith('tx-1', { mcc: '7011' }))
+  })
+
+  it('không đổi gì: đóng dialog, không gọi service', async () => {
+    const u = userEvent.setup()
+    renderRow()
+    await openEdit(u)
+    await u.click(screen.getByRole('button', { name: 'Lưu' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(updateCardTransaction).not.toHaveBeenCalled()
+  })
+
+  it('dữ liệu sai: báo lỗi tại ô, không gọi service', async () => {
+    const u = userEvent.setup()
+    renderRow()
+    await openEdit(u)
+    fireEvent.change(screen.getByLabelText('Số tiền (đ)'), { target: { value: '0' } })
+    await u.click(screen.getByRole('button', { name: 'Lưu' }))
+    expect(await screen.findByText('Nhập số tiền lớn hơn 0')).toBeInTheDocument()
+    expect(screen.getByLabelText('Số tiền (đ)')).toHaveAttribute('aria-invalid', 'true')
+    expect(updateCardTransaction).not.toHaveBeenCalled()
+  })
+
+  it('lưu lỗi: giữ dialog mở và hiện lỗi từ service', async () => {
+    const u = userEvent.setup()
+    vi.mocked(updateCardTransaction).mockRejectedValue({ code: 'NOT_FOUND', message: 'Không tìm thấy giao dịch.' })
+    renderRow()
+    await openEdit(u)
+    fireEvent.change(screen.getByLabelText('Mô tả'), { target: { value: 'x' } })
+    await u.click(screen.getByRole('button', { name: 'Lưu' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Không tìm thấy giao dịch.')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 })

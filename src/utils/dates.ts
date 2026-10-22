@@ -27,6 +27,14 @@ export function formatDisplayDateTime(isoUtcString: string): string {
 }
 
 /**
+ * Giá trị cho ô `<input type="datetime-local">` theo giờ VN: "2026-01-15T14:30" (nghịch đảo của
+ * `vnLocalToISO`). Bỏ giây — form so với giá trị ban đầu để biết user có đổi thời điểm hay không.
+ */
+export function toVnLocalInput(isoUtcString: string): string {
+  return format(toVietnamDate(isoUtcString), "yyyy-MM-dd'T'HH:mm")
+}
+
+/**
  * Calculate percentage change from previousAmount to currentAmount.
  * Returns null if previousAmount <= 0 (cannot calculate % change from zero/negative baseline).
  * Returns rounded whole number percentage: ((current - previous) / previous) * 100
