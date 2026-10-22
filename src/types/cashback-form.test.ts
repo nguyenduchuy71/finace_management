@@ -38,10 +38,15 @@ describe('validateCashbackForm — từ chối', () => {
     if (!r.ok) expect(r.errors.ratePercent).toBeTruthy()
   })
 
-  it('nhóm MCC ngoài danh sách bị chặn (không ghi mã tuỳ ý vào DB)', () => {
-    const r = run({ mcc: '1234' })
+  it.each(['123', '12345', 'abcd', '54 1'])('MCC %j không đủ 4 chữ số bị chặn', (mcc) => {
+    const r = run({ mcc })
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.errors.mcc).toMatch(/danh sách/)
+    if (!r.ok) expect(r.errors.mcc).toMatch(/4 chữ số/)
+  })
+
+  it('mã 4 chữ số ngoài danh sách vẫn nhận (mã mới hơn bộ dữ liệu)', () => {
+    const r = run({ mcc: '1234' })
+    expect(r.ok && r.values.mcc).toBe('1234')
   })
 
   // "1.5" từng âm thầm thành 15đ

@@ -1,12 +1,9 @@
 import { z } from 'zod'
-import { MCC_OPTIONS } from '@/utils/mcc'
 import { moneyAmountField } from './form-fields'
 import type { CashbackRule } from './cashback'
 
 /** Nhãn của rule mặc định (mcc = null) ở mọi nơi hiển thị rule. */
 export const DEFAULT_RULE_LABEL = 'Mọi giao dịch còn lại (mặc định)'
-
-const MCC_CODES = new Set(MCC_OPTIONS.map((o) => o.code))
 
 /** Tối đa bậc thêm mỗi rule; khớp giới hạn của RPC save_cashback_rule ở DB. */
 export const MAX_TIERS = 5
@@ -42,9 +39,10 @@ export const CardCapFormSchema = optionalCapField('Trần hoàn cả thẻ')
 
 /** Input là chuỗi (đúng như ô nhập), output là giá trị đã chuẩn hoá để gửi lên DB. */
 export const CashbackRuleFormSchema = z.object({
-  // '' = rule mặc định cho mọi giao dịch không khớp rule MCC nào
+  // '' = rule mặc định cho mọi giao dịch không khớp rule MCC nào. Mã 4 chữ số ngoài danh sách vẫn nhận
+  // (ngân hàng có thể dùng mã mới hơn bộ dữ liệu); khớp check `^[0-9]{4}$` ở DB.
   mcc: z.string()
-    .refine((v) => v === '' || MCC_CODES.has(v), 'Chọn nhóm MCC trong danh sách')
+    .refine((v) => v === '' || /^\d{4}$/.test(v), 'MCC phải gồm 4 chữ số')
     .transform((v) => (v === '' ? null : v)),
   // Tối đa 2 số lẻ (khớp numeric(5,2) ở DB); chấp nhận dấu phẩy kiểu Việt: "5,5"
   ratePercent: ratePercentField,

@@ -3,16 +3,16 @@ import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { NativeSelect } from '@/components/ui/native-select'
 import { useSaveCashbackRule } from '@/hooks/useCashbackRules'
 import { CashbackTierFields } from './CashbackTierFields'
+import { MccPicker } from './MccPicker'
 import {
   DEFAULT_RULE_LABEL, EMPTY_CASHBACK_FORM, ruleToFormInput, validateCashbackForm,
   type CashbackFormErrors, type CashbackFormInput, type CashbackScalarField,
 } from '@/types/cashback-form'
 import type { CashbackRule } from '@/types/cashback'
 import type { ApiError } from '@/types/api'
-import { MCC_OPTIONS, formatMcc } from '@/utils/mcc'
+import { COMMON_MCC_OPTIONS } from '@/utils/mcc'
 
 const FIELD_ID: Record<CashbackScalarField, string> = {
   mcc: 'rule-mcc',
@@ -37,7 +37,7 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
     // Rule mới: chọn sẵn nhóm đầu tiên CHƯA có rule. Mặc định '' (rule mặc định) mà đã bị chiếm
     // thì <select> hiện một mục bị khoá, user bấm Thêm và nhận lỗi trùng không nói rõ phải đổi gì.
     const taken = new Set(existing.map((r) => r.mcc ?? ''))
-    const firstFree = ['', ...MCC_OPTIONS.map((o) => o.code)].find((m) => !taken.has(m)) ?? ''
+    const firstFree = ['', ...COMMON_MCC_OPTIONS.map((o) => o.code)].find((m) => !taken.has(m)) ?? ''
     return { ...EMPTY_CASHBACK_FORM, mcc: firstFree }
   })
   const [errors, setErrors] = useState<CashbackFormErrors>({})
@@ -80,12 +80,20 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <FormField id="rule-mcc" label="Áp dụng cho" error={errors.mcc}>
-        <NativeSelect {...fieldProps('mcc')}>
-          <option value="" disabled={taken.has('')}>{DEFAULT_RULE_LABEL}</option>
-          {MCC_OPTIONS.map((o) => (
-            <option key={o.code} value={o.code} disabled={taken.has(o.code)}>{formatMcc(o.code)}</option>
-          ))}
-        </NativeSelect>
+        <MccPicker
+          id={FIELD_ID.mcc}
+          value={form.mcc}
+          noneLabel={DEFAULT_RULE_LABEL}
+          disabledCodes={taken}
+          aria-invalid={errors.mcc ? true : undefined}
+          aria-describedby={describedBy(FIELD_ID.mcc, Boolean(errors.mcc))}
+          onChange={(mcc) => {
+            setForm((f) => ({ ...f, mcc }))
+            setErrors((prev) => ({ ...prev, mcc: undefined }))
+            setSubmitError(null)
+          }}
+          className="h-9 w-full text-sm"
+        />
       </FormField>
       <div className="grid gap-4 sm:grid-cols-3">
         <FormField id="rule-rate" label="Hoàn (%)" error={errors.ratePercent}>
