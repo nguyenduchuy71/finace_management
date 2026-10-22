@@ -106,7 +106,8 @@ src/
 │   │                    #   DayGroupHeader, LoadMoreFooter
 │   ├── creditCards/     # CreditCardSelector + MultiCardPicker (cùng dùng CardSearchListbox), CardVisual (thẻ vật lý),
 │   │                    #   CycleProgress, MultiCardTransactionList (?view=all), CardFormDialog, DeleteCardDialog,
-│   │                    #   BillingCycleGroup, BillingCycleInfoCard, CreditCardTransactionRow (chọn MCC),
+│   │                    #   BillingCycleGroup, BillingCycleInfoCard, CreditCardTransactionRow (chọn MCC, nút Sửa),
+│   │                    #   MccPicker (chọn MCC có tìm kiếm), EditCardTransactionDialog,
 │   │                    #   CashbackSummary / CashbackRulesEditor / CashbackRuleForm, BankLogo
 │   ├── dashboard/       # StatCard, NetCashFlowCard, CategoryChart, DashboardDatePicker, BudgetProgressSection (bố cục bento)
 │   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
@@ -119,7 +120,8 @@ src/
 │   ├── form/            # FormField (nhãn+gợi ý+lỗi), form-aria (describedBy)
 │   └── ui/              # shadcn components + CategoryBadge, TransactionKindBadge, MeterBar (thanh tiến độ)
 ├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useMultiCardTransactions,
-│                        #   useCreditCardMutations, useUpdateTransactionMcc, useCashbackRules, useCycleCashback, useNow,
+│                        #   useCreditCardMutations, useUpdateTransactionMcc, useUpdateCardTransaction, useCashbackRules,
+│                        #   useCycleCashback, useNow, useListboxKeyboard,
 │                        #   useDashboardStats, useBudgetAlerts, useDebounced, useCountUp, useAuth
 ├── lib/supabase.ts      # Supabase client singleton
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
@@ -129,7 +131,8 @@ src/
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, credit-card-form.ts, cashback.ts, cashback-form.ts,
 │                        #   form-fields.ts (moneyAmountField), budget.ts, categories.ts
-├── utils/               # dates, currency, categories, csv, billingCycle, mcc, cashback, cashflow, category-colors,
+├── utils/               # dates, currency, categories, csv, billingCycle, mcc (+ mcc-codes sinh tự động, mcc-keywords,
+│                        #   mcc-search), cashback, cashflow, category-colors,
 │                        #   cycle-progress, group-by-day
 ├── test/                # fixtures/, integration-setup.ts
 └── lib/utils.ts         # cn() = clsx + twMerge
@@ -264,6 +267,8 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 | `useCreateCreditCard()` / `useUpdateCreditCard(card)` / `useDeleteCreditCard()` | Mutations; invalidate thẻ, giao dịch thẻ, dashboard, rule, chi tiêu chu kỳ |
 | `useCardTransactionCount(cardId)` | Đếm giao dịch của thẻ (luôn lấy mới) cho dialog xoá |
 | `useUpdateTransactionMcc()` | Gán/bỏ MCC, optimistic ở mọi trang cache, hoàn tác đúng giao dịch khi lỗi |
+| `useUpdateCardTransaction()` | Sửa giao dịch thẻ (patch chỉ gồm trường đã đổi); invalidate giao dịch thẻ, chi tiêu chu kỳ, dashboard |
+| `useListboxKeyboard(count, onSelect, spaceSelects?)` | Con trỏ + phím mũi tên/Home/End/Enter cho ô tìm điều khiển listbox (CardSearchListbox, MccPicker) |
 | `useCashbackRules(cardId)` / `useSaveCashbackRule` / `useDeleteCashbackRule` | Rule hoàn tiền của thẻ (kèm bậc thang) |
 | `useSetCardCashbackCap(cardId)` | Đặt/bỏ trần hoàn tiền cả thẻ; invalidate `['creditCards']` |
 | `useCycleCashback(cardId, cycle, cardCap)` | `{ result, rules, isLoading, isError, refetch }` — rule + chi tiêu chu kỳ + trần thẻ → `computeCashback` |
@@ -352,12 +357,16 @@ formatDayLabel(dayKey, nowISO)            → "Hôm nay" | "Hôm qua" | "Thứ h
 getCategoryChartColor(category)           → 'var(--chart-n)'   // danh mục lạ → màu "Khác"
 ```
 
-### MCC (`mcc.ts`)
+### MCC (`mcc.ts`, `mcc-search.ts`)
 ```typescript
-MCC_OPTIONS                       // 16 mã {code, label, keywords} — user chọn tay
-suggestMcc(merchantName)          → mã | null   // chỉ GỢI Ý, không bao giờ tự lưu; khớp theo ranh giới từ, từ khoá dài nhất thắng
+MCC_OPTIONS                       // ~1000 mã ISO 18245 {code, label, keywords} từ mcc-codes.ts (FILE SINH: sửa scripts/generate-mcc-codes.py)
+COMMON_MCC_OPTIONS                // mã có từ khoá gợi ý (mcc-keywords.ts) — hiện sẵn khi ô tìm trống
+suggestMcc(merchantName)          → mã | null   // chỉ GỢI Ý, không bao giờ tự lưu; ranh giới từ, từ khoá dài nhất thắng, hoà → mã nhỏ hơn
 getMccLabel(code) / formatMcc(code)   // "5411 · Siêu thị"
+searchMcc(query, limit = 50)      → MccOption[]   // mã > đầu mã > chữ (mã nhóm chung trước mã hãng 3000–3999)
+getMccGroup(code)                 → "Bán lẻ, ô tô, xăng dầu"
 ```
+Chọn MCC luôn qua `MccPicker` (không `<select>` nghìn option). Mã 4 chữ số ngoài danh sách vẫn hợp lệ (giao dịch lẫn rule).
 
 ### Cashback (`cashback.ts`)
 ```typescript
