@@ -47,23 +47,29 @@ mồ côi — đúng lỗi lệch dashboard nói ở trên.
 `src/utils/mcc.ts`, `src/features/creditCards/CreditCardTransactionRow.tsx`,
 `src/hooks/useUpdateTransactionMcc.ts`.
 
-SMS ngân hàng VN gần như không kèm MCC nên **người dùng gán tay** từ danh sách 16 mã (`MCC_OPTIONS`):
+SMS ngân hàng VN gần như không kèm MCC nên **người dùng gán tay** bằng `MccPicker` (ô chọn có tìm kiếm).
 
-| Mã | Nhóm | Mã | Nhóm |
-|---|---|---|---|
-| 5411 | Siêu thị | 5732 | Điện tử |
-| 5812 | Nhà hàng | 5942 | Sách / Văn phòng phẩm |
-| 5814 | Đồ ăn nhanh / cafe | 5912 | Nhà thuốc |
-| 5541 | Xăng dầu | 8011 | Y tế |
-| 4121 | Taxi / xe công nghệ | 4899 | Giải trí / Streaming |
-| 4111 | Giao thông công cộng | 7832 | Rạp phim |
-| 5311 | Bách hóa / Trung tâm thương mại | 4900 | Điện nước |
-| 5651 | Quần áo | 4814 | Viễn thông |
+- **Danh sách đầy đủ ~1000 mã** (`src/utils/mcc-codes.ts`, ISO 18245): sinh bằng `scripts/generate-mcc-codes.py`
+  từ [greggles/mcc-codes](https://github.com/greggles/mcc-codes) (tổng hợp Visa/Mastercard/IRS), nhãn tiếng Việt,
+  cộng các mã mới hơn bộ nguồn mà ngân hàng hay nhắc (6540 nạp ví, 5262 sàn TMĐT, 5552 sạc xe điện, 6050, 6532–6538,
+  7280, 7322, 9406). Mã 3000–3999 là mã riêng của từng hãng bay / hãng thuê xe / chuỗi khách sạn, giữ tên hãng gốc.
+  **Đừng sửa tay file sinh**: sửa script rồi chạy lại (hướng dẫn ở đầu script).
+- 16 mã ban đầu giữ nguyên nhãn (5411 Siêu thị, 5812 Nhà hàng…), nên giao dịch và rule cũ hiển thị như trước.
+- Ô tìm (`searchMcc`, `mcc-search.ts`): theo mã, tên nhóm (không dấu) hoặc từ khoá merchant ("grab" ra 4121).
+  Thứ tự: trùng mã > đầu mã > chữ khớp ở mã nhóm chung > mã hãng. Nếu không đẩy mã hãng xuống cuối,
+  gõ "khach san" sẽ ra 400 chuỗi khách sạn trước, còn 7011 rơi khỏi 50 kết quả đầu. Ô trống thì hiện các
+  nhóm hay gặp (`COMMON_MCC_OPTIONS` = mã có từ khoá gợi ý).
+- Gõ một mã 4 chữ số ngoài danh sách vẫn chọn được ("Dùng mã …") cho cả giao dịch lẫn rule: DB chỉ kiểm
+  `^[0-9]{4}$`, và ngân hàng có thể dùng mã mới hơn bộ dữ liệu.
+- Không dùng `<select>`: nghìn option lặp lại ở mỗi dòng giao dịch vừa nặng DOM vừa không tìm được.
+  Popover chỉ dựng khi mở và tối đa 50 dòng.
 
 - Lưu ở cột `transactions.mcc` (4 chữ số, nullable = chưa phân loại; DB có check).
 - **MCC độc lập với `Category`** (Ăn uống, Mua sắm…). `categoryOverrideStore` vẫn chỉ nằm ở
   localStorage; MCC thì lưu DB vì rule hoàn tiền phụ thuộc vào nó.
-- `suggestMcc(merchantName)` chỉ **gợi ý** bằng một nút bấm, không bao giờ tự lưu. Khớp theo
+- `suggestMcc(merchantName)` chỉ **gợi ý** bằng một nút bấm, không bao giờ tự lưu. Từ khoá ở
+  `src/utils/mcc-keywords.ts`; khoá số của object luôn duyệt theo mã tăng dần nên hai từ khoá dài bằng
+  nhau thì **mã nhỏ hơn thắng**. Khớp theo
   **ranh giới từ** (không khớp chuỗi con giữa từ: `shell` không dính "Shellfish"), nhiều từ khoá cùng
   khớp thì lấy từ khoá **dài nhất** (`apple music` thắng `apple`). Từ khoá nhập nhằng
   (`metro`, `gas`) và từ khoá địa điểm (`vincom`, `mall`) cố ý không có. Muốn thêm từ khoá: test
@@ -71,6 +77,17 @@ SMS ngân hàng VN gần như không kèm MCC nên **người dùng gán tay** t
 - Cập nhật lạc quan (optimistic) vào mọi trang/bộ lọc đang cache, lỗi thì hoàn tác **đúng giao dịch
   đó** (không khôi phục cả ảnh chụp cache, vì sẽ xoá thay đổi của lần sửa song song).
 - Cột `MCC` trong CSV chỉ có ở file xuất của thẻ.
+
+### Sửa giao dịch thẻ
+
+`EditCardTransactionDialog` (nút "Sửa" trên mỗi dòng, cả "Từng thẻ" lẫn "Nhiều thẻ") sửa nơi giao dịch, mô tả,
+chiều + số tiền, thời điểm, loại (thường / nội bộ / cashback), danh mục và MCC.
+- `toCardTxPatch` (`types/card-transaction-form.ts`) chỉ giữ trường user **thực sự đổi**: ô `datetime-local`
+  chỉ tới phút, ghi lại thời điểm cũ sẽ làm mất giây. Không đổi gì thì đóng dialog, không gọi mạng.
+- `updateCardTransaction` (`services/creditCards.ts`) validate bằng Zod, chỉ chạm giao dịch có `card_id`,
+  0 dòng thì báo `NOT_FOUND`. Không cần RPC hay migration: grant `update` + policy `own_tx_update` đã kiểm
+  `user_id` và thẻ thuộc chính user.
+- Cashback phải là tiền vào (giống form xử lý hộp tin). Không đổi được thẻ của giao dịch, trạng thái, và không xoá.
 
 ## 3. Rule hoàn tiền
 
@@ -143,8 +160,9 @@ Giao dịch của chu kỳ lấy qua `exportTransactions` (tự lật trang 500 
 |---|---|
 | `['cashbackRules', cardId]` | thêm/sửa/xoá rule (kèm bậc); sửa/xoá thẻ |
 | `['creditCards']` | đặt/bỏ trần cả thẻ (Summary tính lại ngay từ `card.cashbackMonthlyCap`, không tải lại giao dịch) |
-| `['cardCycleExpenses', cardId, start, end]` | đổi MCC; sửa/xoá thẻ |
-| `['creditCardTransactions', …]` | đổi MCC; thêm/sửa/xoá thẻ |
+| `['cardCycleExpenses', cardId, start, end]` | đổi MCC; sửa giao dịch; sửa/xoá thẻ |
+| `['creditCardTransactions', …]` | đổi MCC; sửa giao dịch; thêm/sửa/xoá thẻ |
+| `['dashboardStats', …]` | sửa giao dịch (số tiền, ngày, loại, danh mục đều đổi tổng quan); sửa/xoá thẻ |
 | `['creditCardTxCount', cardId]` | luôn lấy mới khi mở dialog xoá |
 
 Giới hạn đã biết: một SMS mới đến lúc trang đang mở **không** làm số ước tính tự cập nhật.
@@ -165,7 +183,7 @@ Giới hạn đã biết: một SMS mới đến lúc trang đang mở **không*
 
 | Loại | File | Ghi chú |
 |---|---|---|
-| Unit / render | `src/**/*.test.{ts,tsx}` | `cashback.test.ts`, `cashback-tiers.test.ts` (vách đá, thứ tự cắt trần), `mcc.test.ts`, `billingCycle.test.ts` (quét mọi ngày × ngày sao kê 1..31), các test dialog/trang |
+| Unit / render | `src/**/*.test.{ts,tsx}` | `cashback.test.ts`, `cashback-tiers.test.ts` (vách đá, thứ tự cắt trần), `mcc.test.ts`, `mcc-search.test.ts`, `card-transaction-form.test.ts`, `billingCycle.test.ts` (quét mọi ngày × ngày sao kê 1..31), các test dialog/trang |
 | Integration | `card-crud`, `credit-card-mutations`, `transaction-mcc`, `cashback-rules` `.integration.test.ts` | Cần Supabase local, xem `CLAUDE.md` |
 | RLS chéo 2 user | `supabase/tests/card-crud-rls.sql`, `supabase/tests/card-cashback-tiers-rls.sql` | Chạy trên Postgres tạm, hướng dẫn ở đầu file (file thứ hai tự chứa, dùng ID riêng) |
 

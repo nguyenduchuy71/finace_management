@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-10-22 — MCC đầy đủ và sửa giao dịch thẻ
+
+Plan: `plans/261022-1024-full-mcc-list-and-edit-card-transaction/`.
+
+### Thêm
+- **Danh sách MCC đầy đủ (~1000 mã)** thay cho 16 nhóm: `src/utils/mcc-codes.ts` sinh bằng `scripts/generate-mcc-codes.py`,
+  nhãn tiếng Việt, kèm các mã mới hay gặp trong điều khoản hoàn tiền (6540 nạp ví, 5262, 5552, 6536–6538…).
+- **`MccPicker`**: ô chọn MCC có tìm kiếm (mã, nhóm, tên cửa hàng) ở dòng giao dịch thẻ, form rule hoàn tiền và dialog sửa giao dịch.
+  Gõ mã 4 số ngoài danh sách vẫn dùng được.
+- Thêm từ khoá gợi ý MCC cho các nhóm hay gặp ở VN (hãng bay, khách sạn, mỹ phẩm, trang sức, bảo hiểm, ví điện tử…).
+- **Sửa giao dịch thẻ** (`EditCardTransactionDialog`): nơi giao dịch, mô tả, số tiền, chiều, thời điểm, loại, danh mục, MCC.
+  Chỉ ghi trường đã đổi.
+
+### Thay đổi hành vi / cần biết
+- `MCC_OPTIONS` giờ là toàn bộ danh sách; mã có gợi ý nằm ở `COMMON_MCC_OPTIONS`. Từ khoá gợi ý chuyển sang `mcc-keywords.ts`.
+- Rule hoàn tiền nhận mọi MCC 4 chữ số; trước đây chỉ nhận mã trong danh sách.
+- Form rule mới, khi rule mặc định đã có, chọn sẵn nhóm hay gặp đầu tiên còn trống (4111) thay vì 5411.
+- Điều hướng bàn phím của listbox tách ra `useListboxKeyboard` (dùng chung với bộ chọn thẻ).
+
 ## 2026-10-21 — Làm mới giao diện "Ví Jade" và mục Nhiều thẻ
 
 Plan: `plans/261021-1851-ui-visual-identity-refresh/` (7 phase: token, shell, dashboard, thẻ, danh sách, nhiều thẻ, motion/QA).
