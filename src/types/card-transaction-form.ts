@@ -60,7 +60,9 @@ export function toCardTxPatch(
   const v = r.data
   const changed = (k: keyof CardTxFormInput) => input[k].trim() !== initial[k].trim()
   const patch: CardTransactionPatch = {}
-  if (changed('merchantName')) patch.merchantName = v.merchantName || null
+  // merchantName hiển thị có thể là MÔ TẢ (mapper lấy description khi merchant_name trống): đổi mô tả mà
+  // không ghi kèm merchant thì sau khi lưu, tên user đang thấy biến mất. Nên đổi mô tả là ghi cả merchant.
+  if (changed('merchantName') || changed('description')) patch.merchantName = v.merchantName || null
   if (changed('description')) patch.description = v.description || null
   if (changed('kind')) patch.kind = v.kind
   // Đổi chiều hoặc số tiền đều phải ghi lại số tiền có dấu.

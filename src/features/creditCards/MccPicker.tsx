@@ -54,10 +54,9 @@ export function MccPicker({
           id={id}
           type="button"
           variant="outline"
-          role="combobox"
-          aria-haspopup="listbox"
+          // Nút mở một popover; combobox thật là ô tìm bên trong (nơi giữ focus và điều khiển listbox).
+          aria-haspopup="dialog"
           aria-expanded={open}
-          aria-controls={open ? listboxId : undefined}
           {...aria}
           className={cn('h-8 justify-between gap-2 px-2.5 text-xs font-normal aria-busy:opacity-60', className)}
         >
@@ -114,6 +113,9 @@ function MccSearchListbox({ id, value, noneLabel, disabledCodes, onPick }: {
           }}
           onKeyDown={onKeyDown}
           placeholder="Tìm theo mã, nhóm hoặc tên cửa hàng…"
+          role="combobox"
+          aria-expanded
+          aria-autocomplete="list"
           aria-label="Tìm MCC"
           aria-controls={id}
           aria-activedescendant={items[activeIndex] ? `${id}-${activeIndex}` : undefined}
