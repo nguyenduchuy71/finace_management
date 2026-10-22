@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { supabase } from '@/lib/supabase'
-import { getCreditCardTransactions, updateCardTransactionMcc } from './creditCards'
+import { getCreditCardTransactions, updateCardTransaction, updateCardTransactionMcc } from './creditCards'
 import { exportTransactions } from './exports'
 
 // Service MCC chạy trên Supabase local THẬT (Zod, RLS, cột mcc, TX_COLUMNS). Dùng chung DB
@@ -86,5 +86,47 @@ describe('updateCardTransactionMcc', () => {
   it('DB cũng chặn MCC sai định dạng nếu service bị qua mặt', async () => {
     const { error } = await supabase.from('transactions').update({ mcc: '12' }).eq('id', txId)
     expect(error?.code).toBe('23514')
+  })
+})
+
+describe('updateCardTransaction (sửa giao dịch thẻ)', () => {
+  const readTx = async () => (await getCreditCardTransactions(cardId)).data.find((t) => t.id === txId)
+
+  it('sửa nhiều trường một lần rồi đọc lại', async () => {
+    await updateCardTransaction(txId, {
+      amount: -250_000, merchantName: 'WinMart+ Q1', description: 'Mua đồ',
+      category: 'Mua sắm', kind: 'normal', mcc: '5411',
+      transactionDate: '2026-03-10T08:15:00+07:00',
+    })
+    expect(await readTx()).toMatchObject({
+      amount: -250_000, merchantName: 'WinMart+ Q1', description: 'Mua đồ',
+      category: 'Mua sắm', kind: 'normal', mcc: '5411',
+      transactionDate: '2026-03-10T01:15:00.000Z',
+    })
+  })
+
+  it('chỉ ghi trường có trong patch, giữ nguyên phần còn lại', async () => {
+    await updateCardTransaction(txId, { kind: 'internal_transfer' })
+    expect(await readTx()).toMatchObject({ kind: 'internal_transfer', amount: -250_000, mcc: '5411' })
+  })
+
+  it('null xoá giá trị; merchant trống thì danh sách hiện mô tả', async () => {
+    await updateCardTransaction(txId, { merchantName: null, category: null, mcc: null })
+    const tx = await readTx()
+    expect(tx).toMatchObject({ merchantName: 'Mua đồ', description: 'Mua đồ' })
+    expect(tx?.category).toBeUndefined()
+    expect(tx?.mcc).toBeUndefined()
+  })
+
+  it.each([
+    [{ amount: 0 }], [{ amount: 1.5 }], [{ transactionDate: '2026-03-10T08:15' }],
+    [{ category: 'Linh tinh' }], [{ mcc: '12' }], [{ kind: 'promo' }],
+  ])('dữ liệu sai %j bị chặn trước khi gọi DB', async (bad) => {
+    await expect(updateCardTransaction(txId, bad as never)).rejects.toMatchObject({ code: 'INVALID_TRANSACTION' })
+  })
+
+  it('giao dịch không tồn tại -> NOT_FOUND', async () => {
+    await expect(updateCardTransaction('00000000-0000-4000-a000-0000000000fb', { amount: -1 }))
+      .rejects.toMatchObject({ code: 'NOT_FOUND' })
   })
 })

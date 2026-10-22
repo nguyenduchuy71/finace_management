@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useUpdateTransactionMcc } from '@/hooks/useUpdateTransactionMcc'
 import { formatVND } from '@/utils/currency'
 import { formatDisplayDate } from '@/utils/dates'
 import { formatMcc, suggestMcc } from '@/utils/mcc'
-import { ArrowDownLeft, ShoppingBag } from 'lucide-react'
+import { ArrowDownLeft, Pencil, ShoppingBag } from 'lucide-react'
 import type { CreditCard, CreditCardTransaction } from '@/types/creditCard'
 import { BankLogo } from './BankLogo'
+import { EditCardTransactionDialog } from './EditCardTransactionDialog'
 import { MccPicker } from './MccPicker'
 import { TransactionKindBadge } from '@/components/ui/TransactionKindBadge'
 
@@ -20,6 +23,7 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
   // Tiền vào thẻ (trả nợ, hoàn tiền) — amount dương. Trước đây mọi dòng đều hiện '–' màu chi.
   const isCredit = tx.amount > 0
   const updateMcc = useUpdateTransactionMcc()
+  const [editing, setEditing] = useState(false)
 
   // Không dùng `disabled` khi đang lưu: control đang focus bị disable thì focus rơi về <body>,
   // người dùng bàn phím mất vị trí. Chặn ngay trong handler, báo trạng thái bằng aria-busy.
@@ -83,8 +87,20 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
               Gợi ý: {formatMcc(suggestion)}
             </button>
           )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(true)}
+            aria-label={`Sửa giao dịch ${merchantLabel}`}
+            className="ml-auto h-8 gap-1 px-2 text-xs text-muted-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Sửa</span>
+          </Button>
         </div>
       </div>
+      <EditCardTransactionDialog transaction={editing ? tx : null} onOpenChange={setEditing} />
     </li>
   )
 }
