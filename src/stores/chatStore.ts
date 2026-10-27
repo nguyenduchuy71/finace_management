@@ -21,7 +21,6 @@ interface ChatState {
   regenerateCallback: (() => void) | null
   // Actions
   toggleChat: () => void
-  openChat: () => void
   closeChat: () => void
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
   clearMessages: () => void
@@ -90,7 +89,6 @@ export const useChatStore = create<ChatState>()((set) => ({
   regenerateCallback: null,
 
   toggleChat: () => set((s) => ({ isOpen: !s.isOpen })),
-  openChat: () => set({ isOpen: true }),
   closeChat: () => set({ isOpen: false }),
 
   addMessage: (msg) =>
