@@ -36,13 +36,13 @@ beforeEach(() => {
 })
 
 describe('AppShell — điều hướng', () => {
-  it('header và thanh tab dưới cùng render đủ 3 mục từ cùng một nguồn', () => {
+  it('header và thanh tab dưới cùng render đủ 4 mục từ cùng một nguồn', () => {
     renderShell()
     const navs = screen.getAllByRole('navigation', { name: 'Điều hướng chính' })
     expect(navs).toHaveLength(2)
     for (const nav of navs) {
       const links = within(nav).getAllByRole('link')
-      expect(links.map((l) => l.getAttribute('href'))).toEqual(['/dashboard', '/accounts', '/credit-cards'])
+      expect(links.map((l) => l.getAttribute('href'))).toEqual(['/dashboard', '/accounts', '/credit-cards', '/settings'])
     }
   })
 

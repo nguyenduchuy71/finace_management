@@ -1,4 +1,4 @@
-import { Building2, CreditCard, LayoutDashboard, type LucideIcon } from 'lucide-react'
+import { Building2, CreditCard, LayoutDashboard, Settings, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   to: string
@@ -13,4 +13,5 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { to: '/accounts', label: 'Ngân hàng', icon: Building2, showUnparsedBadge: true },
   { to: '/credit-cards', label: 'Thẻ tín dụng', icon: CreditCard },
+  { to: '/settings', label: 'Cài đặt', icon: Settings },
 ]

@@ -6,9 +6,11 @@ import { AppShell } from '@/components/layout/AppShell'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { SignupPage } from '@/features/auth/SignupPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 
 export function App() {
   return (
@@ -17,12 +19,14 @@ export function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route index element={<Navigate to="/accounts" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/accounts" element={<BankAccountsPage />} />
                 <Route path="/credit-cards" element={<CreditCardsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Route>
           </Routes>

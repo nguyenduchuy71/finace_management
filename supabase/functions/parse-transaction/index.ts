@@ -5,15 +5,17 @@
 //
 // Deploy: supabase functions deploy parse-transaction
 // Gọi từ Shortcuts: POST { "text": "<nội dung notification>", "source": "<tên bank>" }
-//   header bắt buộc: x-shortcut-secret. `source` tuỳ chọn — xem docs/ios-shortcut-setup.md
+//   header: Authorization: Bearer vj_… (API key của user, tạo ở trang Cài đặt).
+//   Legacy x-shortcut-secret (single-tenant) còn nhận tới phase 4. `source` tuỳ chọn —
+//   xem docs/ios-shortcut-setup.md
 //
-// Luồng: OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages + gợi ý loại
+// Luồng: xác thực key -> OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages + gợi ý loại
 
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { parseOwnerNames } from './internal-transfer.ts'
 import { normalizeInput } from './helpers.ts'
-import { secretMatches } from './shortcut-auth.ts'
+import { resolveCaller } from './api-key-auth.ts'
 import { classifyUnparsed } from './classify-unparsed.ts'
 import { insertTransaction, isOtp, parseNotification, resolveRefs } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
@@ -23,20 +25,23 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-// Shortcut trên iOS không cầm được JWT của user -> dùng shared secret.
+// Shortcut trên iOS không cầm được JWT của user -> API key riêng của từng user.
+// Rate limit đếm ở Postgres (authenticate_api_key), không đếm trong bộ nhớ: edge
+// function chạy nhiều instance ngắn hạn, mỗi instance đếm riêng, restart là mất.
 //
-// KHÔNG có rate limit ở tầng function: edge function chạy nhiều instance ngắn hạn,
-// đếm trong bộ nhớ không đáng tin (mỗi instance đếm riêng, restart là mất).
-// Nếu cần chống flood thật thì đặt ở tầng trước (Cloudflare/WAF) hoặc đếm bằng
-// bảng Postgres. Với app cá nhân (vài chục request/ngày, secret 256-bit) thì
-// chấp nhận rủi ro này.
-const SHORTCUT_SECRET = Deno.env.get('SHORTCUT_SECRET')
-// App single-user: mọi giao dịch thuộc về user này.
-// BẮT BUỘC có, nếu không row sẽ vô hình sau khi bật RLS.
-const DEFAULT_USER_ID = Deno.env.get('DEFAULT_USER_ID')
-// Tên chủ TK (phân tách ";") để nhận diện chuyển nội bộ — xem internal-transfer.ts.
-// Không set -> mọi giao dịch là 'normal' (chỉ thiếu nhãn, không sai số tiền).
-const OWNER_NAMES = parseOwnerNames(Deno.env.get('OWNER_NAMES'))
+// LEGACY single-tenant (gỡ ở phase 4): secret chung -> mọi giao dịch thuộc
+// DEFAULT_USER_ID, tên chủ TK (phân tách ";") lấy từ env OWNER_NAMES. Chỉ chạy khi
+// có cả SHORTCUT_SECRET và DEFAULT_USER_ID. User qua API key dùng
+// user_settings.owner_names thay cho env này.
+const LEGACY = {
+  secret: Deno.env.get('SHORTCUT_SECRET'),
+  userId: Deno.env.get('DEFAULT_USER_ID'),
+  ownerNames: parseOwnerNames(Deno.env.get('OWNER_NAMES')),
+}
+
+/** Bao RPC authenticate_api_key (chỉ service role gọi được) cho resolveCaller. */
+const authenticate = (keyHashHex: string) =>
+  supabase.rpc('authenticate_api_key', { p_key_hash: keyHashHex })
 
 /** Thông báo ngân hàng thật < 500 ký tự. Xem lý do ở chỗ dùng bên dưới. */
 const MAX_TEXT_LENGTH = 2000
@@ -82,7 +87,7 @@ async function insertTx(
 ): Promise<Response> {
   const refs = await resolveRefs(supabase, parsed, userId)
   if (!refs.account_id && !refs.card_id) {
-    await saveUnparsed(parsed.raw_text, source, 'no_account', 'transaction')
+    await saveUnparsed(parsed.raw_text, source, 'no_account', userId, 'transaction')
     return json({ skipped: 'no_account', bank: parsed.bank_name, account_ref: parsed.account_ref }, 200)
   }
   await insertTransaction(supabase, parsed, refs, userId)
@@ -99,7 +104,8 @@ async function insertTx(
  * (kèm gợi ý loại để ẩn quảng cáo) và là nguồn mẫu để viết regex parser mới.
  */
 async function saveUnparsed(
-  text: string, source: string | null, reason: string, suggested = classifyUnparsed(text),
+  text: string, source: string | null, reason: string, userId: string,
+  suggested = classifyUnparsed(text),
 ) {
   // user_id bắt buộc (NOT NULL từ migration 20261021100000) — tin hiện trong hộp
   // "Chưa phân loại" của user. Lỗi không chặn response cho Shortcut nhưng phải lộ
@@ -107,7 +113,7 @@ async function saveUnparsed(
   const { error } = await supabase
     .from('unparsed_messages')
     .insert({
-      raw_text: text, source, reason, user_id: DEFAULT_USER_ID,
+      raw_text: text, source, reason, user_id: userId,
       suggested_kind: suggested,
     })
   if (error) console.error('saveUnparsed failed', error.code, error.message)
@@ -115,12 +121,9 @@ async function saveUnparsed(
 
 serve(async (req) => {
   try {
-    if (!SHORTCUT_SECRET || !DEFAULT_USER_ID) {
-      return json({ error: 'server misconfigured: missing env' }, 500)
-    }
-    if (!(await secretMatches(req.headers.get('x-shortcut-secret'), SHORTCUT_SECRET))) {
-      return json({ error: 'unauthorized' }, 401)
-    }
+    const auth = await resolveCaller(req.headers, authenticate, LEGACY)
+    if (!auth.ok) return json({ error: auth.error }, auth.status)
+    const { userId, ownerNames } = auth.caller
 
     const body = await req.json()
     const text = typeof body?.text === 'string' ? normalizeInput(body.text) : ''
@@ -149,25 +152,25 @@ serve(async (req) => {
       return json({ skipped: 'otp_or_security' }, 200)
     }
 
-    if (await isDuplicate(text, DEFAULT_USER_ID)) {
+    if (await isDuplicate(text, userId)) {
       return json({ skipped: 'duplicate' }, 200)
     }
 
-    const outcome = parseNotification(text, OWNER_NAMES)
+    const outcome = parseNotification(text, ownerNames)
     if (outcome.status === 'parsed') {
-      return await insertTx(outcome.tx, DEFAULT_USER_ID, source)
+      return await insertTx(outcome.tx, userId, source)
     }
     // Regex khớp nhưng ra dữ liệu vô nghĩa -> không ghi rác vào DB, trả 422
     // thay vì để Postgres báo 500.
     if (outcome.status === 'invalid') {
-      await saveUnparsed(text, source, 'invalid_parse')
+      await saveUnparsed(text, source, 'invalid_parse', userId)
       return json({ skipped: 'invalid_parse', bank: outcome.bank }, 422)
     }
 
     // Không khớp bank nào -> lưu lại để bổ sung parser sau.
     // Đây là NGUỒN DỮ LIỆU để viết parser cho bank còn thiếu: query bảng này
     // lấy raw_text thật rồi thêm test case vào parsers.test.ts.
-    await saveUnparsed(text, source, 'no_match')
+    await saveUnparsed(text, source, 'no_match', userId)
     return json({ skipped: 'no_match' }, 200)
   } catch (e) {
     return json({ error: String(e) }, 500)
