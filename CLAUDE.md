@@ -180,6 +180,11 @@ user_settings  user_id PK (trigger handle_new_user tạo lúc đăng ký), owner
 api_keys       id, user_id, name, prefix ('vj_'+6), last4, key_hash bytea UNIQUE (SHA-256), last_used_at, revoked_at, rl_*
                authenticated KHÔNG đọc key_hash/rl_* (select('*') = 42501 → dùng danh sách cột), chỉ sửa name/revoked_at;
                trigger api_keys_guard: tối đa 10 key còn hiệu lực/user, thu hồi là vĩnh viễn
+user_settings.suspended_at  admin khoá user (user đọc được, không sửa được). Lý do khoá CHỈ ở admin_audit_log — user đọc
+               được user_settings nên không đặt ghi chú nội bộ của admin ở đây
+admin_audit_log  id, admin_id, action 'suspend'|'unsuspend'|'revoke_keys'|'view_user', target_user_id (KHÔNG FK — sống sau khi xoá
+               user), reason (5..500, bắt buộc), payload jsonb (không email/nội dung giao dịch), created_at.
+               Append-only (trigger chặn update/delete/truncate cả service_role); RLS bật, không policy, chỉ service_role
 
 transactions.mcc  text|NULL, 4 chữ số — USER gán tay (SMS ngân hàng VN không có MCC)
 ```
@@ -196,12 +201,21 @@ id giao dịch|null: kind normal/internal_transfer/cashback cần `p_tx` {amount
 account_id XOR card_id, description?, merchant_name?, category? ∈ 6 Category}; bank_name/source_type lấy từ TK/thẻ;
 card_reminder/promo không có p_tx. Lỗi 22023 (tham số / đã xử lý), P0002 (không thấy).
 `create_api_key(p_name)` → key `vj_…` đầy đủ (lần DUY NHẤT; DB chỉ giữ SHA-256). `authenticate_api_key(p_key_hash hex)` →
-(user_id, owner_names, rate_limited): **chỉ `service_role`** (revoke khỏi public/anon/authenticated), một UPDATE…RETURNING tăng bộ
+(user_id, owner_names, rate_limited, suspended): **chỉ `service_role`** (revoke khỏi public/anon/authenticated), một UPDATE…RETURNING tăng bộ
 đếm rate limit 60/phút/key + `last_used_at`; 0 dòng = key sai/đã thu hồi.
+`authenticate_api_key` trả thêm `suspended` → parse-transaction `403 suspended` (tin KHÔNG lưu, kiểm trước rate limit).
+`admin_user_stats(p_user_ids)` (chỉ count/max; `tx_count_30d` chỉ giao dịch PARSER ghi — không đếm giao dịch user ghi từ hộp tin),
+`admin_user_keys`, `admin_set_suspended`, `admin_revoke_user_keys`, `admin_log_view`, `admin_list_audit`: **chỉ `service_role`**, mỗi thay đổi ghi audit CÙNG transaction; gọi qua edge function `admin`.
 Mọi RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**. Ngoại lệ DUY NHẤT: trigger
 `handle_new_user` trên `auth.users` (mẫu chuẩn Supabase, chạy dưới role GoTrue, không gọi được như RPC).
 
 **RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
+**KHÔNG thêm policy "admin bypass"** vào bảng nào: admin chỉ đi qua edge function `admin` (service role) — 1 policy admin
+sai là lộ giao dịch của mọi user, và admin theo quyết định chỉ được thấy metadata (không số tiền/mô tả/raw_text).
+Policy **RESTRICTIVE** `not_suspended` (`not (select is_suspended())`) trên transactions, accounts, credit_cards,
+card_cashback_rules, card_cashback_rule_tiers, unparsed_messages, api_keys: AND với policy cũ để khoá có hiệu lực NGAY cả với
+access token còn hạn (ban GoTrue chỉ chặn đăng nhập + refresh — đã kiểm: REST vẫn 200 sau ban). Bảng mới chứa dữ liệu user
+phải thêm vào danh sách này (migration 20261028100000). `user_settings` cố ý KHÔNG gắn (UI cần đọc cờ khoá).
 `transactions` insert/update kiểm thêm `card_id`/`account_id` **thuộc chính user**; `card_cashback_rules`
 insert/update kiểm thẻ thuộc user; `card_cashback_rule_tiers` kiểm rule thuộc user. Chỉ kiểm `user_id` là chưa đủ: FK vẫn chấp nhận trỏ sang thẻ của
 người khác, và khi họ xoá thẻ thì giao dịch bị `set null` thành mồ côi.
@@ -254,6 +268,20 @@ dùng `[^\n]{0,N}?` để chặn backtracking.
 Secret so sánh bằng hash SHA-256 + XOR toàn bộ (constant-time), không dùng `!==`.
 Response **không** trả `raw_text` về client.
 Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /app denoland/deno:2.1.4 test --allow-all` (mọi file test)
+
+## Edge Function `admin` (`supabase/functions/admin/`)
+
+Cổng duy nhất cho quản trị. `admin-auth.ts`: `getUser(token)` → `app_metadata.role === 'admin'` (user không tự ghi được
+app_metadata) → claim `aal === 'aal2'` (MFA TOTP) — sai thì 401/403 `forbidden`/`mfa_required`. `admin-actions.ts`: danh sách
+hành động ĐÓNG `list_users`, `get_user`, `suspend`, `unsuspend`, `revoke_keys`, `list_audit`; lý do 5..500 ký tự; không nhắm
+chính mình / admin khác. Email + đăng nhập cuối + ban lấy từ GoTrue (`auth.admin.listUsers`), ghép theo id với
+`admin_user_stats` — RPC không đọc `auth.users`. Khoá = RPC (cờ DB + audit) TRƯỚC, rồi ban GoTrue (`ban_duration`);
+ban lỗi → `502 ban_failed`, bấm lại an toàn. `get_user` ghi audit `view_user` TRƯỚC khi trả dữ liệu (ghi lỗi → không trả).
+Đường legacy `x-shortcut-secret` cũng kiểm khoá của `DEFAULT_USER_ID` (không kiểm được → 500, không cho qua).
+Gán admin (SQL, 1 lần): `update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}' where email = '…'`.
+Break-glass gỡ ban: `update auth.users set banned_until = null where id = '…'` + `update user_settings set suspended_at = null …`.
+TOTP: `config.toml` `[auth.mfa.totp]` chỉ cho local — **production bật ở dashboard** (Authentication → Multi-Factor).
+Test: `docker run --rm -v "$PWD/supabase/functions:/f" -w /f/parse-transaction denoland/deno:2.1.4 test --allow-all . ../admin`
 
 ## State Management (`src/stores/`)
 
@@ -428,7 +456,7 @@ Integration hộp tin seed `unparsed_messages` bằng service_role **local**: th
 `supabase status -o env`) vào `.env.test.local` — file chỉ nạp ở mode test, không vào bundle.
 
 **RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql`,
-`api-keys-rls.sql` chạy trên Postgres 17 tạm
+`api-keys-rls.sql`, `admin-rls.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
 
 ---

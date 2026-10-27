@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-27 — Quản trị user: khoá, thu hồi key, audit (admin phase 1/2)
+
+Plan: `plans/261027-1049-admin-user-management/` (phase 1, backend — chưa có UI).
+
+### Thêm
+- Edge function **`admin`**: chỉ user có `app_metadata.role = 'admin'` **và** đã qua MFA TOTP (aal2). Hành động: xem danh
+  sách/chi tiết user (chỉ metadata: email, mốc thời gian, số key, số giao dịch/tin 30 ngày, tỉ lệ parse), khoá/mở khoá,
+  thu hồi mọi key, xem audit. Mọi thay đổi bắt lý do và ghi `admin_audit_log` (append-only).
+- Khoá user: chặn đăng nhập (ban GoTrue), Shortcut (`403 suspended`, cả đường legacy) và **mọi truy cập dữ liệu ngay lập tức**
+  kể cả bằng phiên đang mở (policy RLS restrictive `not_suspended`). Dữ liệu giữ nguyên; mở khoá là dùng lại được.
+- Mở chi tiết 1 user ghi audit `view_user`.
+
+### Thay đổi hành vi / cần biết
+- `authenticate_api_key` thêm cột `suspended` (drop + tạo lại). Deploy: `db push` → deploy `parse-transaction` + `admin`.
+- Production phải **bật MFA TOTP trên dashboard** và gán role admin bằng SQL (xem CLAUDE.md → Edge Function `admin`).
+- Không có feature flag (bỏ theo YAGNI — chưa có tính năng beta nào).
+
 ## 2026-10-27 — Đăng ký tài khoản, API key theo user, xoá tài khoản (SaaS phase 1/4)
 
 Plan: `plans/261027-1012-saas-signup-api-key-credits/` (phase 1). PR #18.
