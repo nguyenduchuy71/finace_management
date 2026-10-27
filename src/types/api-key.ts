@@ -22,6 +22,8 @@ export const UserSettingsSchema = z.object({
   ownerNames: z.array(z.string()),
   privacyConsentAt: z.string().datetime().nullable(),
   privacyPolicyVersion: z.string().nullable(),
+  /** Admin khoá user (đọc được, không sửa được) — lý do khoá không lộ cho user. */
+  suspendedAt: z.string().datetime().nullable(),
 })
 export type UserSettings = z.infer<typeof UserSettingsSchema>
 

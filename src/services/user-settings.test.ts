@@ -51,7 +51,7 @@ describe('getUserSettings', () => {
     db.state.data = { owner_names: [], privacy_consent_at: null, privacy_policy_version: null }
     await getUserSettings()
     expect(db.from).toHaveBeenCalledWith('user_settings')
-    expect(db.q.select).toHaveBeenCalledWith('owner_names, privacy_consent_at, privacy_policy_version')
+    expect(db.q.select).toHaveBeenCalledWith('owner_names, privacy_consent_at, privacy_policy_version, suspended_at')
     expect(db.q.single).toHaveBeenCalled()
   })
 
@@ -60,18 +60,20 @@ describe('getUserSettings', () => {
       owner_names: ['NGUYEN VAN A'],
       privacy_consent_at: '2026-10-20T10:00:00+07:00',
       privacy_policy_version: '2026-10',
+      suspended_at: '2026-10-27T11:00:00+07:00',
     }
     await expect(getUserSettings()).resolves.toEqual({
       ownerNames: ['NGUYEN VAN A'],
       privacyConsentAt: '2026-10-20T03:00:00.000Z',
       privacyPolicyVersion: '2026-10',
+      suspendedAt: '2026-10-27T04:00:00.000Z',
     })
   })
 
   it('owner_names NULL -> mảng rỗng; consent NULL -> null', async () => {
-    db.state.data = { owner_names: null, privacy_consent_at: null, privacy_policy_version: null }
+    db.state.data = { owner_names: null, privacy_consent_at: null, privacy_policy_version: null, suspended_at: null }
     await expect(getUserSettings()).resolves.toEqual({
-      ownerNames: [], privacyConsentAt: null, privacyPolicyVersion: null,
+      ownerNames: [], privacyConsentAt: null, privacyPolicyVersion: null, suspendedAt: null,
     })
   })
 

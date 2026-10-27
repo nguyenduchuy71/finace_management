@@ -51,6 +51,6 @@ serve(async (req) => {
     return json({ deleted: true }, 200)
   } catch (e) {
     console.error('delete-account', String(e))
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'internal_error' }, 500)
   }
 })
