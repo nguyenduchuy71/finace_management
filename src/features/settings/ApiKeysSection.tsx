@@ -10,9 +10,9 @@ import {
 import { useApiKeys, useRevokeApiKey } from '@/hooks/useApiKeys'
 import { formatDisplayDateTime } from '@/utils/dates'
 import { MAX_ACTIVE_API_KEYS, type ApiKey } from '@/types/api-key'
-import type { ApiError } from '@/types/api'
 import { toast } from 'sonner'
 import { CreateApiKeyDialog } from './CreateApiKeyDialog'
+import { getErrorMessage } from '@/services/api-errors'
 
 function ApiKeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: (k: ApiKey) => void }) {
   const revoked = apiKey.revokedAt !== null
@@ -51,7 +51,7 @@ export function ApiKeysSection() {
     try {
       await revoke.mutateAsync(revoking.id)
     } catch (err) {
-      toast.error((err as ApiError).message ?? 'Không thu hồi được key.')
+      toast.error(getErrorMessage(err, 'Không thu hồi được key.'))
     } finally {
       setRevoking(null)
     }

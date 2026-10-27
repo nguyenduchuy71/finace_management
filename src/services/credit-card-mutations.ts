@@ -16,6 +16,10 @@ function toRow(v: CardFormValues) {
   }
 }
 
+const CARD_ERRORS: Record<string, string> = {
+  '23505': 'Thẻ này đã tồn tại (cùng ngân hàng và số thẻ).',
+}
+
 // Không gửi `user_id`: cột có default auth.uid() và RLS kiểm lại. `currency` mặc
 // định 'VND', `current_balance` mặc định 0 (không có trong SMS ngân hàng).
 export async function createCreditCard(values: CardFormValues) {
@@ -24,7 +28,7 @@ export async function createCreditCard(values: CardFormValues) {
     .insert(toRow(values))
     .select('*')
     .single()
-  if (error) throw toApiError(error)
+  if (error) throw toApiError(error, CARD_ERRORS)
   return mapCreditCard(data as CreditCardRow)
 }
 
@@ -35,7 +39,7 @@ export async function updateCreditCard(id: string, values: CardFormValues) {
     .eq('id', id)
     .select('*')
     .single()
-  if (error) throw toApiError(error)
+  if (error) throw toApiError(error, CARD_ERRORS)
   return mapCreditCard(data as CreditCardRow)
 }
 

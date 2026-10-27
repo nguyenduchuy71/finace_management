@@ -14,6 +14,13 @@ Plan: `plans/261027-1832-maintainability-refactor/` (phase 1). Review: `plans/re
 - "Xóa bộ lọc" xoá luôn khoảng ngày đang hiển thị trên `DateRangePicker` (trước giữ bản sao cục bộ, hiện ngày cũ).
 - Lưu cấu hình API chatbot không còn ném lỗi khi `localStorage` bị chặn.
 
+### Dọn code (phase 2, không đổi hành vi)
+- `getErrorMessage(err, fallback)` (`api-errors.ts`) thay 15 chỗ `(err as ApiError).message ?? …`; thông điệp thẻ trùng (23505)
+  chuyển từ `CardFormDialog` xuống `CARD_ERRORS` của service như tài khoản.
+- Dùng chung: `TransactionListError` (3 danh sách, nay đều có `role="alert"`), `BrandMark`/`APP_NAME`, `ThemeToggleButton`,
+  `ui/textarea.tsx` (3 ô), `budget-level.ts` (ngưỡng 80/100% cho thanh ngân sách và toast).
+- Xoá code chết: `PaginatedResponseSchema`, `isConfigured` của `useChatApi`, re-export thừa ở `accounts.ts`.
+
 ## 2026-10-27 — Trang chủ giới thiệu (landing page)
 
 ### Thêm

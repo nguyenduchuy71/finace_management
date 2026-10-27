@@ -8,7 +8,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useDeleteMyAccount } from '@/hooks/useUserSettings'
-import type { ApiError } from '@/types/api'
+import { getErrorMessage } from '@/services/api-errors'
 
 /** Gõ lại email mới cho xoá — cùng kiểu xác nhận với DeleteAccountDialog (TK ngân hàng). */
 function DeleteBody({ email, onDone, setBusy }: {
@@ -29,7 +29,7 @@ function DeleteBody({ email, onDone, setBusy }: {
       await del.mutateAsync()
       // Thành công: phiên bị đăng xuất, ProtectedRoute đưa về /login — không cần đóng dialog.
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không xoá được tài khoản. Vui lòng thử lại.')
+      setError(getErrorMessage(err, 'Không xoá được tài khoản. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }

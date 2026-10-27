@@ -7,9 +7,6 @@ import {
   type TransactionFilters,
 } from './transactionQuery'
 
-// Re-export để không phá import cũ ở creditCards.ts và các hook
-export type { TransactionFilters }
-
 export async function getAccounts() {
   // RLS đã lọc theo user đang đăng nhập — không cần .eq('user_id', ...)
   const { data, error, count } = await supabase

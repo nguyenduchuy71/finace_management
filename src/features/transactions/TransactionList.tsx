@@ -8,7 +8,7 @@ import { TransactionRow } from './TransactionRow'
 import { TransactionListSkeleton } from './TransactionListSkeleton'
 import { TransactionEmptyState } from './TransactionEmptyState'
 import { LoadMoreFooter } from './LoadMoreFooter'
-import { AlertCircle } from 'lucide-react'
+import { TransactionListError } from './TransactionListError'
 
 export function TransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -31,17 +31,7 @@ export function TransactionList() {
 
   if (isLoading) return <TransactionListSkeleton count={7} />
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center justify-center p-10 text-center">
-        <AlertCircle className="h-8 w-8 text-destructive mb-3" />
-        <p className="font-medium text-destructive">Không thể tải giao dịch</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          {(error as { message?: string })?.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.'}
-        </p>
-      </div>
-    )
-  }
+  if (isError) return <TransactionListError title="Không thể tải giao dịch" error={error} />
 
   if (allTransactions.length === 0) {
     return <TransactionEmptyState hasFilters={hasActiveFilters} />

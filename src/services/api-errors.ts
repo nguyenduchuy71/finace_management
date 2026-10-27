@@ -33,3 +33,12 @@ export function toApiError(e: PostgrestError, overrides?: Record<string, string>
     message: overrides?.[code] ?? ERROR_MESSAGES[code] ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.',
   }
 }
+
+/**
+ * Thông điệp hiển thị cho một lỗi bắt trong `catch`: `message` của ApiError (đã an toàn để render, xem
+ * `toApiError`) hoặc của Error, không có thì `fallback`.
+ */
+export function getErrorMessage(err: unknown, fallback: string): string {
+  const message = (err as Partial<ApiError> | null)?.message
+  return typeof message === 'string' && message ? message : fallback
+}

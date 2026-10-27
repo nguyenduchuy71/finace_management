@@ -11,8 +11,8 @@ import {
   type CashbackFormErrors, type CashbackFormInput, type CashbackScalarField,
 } from '@/types/cashback-form'
 import type { CashbackRule } from '@/types/cashback'
-import type { ApiError } from '@/types/api'
 import { COMMON_MCC_OPTIONS } from '@/utils/mcc'
+import { getErrorMessage } from '@/services/api-errors'
 
 const FIELD_ID: Record<CashbackScalarField, string> = {
   mcc: 'rule-mcc',
@@ -71,7 +71,7 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
       await save.mutateAsync({ ruleId: rule?.id ?? null, values: result.values })
       onDone()
     } catch (err) {
-      setSubmitError((err as ApiError).message ?? 'Không lưu được rule. Vui lòng thử lại.')
+      setSubmitError(getErrorMessage(err, 'Không lưu được rule. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }
