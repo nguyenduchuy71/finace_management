@@ -52,33 +52,6 @@ describe('Budget Store (Zustand + localStorage)', () => {
     })
   })
 
-  describe('getBudget', () => {
-    it('getBudget("Ăn uống") returns 0 when budget not set', () => {
-      const amount = useBudgetStore.getState().getBudget('Ăn uống')
-      expect(amount).toBe(0)
-    })
-
-    it('getBudget("Ăn uống") returns 5000000 after setBudget called', () => {
-      useBudgetStore.getState().setBudget('Ăn uống', 5000000)
-      const amount = useBudgetStore.getState().getBudget('Ăn uống')
-      expect(amount).toBe(5000000)
-    })
-  })
-
-  describe('clearBudget', () => {
-    it('clearBudget("Ăn uống") removes category from store and localStorage', () => {
-      useBudgetStore.getState().setBudget('Ăn uống', 5000000)
-      expect(useBudgetStore.getState().budgets['Ăn uống']).toBe(5000000)
-
-      useBudgetStore.getState().clearBudget('Ăn uống')
-      expect(useBudgetStore.getState().budgets['Ăn uống']).toBeUndefined()
-
-      const stored = localStorage.getItem('finance-budgets')
-      const parsed = JSON.parse(stored!)
-      expect(parsed['Ăn uống']).toBeUndefined()
-    })
-  })
-
   describe('localStorage round-trip', () => {
     it('setItem("finance-budgets", JSON.stringify({...})) → on reload, store loads same budgets', () => {
       // Simulate previous session data in localStorage

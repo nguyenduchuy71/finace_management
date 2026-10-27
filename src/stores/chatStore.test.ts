@@ -44,7 +44,7 @@ describe('chatStore', () => {
     })
   })
 
-  describe('toggleChat / openChat / closeChat', () => {
+  describe('toggleChat / closeChat', () => {
     it('toggleChat opens when closed', () => {
       useChatStore.getState().toggleChat()
       expect(useChatStore.getState().isOpen).toBe(true)
@@ -56,21 +56,10 @@ describe('chatStore', () => {
       expect(useChatStore.getState().isOpen).toBe(false)
     })
 
-    it('openChat sets isOpen to true', () => {
-      useChatStore.getState().openChat()
-      expect(useChatStore.getState().isOpen).toBe(true)
-    })
-
     it('closeChat sets isOpen to false', () => {
       useChatStore.setState({ isOpen: true })
       useChatStore.getState().closeChat()
       expect(useChatStore.getState().isOpen).toBe(false)
-    })
-
-    it('openChat is idempotent', () => {
-      useChatStore.getState().openChat()
-      useChatStore.getState().openChat()
-      expect(useChatStore.getState().isOpen).toBe(true)
     })
   })
 
@@ -278,7 +267,7 @@ describe('chatStore', () => {
       const s = useChatStore.getState()
       s.addMessage({ role: 'user', content: 'Tháng này tôi chi bao nhiêu?' })
       s.setApiConfig({ apiKey: 'sk-test', model: 'm' })
-      s.openChat()
+      useChatStore.setState({ isOpen: true })
 
       useChatStore.getState().resetForSignOut()
 

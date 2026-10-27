@@ -120,9 +120,8 @@ describe('BudgetSettings Dialog Component', () => {
     await user.click(saveButton)
 
     // Check that store has the parsed value
-    const store = useBudgetStore.getState()
     await waitFor(() => {
-      expect(store.getBudget('Ăn uống')).toBe(100000)
+      expect(useBudgetStore.getState().budgets['Ăn uống']).toBe(100000)
     })
   })
 
@@ -150,7 +149,7 @@ describe('BudgetSettings Dialog Component', () => {
 
     // Verify the new value is set
     await waitFor(() => {
-      expect(store.getBudget('Ăn uống')).toBe(500000)
+      expect(useBudgetStore.getState().budgets['Ăn uống']).toBe(500000)
     })
   })
 
@@ -225,7 +224,7 @@ describe('BudgetSettings Dialog Component', () => {
 
     // Verify it's cleared (0 or not set)
     await waitFor(() => {
-      expect(store.getBudget('Ăn uống')).toBe(0)
+      expect(useBudgetStore.getState().budgets['Ăn uống']).toBe(0)
     })
   })
   it('"1.5" không âm thầm thành 15đ: báo lỗi, không lưu ô nào, dialog vẫn mở', async () => {
