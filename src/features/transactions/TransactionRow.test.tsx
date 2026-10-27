@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { TransactionRow } from './TransactionRow'
 import { useCategoryOverrideStore } from '@/stores/categoryOverrideStore'
 import type { Transaction } from '@/types/account'
@@ -70,11 +70,10 @@ describe('TransactionRow', () => {
       ...mockExpenseTransaction,
       category: 'Ăn uống',
     }
-    const { container } = render(<TransactionRow transaction={txWithCategory} />)
-    // Component should render with override (effective category should be Mua sắm)
-    const effective = useCategoryOverrideStore.getState().getEffectiveCategory('tx-1', 'Ăn uống')
-    expect(effective).toBe('Mua sắm')
-    expect(container).toBeTruthy()
+    render(<TransactionRow transaction={txWithCategory} />)
+    // Nhãn hiển thị là category user chọn, không phải category từ server
+    expect(screen.getByText('Mua sắm')).toBeInTheDocument()
+    expect(screen.queryByText('Ăn uống')).not.toBeInTheDocument()
   })
 
   it('opens popover when CategoryBadge is clicked', () => {
@@ -97,11 +96,9 @@ describe('TransactionRow', () => {
     }
     render(<TransactionRow transaction={txWithCategory} />)
 
-    // Set override directly (simulating popover click)
-    useCategoryOverrideStore.getState().setOverride('tx-1', 'Giải trí')
+    // Set override directly (simulating popover click) -> dòng đang hiển thị cập nhật theo
+    act(() => useCategoryOverrideStore.getState().setOverride('tx-1', 'Giải trí'))
 
-    // Verify override was persisted
-    const effective = useCategoryOverrideStore.getState().getEffectiveCategory('tx-1', 'Ăn uống')
-    expect(effective).toBe('Giải trí')
+    expect(screen.getByText('Giải trí')).toBeInTheDocument()
   })
 })

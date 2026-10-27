@@ -20,6 +20,8 @@ Plan: `plans/261027-1832-maintainability-refactor/` (phase 1). Review: `plans/re
 - Dùng chung: `TransactionListError` (3 danh sách, nay đều có `role="alert"`), `BrandMark`/`APP_NAME`, `ThemeToggleButton`,
   `ui/textarea.tsx` (3 ô), `budget-level.ts` (ngưỡng 80/100% cho thanh ngân sách và toast).
 - Xoá code chết: `PaginatedResponseSchema`, `isConfigured` của `useChatApi`, re-export thừa ở `accounts.ts`.
+- Xoá action store không nơi nào gọi: `clearOverride`, `getEffectiveCategory` (TransactionRow tự đọc `overrides`), `getBudget`,
+  `clearBudget`, `setTheme`, `openChat`. Test `TransactionRow` giờ kiểm nhãn hiển thị thật thay vì gọi getter của store.
 
 ## 2026-10-27 — Trang chủ giới thiệu (landing page)
 
