@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-27 — Rà soát bảo mật toàn dự án
+
+### Sửa
+- **Lịch sử chat và API key Claude không còn sót lại sau đăng xuất** (máy dùng chung): `localStorage` không gắn với user, nên
+  user đăng nhập sau thấy câu hỏi/số liệu tài chính của user trước và dùng được key của họ. Giờ xoá cùng lúc với cache dữ liệu
+  (`AuthProvider`, `chatStore.resetForSignOut`) khi đăng xuất, hết phiên hoặc đổi user.
+- **`anon` không còn EXECUTE được function nào trong `public`** (migration `20261029100000`): Postgres mặc định cấp EXECUTE cho
+  PUBLIC nên `get_dashboard_stats` và 4 function trigger/CHECK gọi được bằng anon key (chưa khai thác được vì anon bị chặn mọi
+  bảng). Function tạo về sau cũng không tự mở cho PUBLIC/anon. Kiểm trong `supabase/tests/admin-rls.sql`.
+- Dependency: `react-router` 7.18.4, `zod` 4.6.7 (`npm audit --omit=dev` = 0). Còn `zod@3` trong CLI `shadcn` (chỉ dev, không vào bundle).
+
 ## 2026-10-27 — Trang quản trị + MFA TOTP (admin phase 2/2)
 
 Plan: `plans/261027-1049-admin-user-management/` (phase 2). Review: `plans/261027-1049-admin-user-management/reports/code-review-261027-1129-admin-branch-review.md`.
