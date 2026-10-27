@@ -37,6 +37,12 @@ const LEGACY = {
   secret: Deno.env.get('SHORTCUT_SECRET'),
   userId: Deno.env.get('DEFAULT_USER_ID'),
   ownerNames: parseOwnerNames(Deno.env.get('OWNER_NAMES')),
+  async isSuspended(userId: string) {
+    const { data, error } = await supabase
+      .from('user_settings').select('suspended_at').eq('user_id', userId).maybeSingle()
+    if (error) throw error
+    return data?.suspended_at != null
+  },
 }
 
 /** Bao RPC authenticate_api_key (chỉ service role gọi được) cho resolveCaller. */

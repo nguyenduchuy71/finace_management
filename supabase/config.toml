@@ -27,6 +27,12 @@ minimum_password_length = 8
 # ⚠️ KHÔNG chạy `supabase config push`: lệnh đó đẩy toàn bộ [auth] (kể cả enable_signup = true
 # ở trên) lên project production. Cấu hình auth production chỉ chỉnh trên dashboard.
 
+[auth.mfa.totp]
+# Bắt buộc cho admin (function `admin` từ chối JWT chưa aal2). Production: bật ở dashboard
+# (Authentication → Multi-Factor) — config.toml chỉ áp cho local.
+enroll_enabled = true
+verify_enabled = true
+
 [auth.email]
 # Bật email provider (đây là cách ĐĂNG NHẬP; chặn đăng ký dùng
 # `enable_signup` ở [auth] bên trên, không phải ở đây).
@@ -61,4 +67,9 @@ entrypoint = "./functions/parse-transaction/index.ts"
 [functions.delete-account]
 enabled = true
 # Gateway kiểm JWT trước; function lấy user từ chính token đó rồi mới xoá.
+verify_jwt = true
+
+[functions.admin]
+enabled = true
+# Gateway kiểm JWT; function kiểm thêm app_metadata.role = 'admin' + aal2.
 verify_jwt = true
