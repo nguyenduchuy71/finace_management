@@ -1,5 +1,6 @@
 import { formatVND } from '@/utils/currency'
 import type { Category } from '@/types/categories'
+import { budgetLevel } from '@/utils/budget-level'
 
 interface BudgetProgressBarProps {
   category: Category
@@ -19,8 +20,9 @@ export function BudgetProgressBar({ category, spent, budget, className = '' }: B
   const cappedPercent = Math.min(percent, 100)
 
   // Color logic
-  const isOverBudget = percent >= 100
-  const isWarning = percent >= 80 && percent < 100
+  const level = budgetLevel(percent)
+  const isOverBudget = level === 'overbudget'
+  const isWarning = level === 'warning'
 
   const fillColorClass = isOverBudget
     ? 'bg-expense'

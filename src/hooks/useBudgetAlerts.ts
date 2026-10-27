@@ -2,6 +2,7 @@ import { useMemo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import type { Category } from '@/types/categories'
 import type { CategoryBreakdownItem } from '@/services/dashboard'
+import { budgetLevel } from '@/utils/budget-level'
 
 export interface BudgetAlert {
   category: Category
@@ -22,15 +23,11 @@ export function computeBudgetAlerts(
     .filter((item) => item.budget > 0)
     .map((item) => {
       const percent = Math.round((item.spent / item.budget) * 100)
-      return {
-        category: item.category,
-        percent,
-        level: (percent >= 100 ? 'overbudget' : 'warning') as 'warning' | 'overbudget',
-        spent: item.spent,
-        budget: item.budget,
-      }
+      return { item, percent, level: budgetLevel(percent) }
     })
-    .filter((alert) => alert.percent >= 80)
+    .flatMap(({ item, percent, level }) =>
+      level === 'ok' ? [] : [{ category: item.category, percent, level, spent: item.spent, budget: item.budget }]
+    )
     .sort((a, b) => b.percent - a.percent)
 }
 

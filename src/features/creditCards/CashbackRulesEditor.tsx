@@ -6,12 +6,12 @@ import {
 import { useCashbackRules, useDeleteCashbackRule } from '@/hooks/useCashbackRules'
 import { formatVND } from '@/utils/currency'
 import { formatMcc } from '@/utils/mcc'
-import type { ApiError } from '@/types/api'
 import type { CashbackRule } from '@/types/cashback'
 import type { CreditCard } from '@/types/creditCard'
 import { DEFAULT_RULE_LABEL } from '@/types/cashback-form'
 import { CashbackRuleForm } from './CashbackRuleForm'
 import { CardCashbackCapField } from './CardCashbackCapField'
+import { getErrorMessage } from '@/services/api-errors'
 
 interface CashbackRulesEditorProps {
   card: CreditCard
@@ -44,7 +44,7 @@ function RuleRow({ rule, cardId, onEdit }: {
     try {
       await del.mutateAsync(rule.id)
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không xoá được rule.')
+      setError(getErrorMessage(err, 'Không xoá được rule.'))
       setConfirming(false)
     }
   }

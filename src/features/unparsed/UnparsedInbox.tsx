@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useResolveUnparsed, useUnparsedMessages } from '@/hooks/useUnparsedMessages'
 import { UNPARSED_PAGE_LIMIT } from '@/services/unparsed-messages'
-import type { ApiError } from '@/types/api'
 import type { UnparsedMessage } from '@/types/unparsed'
 import { toast } from 'sonner'
 import { ResolveUnparsedDialog } from './ResolveUnparsedDialog'
 import { UnparsedMessageItem } from './UnparsedMessageItem'
 import { EmptyState } from '@/components/empty-state/EmptyState'
 import { CheckCheck } from 'lucide-react'
+import { getErrorMessage } from '@/services/api-errors'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -40,7 +40,7 @@ export function UnparsedInbox() {
     if (!marking) return
     resolve.mutate(
       { messageId: marking.message.id, kind: marking.kind },
-      { onError: (err) => toast.error((err as unknown as ApiError).message ?? 'Không cập nhật được tin.') },
+      { onError: (err) => toast.error(getErrorMessage(err, 'Không cập nhật được tin.')) },
     )
   }
 

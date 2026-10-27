@@ -9,14 +9,14 @@ src/
 │   ├── accounts/        # AccountTabs, RecordedTransactionsView, AccountFormDialog, DeleteAccountDialog
 │   ├── unparsed/        # UnparsedInbox, UnparsedMessageItem, ResolveUnparsedDialog, UnparsedCountBadge
 │   ├── transactions/    # TransactionList (nhóm theo ngày), TransactionRow, TransactionListSkeleton, TransactionEmptyState,
-│   │                    #   DayGroupHeader, LoadMoreFooter
+│   │                    #   DayGroupHeader, LoadMoreFooter, TransactionListError (lỗi tải dùng chung 3 danh sách)
 │   ├── creditCards/     # CreditCardSelector + MultiCardPicker (cùng dùng CardSearchListbox), CardVisual (thẻ vật lý),
 │   │                    #   CycleProgress, MultiCardTransactionList (?view=all), CardFormDialog, DeleteCardDialog,
 │   │                    #   BillingCycleGroup, BillingCycleInfoCard, CreditCardTransactionRow (chọn MCC, nút Sửa),
 │   │                    #   MccPicker (chọn MCC có tìm kiếm), EditCardTransactionDialog,
 │   │                    #   CashbackSummary / CashbackRulesEditor / CashbackRuleForm, BankLogo
 │   ├── dashboard/       # StatCard, NetCashFlowCard, CategoryChart, DashboardDatePicker, BudgetProgressSection (bố cục bento)
-│   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
+│   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton, chat-context (prompt + lịch sử, hàm thuần)
 │   ├── settings/        # ApiKeysSection, CreateApiKeyDialog (key hiện 1 lần, chặn Esc/X), OwnerNamesSection,
 │   │                    #   DeleteAccountSection, SuspendedBanner (AppShell — user bị khoá thấy app TRỐNG vì RLS)
 │   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata), AdminActionDialog (lý do 5..500), AdminAuditList,
@@ -25,7 +25,8 @@ src/
 │   └── auth/            # AuthProvider (xoá cache khi đổi user / mất phiên), LoginPage (báo riêng user_banned), SignupPage,
 │                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây)
 ├── components/
-│   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts
+│   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts,
+│   │                    #   BrandMark (+ APP_NAME — tên sản phẩm một chỗ), ThemeToggleButton
 │   ├── empty-state/     # EmptyState (icon + tiêu đề + mô tả + hành động)
 │   ├── filters/         # FilterBar, SearchInput, DateRangePicker, CategoryFilter, ExportButton
 │   ├── budget/          # BudgetProgressBar, BudgetSettings
@@ -39,13 +40,13 @@ src/
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
 ├── services/            # supabase-js: accounts, account-mutations, creditCards, credit-card-mutations, cashbackRules,
 │                        #   dashboard, exports, unparsed-messages; mappers (snake_case→camelCase + Zod),
-│                        #   api-errors (toApiError), query-cursor (keyset cursor, sanitizeSearch), transactionQuery (filter)
+│                        #   api-errors (toApiError; getErrorMessage cho catch ở component), query-cursor (keyset cursor, sanitizeSearch), transactionQuery (filter)
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, credit-card-form.ts, cashback.ts, cashback-form.ts,
 │                        #   form-fields.ts (moneyAmountField), budget.ts, categories.ts
 ├── utils/               # dates, currency, categories, csv, billingCycle, mcc (+ mcc-codes sinh tự động, mcc-keywords,
 │                        #   mcc-search), cashback, cashflow, category-colors,
-│                        #   cycle-progress, group-by-day
+│                        #   cycle-progress, group-by-day, budget-level (ngưỡng 80/100%)
 ├── test/                # fixtures/, integration-setup.ts
 └── lib/utils.ts         # cn() = clsx + twMerge
 ```

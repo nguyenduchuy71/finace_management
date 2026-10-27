@@ -6,8 +6,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { useCardTransactionCount, useDeleteCreditCard } from '@/hooks/useCreditCardMutations'
 import { useFilterStore } from '@/stores/filterStore'
-import type { ApiError } from '@/types/api'
 import type { CreditCard } from '@/types/creditCard'
+import { getErrorMessage } from '@/services/api-errors'
 
 interface DeleteCardDialogProps {
   open: boolean
@@ -44,7 +44,7 @@ function DeleteBody({ card, onDone, setBusy }: {
       setCardId(null)
       onDone()
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không xoá được thẻ. Vui lòng thử lại.')
+      setError(getErrorMessage(err, 'Không xoá được thẻ. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }

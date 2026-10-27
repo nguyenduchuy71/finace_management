@@ -160,10 +160,9 @@ serve(async (req) => {
 
     // Chặn payload dài TRƯỚC khi chạy parser.
     //
-    // Parser SHB dùng lazy scan không neo `(?:.*?)` -> độ phức tạp O(N²): đo thật
-    // 203KB = 8.665ms, 102KB = 2.744ms (gấp đôi input, gấp 4 thời gian). Regex trong
-    // Deno chạy đồng bộ không nhường CPU -> vài request lớn là edge worker đứng hình.
-    // Thông báo ngân hàng thật < 500 ký tự; cap 2000 đưa worst case về 3.5ms.
+    // Regex parser chạy đồng bộ, không nhường CPU; parser SHB từng có lazy scan không neo O(N²)
+    // (203KB = 8.665ms, đã neo lại trong parsers-card-sms.ts). Cap này là lớp chặn thứ hai cho
+    // parser mới lỡ có backtracking. Thông báo ngân hàng thật < 500 ký tự.
     if (text.length > MAX_TEXT_LENGTH) {
       return json({ error: 'text too long', max: MAX_TEXT_LENGTH }, 413)
     }

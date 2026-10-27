@@ -6,6 +6,8 @@ import {
 import { useAdminMutation } from '@/hooks/useAdmin'
 import { ADMIN_REASON_LENGTH, type AdminMutation, type AdminUser } from '@/types/admin'
 import type { ApiError } from '@/types/api'
+import { getErrorMessage } from '@/services/api-errors'
+import { Textarea } from '@/components/ui/textarea'
 
 const COPY: Record<AdminMutation, {
   title: string; effect: string; confirm: string; destructive: boolean
@@ -56,8 +58,8 @@ function ActionBody({ action, user, onDone, setBusy }: {
       await mutate.mutateAsync({ action, userId: user.id, reason: reason.trim() })
       onDone()
     } catch (err) {
-      const e = err as ApiError
-      setError((e.code === 'ban_failed' && copy.banFailed) || e.message || 'Không thực hiện được. Vui lòng thử lại.')
+      const banFailed = (err as Partial<ApiError> | null)?.code === 'ban_failed'
+      setError((banFailed && copy.banFailed) || getErrorMessage(err, 'Không thực hiện được. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }
@@ -71,11 +73,10 @@ function ActionBody({ action, user, onDone, setBusy }: {
       </DialogHeader>
       <div className="space-y-1 text-sm">
         <label htmlFor="admin-reason" className="font-medium">Lý do (ghi vào nhật ký quản trị)</label>
-        <textarea
+        <Textarea
           id="admin-reason" rows={3} value={reason} maxLength={max}
           aria-describedby="admin-reason-hint"
           onChange={(e) => { setReason(e.target.value); setError(null) }}
-          className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
         />
         <p id="admin-reason-hint" className="text-xs text-muted-foreground">
           {min}–{max} ký tự. User không thấy lý do này.

@@ -5,7 +5,8 @@ import { Card } from '@/components/ui/card'
 import { useUpdateOwnerNames, useUserSettings } from '@/hooks/useUserSettings'
 import { normalizeOwnerNames } from '@/services/user-settings'
 import { MAX_OWNER_NAMES, OWNER_NAME_LENGTH } from '@/types/api-key'
-import type { ApiError } from '@/types/api'
+import { getErrorMessage } from '@/services/api-errors'
+import { Textarea } from '@/components/ui/textarea'
 
 /** Textarea mỗi dòng một tên; key = dữ liệu đã lưu nên lưu xong form tự đồng bộ. */
 function OwnerNamesForm({ saved }: { saved: string[] }) {
@@ -32,19 +33,19 @@ function OwnerNamesForm({ saved }: { saved: string[] }) {
     try {
       await update.mutateAsync(names)
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không lưu được. Vui lòng thử lại.')
+      setError(getErrorMessage(err, 'Không lưu được. Vui lòng thử lại.'))
     }
   }
 
   return (
     <form onSubmit={onSubmit} className="mt-4 space-y-2">
       <label htmlFor="owner-names" className="text-sm font-medium">Tên chủ tài khoản (mỗi dòng một tên)</label>
-      <textarea
+      <Textarea
         id="owner-names" rows={3} value={text} spellCheck={false}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? 'owner-names-error' : 'owner-names-hint'}
         onChange={(e) => { setText(e.target.value); setError(null) }}
-        className="w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive dark:bg-input/30"
+        className="font-mono"
         placeholder="NGUYEN VAN A"
       />
       {error

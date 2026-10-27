@@ -13,9 +13,9 @@ import {
   type CardTxFormErrors, type CardTxFormInput,
 } from '@/types/card-transaction-form'
 import { RESOLVE_KIND_LABEL, TX_RESOLVE_KINDS } from '@/types/unparsed'
-import type { ApiError } from '@/types/api'
 import type { CreditCardTransaction } from '@/types/creditCard'
 import { MccPicker } from './MccPicker'
+import { getErrorMessage } from '@/services/api-errors'
 
 const KIND_HINT: Record<(typeof TX_RESOLVE_KINDS)[number], string> = {
   normal: 'Tính vào thu/chi trên tổng quan.',
@@ -61,7 +61,7 @@ function EditBody({ tx, onDone, setBusy }: {
       await update.mutateAsync({ txId: tx.id, patch: r.patch })
       onDone()
     } catch (err) {
-      setSubmitError((err as ApiError).message ?? 'Không lưu được giao dịch. Vui lòng thử lại.')
+      setSubmitError(getErrorMessage(err, 'Không lưu được giao dịch. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }
