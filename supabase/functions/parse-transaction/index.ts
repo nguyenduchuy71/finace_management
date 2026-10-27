@@ -46,6 +46,12 @@ const authenticate = (keyHashHex: string) =>
 /** Thông báo ngân hàng thật < 500 ký tự. Xem lý do ở chỗ dùng bên dưới. */
 const MAX_TEXT_LENGTH = 2000
 const MAX_SOURCE_LENGTH = 50
+/**
+ * Trần body thô, kiểm TRƯỚC JSON.parse: text 2000 ký tự (tối đa 4 byte/ký tự UTF-8,
+ * NFD còn nhân thêm dấu tách) + source + khung JSON. Không có trần này thì request đã
+ * xác thực vẫn bắt function parse JSON tuỳ ý lớn rồi mới tới MAX_TEXT_LENGTH.
+ */
+const MAX_BODY_LENGTH = 16_000
 
 /** Shortcut gửi lại / automation chạy 2 lần trong khoảng này -> coi là trùng. */
 const DEDUP_WINDOW_MS = 10 * 60_000
@@ -125,7 +131,16 @@ serve(async (req) => {
     if (!auth.ok) return json({ error: auth.error }, auth.status)
     const { userId, ownerNames } = auth.caller
 
-    const body = await req.json()
+    const raw = await req.text()
+    if (raw.length > MAX_BODY_LENGTH) {
+      return json({ error: 'body too large', max: MAX_BODY_LENGTH }, 413)
+    }
+    let body: { text?: unknown; source?: unknown }
+    try {
+      body = JSON.parse(raw)
+    } catch {
+      return json({ error: 'invalid json' }, 400)
+    }
     const text = typeof body?.text === 'string' ? normalizeInput(body.text) : ''
     if (!text) {
       return json({ error: 'missing text' }, 400)
@@ -173,6 +188,8 @@ serve(async (req) => {
     await saveUnparsed(text, source, 'no_match', userId)
     return json({ skipped: 'no_match' }, 200)
   } catch (e) {
-    return json({ error: String(e) }, 500)
+    // Chi tiết chỉ vào log: thông điệp lỗi Postgres/supabase-js lộ tên bảng, cột, ràng buộc.
+    console.error('parse-transaction failed', String(e))
+    return json({ error: 'internal error' }, 500)
   }
 })

@@ -2,6 +2,7 @@
 // đường legacy single-tenant (x-shortcut-secret -> DEFAULT_USER_ID) giữ tới phase 4.
 
 import { secretMatches } from './shortcut-auth.ts'
+import { normalizeOwnerNames } from './internal-transfer.ts'
 
 export type Caller = { userId: string; ownerNames: string[] }
 
@@ -10,7 +11,7 @@ export type AuthResult =
   | { ok: false; status: 401 | 429 | 500; error: string }
 
 /** Dòng trả về của RPC `authenticate_api_key` (0 dòng = key sai / đã thu hồi). */
-export type AuthenticateRow = { user_id: string; owner_names: string[] | null; rate_limited: boolean }
+export type AuthenticateRow = { user_id: string; owner_names: (string | null)[] | null; rate_limited: boolean }
 
 /** Gọi RPC bằng service role — tiêm vào để test không cần DB. */
 export type AuthenticateRpc = (keyHashHex: string) =>
@@ -47,7 +48,9 @@ export async function resolveCaller(
     const row = data?.[0]
     if (!row) return { ok: false, status: 401, error: 'unauthorized' }
     if (row.rate_limited) return { ok: false, status: 429, error: 'rate limited' }
-    return { ok: true, caller: { userId: row.user_id, ownerNames: row.owner_names ?? [] } }
+    // User gõ tên tự nhiên ("Nguyễn Đức Huy") còn mô tả giao dịch đã bỏ dấu + in hoa:
+    // phải chuẩn hoá như đường env, không thì chuyển nội bộ không bao giờ được nhận ra.
+    return { ok: true, caller: { userId: row.user_id, ownerNames: normalizeOwnerNames(row.owner_names ?? []) } }
   }
 
   // Legacy: chỉ khi CẢ secret và user id được cấu hình (gỡ ở phase 4).

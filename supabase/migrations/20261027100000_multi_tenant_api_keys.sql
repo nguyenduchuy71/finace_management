@@ -14,11 +14,26 @@ create extension if not exists pgcrypto;
 -- mỗi user có tên chủ TK khác nhau nên không thể là biến môi trường chung.
 -- privacy_*: thời điểm + phiên bản chính sách user đã đồng ý lúc đăng ký.
 -- ---------------------------------------------------------------------------
+
+-- Từng phần tử owner_names: không NULL, 3..100 ký tự. CHECK không được có subquery
+-- nên bọc unnest trong hàm IMMUTABLE. NULL làm edge function throw (mọi tin của user
+-- bị 500 và mất), '' khớp mọi "chuyen tien" (khoản thu thật bị gắn nội bộ).
+create or replace function public.owner_names_ok(p_names text[])
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(bool_and(x is not null and length(btrim(x)) between 3 and 100), true)
+  from unnest(p_names) as x
+$$;
+
 create table if not exists public.user_settings (
   user_id                uuid primary key default auth.uid()
                          references auth.users(id) on delete cascade,
   owner_names            text[] not null default '{}'
-                         check (cardinality(owner_names) <= 10),
+                         check (cardinality(owner_names) <= 10)
+                         check (public.owner_names_ok(owner_names)),
   privacy_consent_at     timestamptz,
   privacy_policy_version text
 );

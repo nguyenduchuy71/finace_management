@@ -25,6 +25,12 @@ Deno.test('key hợp lệ -> user + owner names, gửi hash (không phải plain
   assertEquals(r.calls, [await sha256Hex(KEY)])
 })
 
+Deno.test('owner_names từ DB được chuẩn hoá như env: bỏ dấu, in hoa, bỏ null/rỗng/ngắn, bỏ trùng', async () => {
+  const r = rpc([{ user_id: USER, owner_names: ['Nguyễn Đức  Huy', null, '', 'ab', 'NGUYEN DUC HUY'], rate_limited: false }])
+  const got = await resolveCaller(bearer(KEY), r.fn, LEGACY)
+  assertEquals(got.ok && got.caller.ownerNames, ['NGUYEN DUC HUY'])
+})
+
 Deno.test('owner_names null -> mảng rỗng', async () => {
   const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: null, rate_limited: false }]).fn, LEGACY)
   assertEquals(got.ok && got.caller.ownerNames, [])

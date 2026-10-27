@@ -23,10 +23,22 @@ export function normalizeVN(s: string): string {
     .trim()
 }
 
+/**
+ * Chuẩn hoá danh sách tên chủ TK (bỏ dấu, in hoa, bỏ trùng, bỏ tên < 3 ký tự).
+ * Nhận `unknown[]` vì nguồn có thể là cột DB `user_settings.owner_names`: phần tử
+ * null/không phải chuỗi làm escapeRe throw -> mọi tin của user bị 500 và mất; tên
+ * rỗng thành regex `\b\b` khớp mọi "chuyen tien" -> khoản thu thật bị gắn nội bộ.
+ */
+export function normalizeOwnerNames(names: readonly unknown[]): string[] {
+  return [...new Set(
+    names.filter((n): n is string => typeof n === 'string').map(normalizeVN).filter((n) => n.length >= 3),
+  )]
+}
+
 /** OWNER_NAMES="NGUYEN DUC HUY;Nguyễn Đức Huy" -> ['NGUYEN DUC HUY'] (đã chuẩn hoá, bỏ trùng). */
 export function parseOwnerNames(raw: string | undefined | null): string[] {
   if (!raw) return []
-  return [...new Set(raw.split(';').map(normalizeVN).filter((n) => n.length >= 3))]
+  return normalizeOwnerNames(raw.split(';'))
 }
 
 /** Chốt `kind` cho giao dịch vừa parse: giữ kind parser đã set, không thì suy từ nội dung. */

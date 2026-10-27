@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-27 — Đăng ký tài khoản, API key theo user, xoá tài khoản (SaaS phase 1/4)
+
+Plan: `plans/261027-1012-saas-signup-api-key-credits/` (phase 1). PR #18.
+
+### Thêm
+- **Đăng ký** (`/signup`): email + mật khẩu ≥ 8 ký tự, ô đồng ý xử lý dữ liệu; phiên bản chính sách ghi vào `user_settings`.
+- **Trang Cài đặt** (`/settings`): tạo/thu hồi **API key** cho iOS Shortcut (key hiện một lần, tối đa 10 key còn hiệu lực),
+  **tên chủ tài khoản** để nhận diện chuyển nội bộ (thay secret `OWNER_NAMES`), **xoá tài khoản** cùng toàn bộ dữ liệu.
+- Edge function `delete-account`. Rate limit 60 request/phút/key cho `parse-transaction`.
+
+### Thay đổi hành vi / cần biết
+- Shortcut xác thực bằng `Authorization: Bearer vj_…`. `x-shortcut-secret` (legacy) vẫn chạy tới phase 4.
+- `parse-transaction`: body > 16.000 ký tự → `413`, JSON hỏng → `400`, lỗi nội bộ trả thông điệp chung (chi tiết chỉ ở log).
+- Deploy: `db push` → deploy `parse-transaction` + `delete-account`. Đăng ký trên production **giữ tắt** tới hết phase 3;
+  không chạy `supabase config push` (`config.toml` bật đăng ký cho local).
+
 ## 2026-10-22 — MCC đầy đủ và sửa giao dịch thẻ
 
 Plan: `plans/261022-1024-full-mcc-list-and-edit-card-transaction/`.

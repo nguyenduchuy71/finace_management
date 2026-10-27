@@ -11,8 +11,9 @@ export async function deleteMyAccount(): Promise<void> {
     const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' })
     if (!error) {
       // Phiên cũ trỏ tới user không còn tồn tại. `scope: 'local'` vì refresh token đã
-      // chết cùng user — gọi server để thu hồi chỉ lỗi vô ích.
-      await supabase.auth.signOut({ scope: 'local' })
+      // chết cùng user — gọi server để thu hồi chỉ lỗi vô ích. Tài khoản ĐÃ xoá: lỗi
+      // đăng xuất không được biến thành "không xoá được".
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
       return
     }
     console.error('[delete-account]', error.message)
