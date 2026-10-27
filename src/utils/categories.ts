@@ -9,15 +9,22 @@ export const CATEGORY_TAXONOMY: Record<Category, string[]> = {
   'Khác': [],
 }
 
+const ESCAPE_REGEX = /[.*+?^${}()|[\]\\]/g
+
+/**
+ * Từ khoá khớp theo RANH GIỚI TỪ (chữ/số Unicode, gồm cả chữ có dấu): khớp chuỗi con từng xếp
+ * "Phone bill" vào Ăn uống ("pho") và "Beauty Salon" vào Di chuyển ("be"). Không dùng lookbehind
+ * vì Safari < 16.4 ném SyntaxError khi nạp module (xem `mcc.ts`).
+ */
+const MATCHERS = (Object.entries(CATEGORY_TAXONOMY) as [Category, string[]][]).map(([category, keywords]) => ({
+  category,
+  res: keywords.map((kw) => new RegExp(`(?:^|[^\\p{L}\\p{N}])${kw.replace(ESCAPE_REGEX, '\\$&')}(?![\\p{L}\\p{N}])`, 'u')),
+}))
+
 export function classifyTransaction(merchant: string | undefined): Category {
   if (!merchant) return 'Khác'
-  const query = merchant.toLowerCase()
-  for (const [category, keywords] of Object.entries(CATEGORY_TAXONOMY)) {
-    if (keywords.some((kw) => query.includes(kw))) {
-      return category as Category
-    }
-  }
-  return 'Khác'
+  const query = merchant.normalize('NFC').toLowerCase()
+  return MATCHERS.find(({ res }) => res.some((re) => re.test(query)))?.category ?? 'Khác'
 }
 
 export function getCategoryLabel(category: Category): string {

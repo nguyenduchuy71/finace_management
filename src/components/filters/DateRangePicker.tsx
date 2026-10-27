@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
 import { CalendarIcon, X } from 'lucide-react'
@@ -14,13 +14,13 @@ export function DateRangePicker() {
   const dateTo = useFilterStore((s) => s.dateTo)
   const [open, setOpen] = useState(false)
 
-  const [selected, setSelected] = useState<DateRange | undefined>({
-    from: dateFrom ? new Date(dateFrom) : undefined,
-    to: dateTo ? new Date(dateTo) : undefined,
-  })
+  // Lấy thẳng từ store, không giữ bản sao: "Xóa bộ lọc" (resetFilters) từng để picker hiện khoảng ngày cũ.
+  // `parse` theo giờ máy — `new Date('yyyy-MM-dd')` là nửa đêm UTC, lệch 1 ngày ở múi giờ âm.
+  const selected: DateRange | undefined = dateFrom
+    ? { from: toLocalDate(dateFrom), to: dateTo ? toLocalDate(dateTo) : undefined }
+    : undefined
 
   function handleSelect(range: DateRange | undefined) {
-    setSelected(range)
     setDateRange(
       range?.from ? format(range.from, 'yyyy-MM-dd') : null,
       range?.to ? format(range.to, 'yyyy-MM-dd') : null,
@@ -30,7 +30,6 @@ export function DateRangePicker() {
   }
 
   function handleClear() {
-    setSelected(undefined)
     setDateRange(null, null)
   }
 
@@ -75,4 +74,8 @@ export function DateRangePicker() {
       </PopoverContent>
     </Popover>
   )
+}
+
+function toLocalDate(ymd: string): Date {
+  return parse(ymd, 'yyyy-MM-dd', new Date())
 }
