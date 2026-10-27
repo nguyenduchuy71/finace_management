@@ -66,10 +66,14 @@ function loadApiConfig(): ApiConfig | null {
 }
 
 function saveApiConfig(config: ApiConfig | null) {
-  if (config) {
-    localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config))
-  } else {
-    localStorage.removeItem(API_CONFIG_KEY)
+  try {
+    if (config) {
+      localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config))
+    } else {
+      localStorage.removeItem(API_CONFIG_KEY)
+    }
+  } catch {
+    // Safari private / bị chặn: vẫn dùng được trong phiên, chỉ không nhớ sau khi tải lại
   }
 }
 

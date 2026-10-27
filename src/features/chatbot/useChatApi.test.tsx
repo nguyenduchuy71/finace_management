@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { useChatStore } from '@/stores/chatStore'
@@ -8,6 +8,19 @@ import { useChatStore } from '@/stores/chatStore'
 const mockTransactions = vi.hoisted(() => ({ current: undefined as unknown }))
 vi.mock('@/hooks/useTransactions', () => ({
   useTransactions: () => ({ data: mockTransactions.current }),
+}))
+
+// SDK giả: ghi lại `messages` gửi lên để kiểm lịch sử hội thoại.
+const sdk = vi.hoisted(() => ({ calls: [] as { messages: unknown }[] }))
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: class {
+    messages = {
+      stream: async (req: { messages: unknown }) => {
+        sdk.calls.push(req)
+        return { finalMessage: async () => ({ content: [{ type: 'text', text: `Trả lời ${sdk.calls.length}` }] }) }
+      },
+    }
+  },
 }))
 
 import { useChatApi } from './useChatApi'
@@ -58,5 +71,29 @@ describe('useChatApi', () => {
     rerender()
     rerender()
     expect(result.current.sendMessage).toBe(first)
+  })
+
+  it('"Tạo lại" không nhân đôi câu hỏi và không gửi lại câu trả lời đã xoá', async () => {
+    sdk.calls = []
+    mockTransactions.current = { pages: [{ data: [] }] }
+    useChatStore.setState({ apiConfig: { apiKey: 'k', model: 'm' } })
+    const { result } = renderHook(() => useChatApi(), { wrapper })
+
+    await act(() => result.current.sendMessage('Tháng này chi bao nhiêu?'))
+    const answer = useChatStore.getState().messages.find((m) => m.role === 'assistant')!
+
+    // Đúng thứ tự ChatMessage.handleRegenerate: xoá câu trả lời rồi gọi callback.
+    await act(async () => {
+      useChatStore.getState().deleteMessage(answer.id)
+      useChatStore.getState().regenerateCallback?.()
+    })
+
+    await waitFor(() => expect(useChatStore.getState().isLoading).toBe(false))
+    await waitFor(() => expect(sdk.calls).toHaveLength(2))
+    expect(sdk.calls[1].messages).toEqual([{ role: 'user', content: 'Tháng này chi bao nhiêu?' }])
+    expect(useChatStore.getState().messages.map((m) => `${m.role}:${m.content}`)).toEqual([
+      'user:Tháng này chi bao nhiêu?',
+      'assistant:Trả lời 2',
+    ])
   })
 })

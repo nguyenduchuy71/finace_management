@@ -70,7 +70,7 @@ describe('BudgetSettings Dialog Component', () => {
     expect(firstInput.value).toContain('5')
   })
 
-  it('Test 3: Clicking "Lưu" (Save) button calls setBudget for each category with parseVND(input) parsed amount', async () => {
+  it('Test 3: Clicking "Lưu" (Save) button calls setBudget for each category with parsed amount', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()
     const store = useBudgetStore.getState()
@@ -99,7 +99,7 @@ describe('BudgetSettings Dialog Component', () => {
     })
   })
 
-  it('Test 4: User can type "100.000" (VND format with thousand separator) → parseVND extracts 100000 integer', async () => {
+  it('Test 4: User can type "100.000" (VND format with thousand separator) → lưu 100000', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()
 
@@ -227,5 +227,23 @@ describe('BudgetSettings Dialog Component', () => {
     await waitFor(() => {
       expect(store.getBudget('Ăn uống')).toBe(0)
     })
+  })
+  it('"1.5" không âm thầm thành 15đ: báo lỗi, không lưu ô nào, dialog vẫn mở', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    const setBudgetSpy = vi.spyOn(useBudgetStore.getState(), 'setBudget')
+    setBudgetSpy.mockClear() // spy dùng chung với test trước trên cùng object store
+    render(<BudgetSettings open={true} onOpenChange={onOpenChange} />)
+
+    const inputs = screen.getAllByRole('textbox')
+    await user.type(inputs[0], '1.5')
+    await user.type(inputs[1], '200.000')
+    await user.click(screen.getByText('Lưu'))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Ngân sách sai định dạng')
+    expect(inputs[0]).toHaveAttribute('aria-invalid', 'true')
+    expect(setBudgetSpy).not.toHaveBeenCalled()
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+    setBudgetSpy.mockRestore()
   })
 })

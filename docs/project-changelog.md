@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-10-27 — Rà soát maintainability: sửa lỗi review phát hiện
+
+Plan: `plans/261027-1832-maintainability-refactor/` (phase 1). Review: `plans/reports/code-reviewer-261027-1832-*.md`.
+
+### Sửa
+- **Chatbot "Tạo lại" chưa từng gửi request**: callback lưu dạng `() => () => …` vào zustand (setter không phải `setState` của React)
+  nên bấm chỉ xoá câu trả lời. Sửa luôn lỗi tiềm ẩn phía sau: lịch sử gửi lại còn câu trả lời vừa xoá và câu hỏi bị thêm trùng.
+- Ngữ cảnh chatbot ghi ngày theo **giờ Việt Nam** (trước là ngày UTC, giao dịch 00:00–06:59 lùi một ngày); tách `chat-context.ts`.
+- **Tự phân loại danh mục khớp theo ranh giới từ**: "Phone bill" từng thành Ăn uống ("pho"), "Beauty Salon" thành Di chuyển ("be").
+  Nhận cả chuỗi NFD từ iOS.
+- **Ô ngân sách dùng `moneyAmountField`**: "1.5" từng âm thầm thành 15đ. Giờ báo lỗi từng ô và không lưu khi có ô sai. Xoá `parseVND`.
+- "Xóa bộ lọc" xoá luôn khoảng ngày đang hiển thị trên `DateRangePicker` (trước giữ bản sao cục bộ, hiện ngày cũ).
+- Lưu cấu hình API chatbot không còn ném lỗi khi `localStorage` bị chặn.
+
 ## 2026-10-27 — Trang chủ giới thiệu (landing page)
 
 ### Thêm
