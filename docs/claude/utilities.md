@@ -6,7 +6,7 @@
 ```typescript
 formatVND(amount)         → "đ 1.500.000"
 formatVNDSigned(amount)   → "- đ 500.000"
-parseVND(str)             → number
+// Ô nhập số tiền: KHÔNG tự parse — dùng moneyAmountField (src/types/form-fields.ts)
 ```
 
 ### Dates (`dates.ts`)

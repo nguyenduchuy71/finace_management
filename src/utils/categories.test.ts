@@ -26,6 +26,19 @@ describe('Category Classification', () => {
     expect(classifyTransaction(undefined)).toBe('Khác')
   })
 
+  it('khớp theo ranh giới từ, không theo chuỗi con', () => {
+    expect(classifyTransaction('Phone bill VNPT')).toBe('Hóa đơn') // "pho" nằm trong "phone"
+    expect(classifyTransaction('Beauty Salon')).toBe('Khác') // "be" nằm trong "beauty"
+    expect(classifyTransaction('Be Group')).toBe('Di chuyển')
+    expect(classifyTransaction('Phở Pho 24')).toBe('Ăn uống')
+  })
+
+  it('từ khoá tiếng Việt có dấu, kể cả chuỗi NFD từ iOS', () => {
+    expect(classifyTransaction('Tiền điện tháng 10')).toBe('Hóa đơn')
+    expect(classifyTransaction('Tiền điện'.normalize('NFD'))).toBe('Hóa đơn')
+    expect(classifyTransaction('Cửa hàng xăng dầu số 5')).toBe('Di chuyển')
+  })
+
   it("getCategoryLabel('Ăn uống') returns 'Ăn uống'", () => {
     expect(getCategoryLabel('Ăn uống')).toBe('Ăn uống')
   })

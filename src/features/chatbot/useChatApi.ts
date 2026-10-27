@@ -3,11 +3,10 @@ import { useShallow } from 'zustand/react/shallow'
 import { useChatStore } from '@/stores/chatStore'
 import { useFilterStore } from '@/stores/filterStore'
 import { useTransactions } from '@/hooks/useTransactions'
+import { buildSystemPrompt, regenerateTurns, toChatTurns, type ChatTurn } from './chat-context'
 
-const SYSTEM_PROMPT_BASE = `Bạn là trợ lý tài chính cá nhân cho người dùng Việt Nam. \
-Phân tích dữ liệu giao dịch và đưa ra lời khuyên thực tế, ngắn gọn bằng tiếng Việt. \
-Sử dụng markdown để định dạng câu trả lời (danh sách, in đậm cho số tiền quan trọng). \
-Luôn trả lời bằng tiếng Việt trừ khi người dùng hỏi bằng ngôn ngữ khác.`
+/** Giới hạn độ dài câu trả lời của model. */
+const MAX_REPLY_TOKENS = 1024
 
 // Lazy-load the Anthropic SDK — ~72KB chunk deferred until first chat message is sent.
 // The SDK chunk ('anthropic') is loaded from Vite's manualChunks on first invocation.
@@ -60,60 +59,12 @@ export function useChatApi() {
     [transactionPages]
   )
 
-  const sendMessage = useCallback(
-    async (userText: string) => {
-      if (!userText.trim() || isLoading) return
-
-      // Guard: API not configured
-      if (!apiConfig?.apiKey || !apiConfig?.model) {
-        addMessage({
-          role: 'error',
-          content:
-            'Chưa cấu hình API. Nhấn biểu tượng ⚙️ để nhập Anthropic API key và chọn model.',
-        })
-        return
-      }
-
-      // Add user message to store
-      addMessage({ role: 'user', content: userText })
+  /** Gọi API với lịch sử ĐÃ có sẵn tin user cuối, rồi thêm câu trả lời (hoặc lỗi) vào store. */
+  const requestReply = useCallback(
+    async (history: ChatTurn[]) => {
+      if (!apiConfig?.apiKey || !apiConfig?.model) return
       setLoading(true)
-
-      // Build transaction context (cap at 20 to prevent token overflow)
-      const contextSample = visibleTransactions.slice(0, 20)
-      const filterDesc = [
-        accountId ? `tài khoản ${accountId}` : null,
-        dateFrom ? `từ ${dateFrom}` : null,
-        dateTo ? `đến ${dateTo}` : null,
-        txType !== 'all' ? `loại ${txType}` : null,
-        searchQuery ? `tìm kiếm "${searchQuery}"` : null,
-      ]
-        .filter(Boolean)
-        .join(', ')
-
-      const contextText =
-        contextSample.length > 0
-          ? `Dữ liệu ${contextSample.length} giao dịch${filterDesc ? ` (lọc: ${filterDesc})` : ''}:\n` +
-            contextSample
-              .map(
-                (tx) =>
-                  `- ${tx.transactionDate.slice(0, 10)}: ${tx.merchantName ?? tx.description} | ${tx.type === 'income' ? '+' : '-'}${Math.abs(tx.amount).toLocaleString('vi-VN')}đ`
-              )
-              .join('\n')
-          : 'Không có giao dịch nào trong bộ lọc hiện tại.'
-
-      const systemPrompt = `${SYSTEM_PROMPT_BASE}\n\n${contextText}`
-
-      // Build conversation history from store messages (exclude error messages)
-      // Anthropic API accepts: { role: 'user' | 'assistant', content: string }[]
-      const conversationHistory = messages
-        .filter((m) => m.role === 'user' || m.role === 'assistant')
-        .map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        }))
-
-      // Append the new user message to history
-      conversationHistory.push({ role: 'user', content: userText })
+      const systemPrompt = buildSystemPrompt(visibleTransactions, { accountId, dateFrom, dateTo, txType, searchQuery })
 
       try {
         // Lazy-load Anthropic SDK on first message — avoids loading ~72KB on initial page render
@@ -125,9 +76,9 @@ export function useChatApi() {
 
         const stream = await client.messages.stream({
           model: apiConfig.model,
-          max_tokens: 1024,
+          max_tokens: MAX_REPLY_TOKENS,
           system: systemPrompt,
-          messages: conversationHistory,
+          messages: history,
         })
 
         // Collect full streamed response then add as single message
@@ -146,23 +97,39 @@ export function useChatApi() {
         setLoading(false)
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [apiConfig, messages, visibleTransactions, searchQuery, dateFrom, dateTo, txType, accountId, isLoading]
+    [apiConfig, visibleTransactions, searchQuery, dateFrom, dateTo, txType, accountId, addMessage, setLoading]
   )
 
-  // Register regenerate callback: re-send the last user message
-  useEffect(() => {
-    const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
-    if (lastUserMessage) {
-      setRegenerateCallback(() => () => sendMessage(lastUserMessage.content))
-    } else {
-      setRegenerateCallback(null)
-    }
-  }, [messages, sendMessage, setRegenerateCallback])
+  const sendMessage = useCallback(
+    async (userText: string) => {
+      if (!userText.trim() || isLoading) return
 
-  return {
-    sendMessage,
-    isLoading,
-    isConfigured: Boolean(apiConfig?.apiKey && apiConfig?.model),
-  }
+      // Guard: API not configured
+      if (!apiConfig?.apiKey || !apiConfig?.model) {
+        addMessage({
+          role: 'error',
+          content:
+            'Chưa cấu hình API. Nhấn biểu tượng ⚙️ để nhập Anthropic API key và chọn model.',
+        })
+        return
+      }
+
+      addMessage({ role: 'user', content: userText })
+      await requestReply([...toChatTurns(messages), { role: 'user', content: userText }])
+    },
+    [apiConfig, messages, isLoading, addMessage, requestReply]
+  )
+
+  // "Tạo lại": ChatMessage xoá câu trả lời rồi gọi hàm này. Đọc store LÚC GỌI (đã xoá xong) thay vì
+  // `messages` của lần render trước — bản cũ gửi lại cả câu trả lời vừa xoá và thêm trùng câu hỏi.
+  // Truyền THẲNG hàm: setter của zustand không phải setState của React, `() => () => …` từng lưu hàm
+  // bọc ngoài nên bấm "Tạo lại" chỉ xoá câu trả lời mà không gửi gì.
+  useEffect(() => {
+    setRegenerateCallback(() => {
+      const history = regenerateTurns(useChatStore.getState().messages)
+      if (history && !useChatStore.getState().isLoading) void requestReply(history)
+    })
+  }, [requestReply, setRegenerateCallback])
+
+  return { sendMessage, isLoading }
 }
