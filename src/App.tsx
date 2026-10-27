@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/query-client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
@@ -11,6 +12,9 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+
+// Chunk riêng: chỉ admin tải.
+const AdminPage = lazy(() => import('@/pages/AdminPage'))
 
 export function App() {
   return (
@@ -27,6 +31,10 @@ export function App() {
                 <Route path="/accounts" element={<BankAccountsPage />} />
                 <Route path="/credit-cards" element={<CreditCardsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route
+                  path="/admin"
+                  element={<Suspense fallback={<p className="text-sm text-muted-foreground">Đang tải…</p>}><AdminPage /></Suspense>}
+                />
               </Route>
             </Route>
           </Routes>

@@ -196,6 +196,6 @@ serve(async (req) => {
   } catch (e) {
     // Chi tiết chỉ vào log: thông điệp lỗi Postgres/supabase-js lộ tên bảng, cột, ràng buộc.
     console.error('parse-transaction failed', String(e))
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'internal_error' }, 500)
   }
 })

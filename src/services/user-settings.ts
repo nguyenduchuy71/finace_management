@@ -6,13 +6,14 @@ interface UserSettingsRow {
   owner_names: string[] | null
   privacy_consent_at: string | null
   privacy_policy_version: string | null
+  suspended_at: string | null
 }
 
 /** Dòng do trigger đăng ký tạo sẵn; RLS chỉ trả dòng của chính user. */
 export async function getUserSettings(): Promise<UserSettings> {
   const { data, error } = await supabase
     .from('user_settings')
-    .select('owner_names, privacy_consent_at, privacy_policy_version')
+    .select('owner_names, privacy_consent_at, privacy_policy_version, suspended_at')
     .single()
   if (error) throw toApiError(error)
   const row = data as UserSettingsRow
@@ -20,6 +21,7 @@ export async function getUserSettings(): Promise<UserSettings> {
     ownerNames: row.owner_names ?? [],
     privacyConsentAt: row.privacy_consent_at ? new Date(row.privacy_consent_at).toISOString() : null,
     privacyPolicyVersion: row.privacy_policy_version,
+    suspendedAt: row.suspended_at ? new Date(row.suspended_at).toISOString() : null,
   })
 }
 

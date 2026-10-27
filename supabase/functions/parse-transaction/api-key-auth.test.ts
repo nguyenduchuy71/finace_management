@@ -88,7 +88,7 @@ Deno.test('legacy: user DEFAULT_USER_ID bị admin khoá -> 403 suspended (secre
 
 Deno.test('legacy: không kiểm được khoá (thiếu hàm / lỗi DB) -> 500, KHÔNG cho qua', async () => {
   const h = new Headers({ 'x-shortcut-secret': 's3cret' })
-  const { isSuspended: _omit, ...noCheck } = LEGACY
+  const noCheck = { secret: LEGACY.secret, userId: LEGACY.userId, ownerNames: LEGACY.ownerNames }
   assertEquals(await resolveCaller(h, rpc([]).fn, noCheck), { ok: false, status: 500, error: 'auth unavailable' })
   assertEquals(await resolveCaller(h, rpc([]).fn, { ...LEGACY, isSuspended: () => Promise.reject(new Error('db')) }),
     { ok: false, status: 500, error: 'auth unavailable' })

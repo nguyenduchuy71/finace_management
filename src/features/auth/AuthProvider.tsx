@@ -1,6 +1,7 @@
-import { createContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { queryClient } from '@/lib/query-client'
 
 interface AuthContextValue {
   session: Session | null
@@ -15,6 +16,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // `loading` bắt buộc: thiếu nó thì mỗi lần reload sẽ nháy sang /login
   // trong lúc getSession() còn đang chạy, dù user đã đăng nhập.
   const [loading, setLoading] = useState(true)
+  // User của phiên đã có dữ liệu trong cache. Đổi user hoặc mất phiên (hết hạn, đăng xuất ở tab
+  // khác — không đi qua nút đăng xuất của AppHeader) -> xoá cache, kể cả dữ liệu trang quản trị.
+  const cachedUserId = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     // Chặn setState sau khi unmount (StrictMode mount/unmount 2 lần ở dev).
@@ -37,7 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (active) setSession(next)
+      if (!active) return
+      const nextUserId = next?.user.id ?? null
+      if (cachedUserId.current !== undefined && cachedUserId.current !== nextUserId) queryClient.clear()
+      cachedUserId.current = nextUserId
+      setSession(next)
     })
 
     return () => {
