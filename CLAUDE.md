@@ -89,9 +89,12 @@ Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legac
 /credit-cards  → CreditCardsPage (?view=all = "Nhiều thẻ"; mặc định "Từng thẻ")
 /settings      → SettingsPage (API key cho Shortcut, tên chủ TK, xoá tài khoản)
 /signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
+/admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```
 
 Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `sm`) và thanh tab dưới `MobileTabBar` (< `sm`).
+`visibleNavItems(isAdmin)` lọc mục `adminOnly`; `shortLabel` cho tab điện thoại khi nhãn dài (5 cột ở 360px ≈ 65px/cột —
+"Thẻ tín dụng" xuống 2 dòng), kèm `aria-label` = nhãn đầy đủ.
 
 All routes wrapped in `<AppShell>` (header + layout + chat button/panel).
 
@@ -115,8 +118,11 @@ src/
 │   ├── dashboard/       # StatCard, NetCashFlowCard, CategoryChart, DashboardDatePicker, BudgetProgressSection (bố cục bento)
 │   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
 │   ├── settings/        # ApiKeysSection, CreateApiKeyDialog (key hiện 1 lần, chặn Esc/X), OwnerNamesSection,
-│   │                    #   DeleteAccountSection
-│   └── auth/            # AuthProvider, LoginPage, SignupPage, ProtectedRoute
+│   │                    #   DeleteAccountSection, SuspendedBanner (AppShell — user bị khoá thấy app TRỐNG vì RLS)
+│   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata), AdminActionDialog (lý do 5..500), AdminAuditList,
+│   │                    #   SuspensionBadge (Hoạt động / Bị khoá / Lệch trạng thái)
+│   └── auth/            # AuthProvider (xoá cache khi đổi user / mất phiên), LoginPage (báo riêng user_banned), SignupPage,
+│                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây)
 ├── components/
 │   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts
 │   ├── empty-state/     # EmptyState (icon + tiêu đề + mô tả + hành động)
@@ -324,7 +330,8 @@ Test: `docker run --rm -v "$PWD/supabase/functions:/f" -w /f/parse-transaction d
 | `useUnparsedMessages(includePromo)` / `useUnparsedCount()` / `useResolveUnparsed()` | Hộp tin chưa phân loại (200 tin mới nhất, không phân trang) |
 | `useCreateAccount()` / `useUpdateAccount(a)` / `useDeleteAccount()` / `useAccountTransactionCount(id)` | CRUD tài khoản ngân hàng |
 | `useApiKeys()` / `useCreateApiKey()` / `useRevokeApiKey()` | API key cho Shortcut; `mutateAsync` của tạo trả key đầy đủ (không toast key) |
-| `useUserSettings()` / `useUpdateOwnerNames()` / `useDeleteMyAccount()` | Cài đặt user; xoá tài khoản qua edge function `delete-account` rồi `queryClient.clear()` |
+| `useUserSettings()` / `useUpdateOwnerNames()` / `useDeleteMyAccount()` | Cài đặt user (gồm `suspendedAt`); xoá tài khoản qua edge function `delete-account` rồi `queryClient.clear()` |
+| `useIsAdmin()` / `useAdminUsers()` / `useAdminUser(id)` / `useAdminAudit()` / `useAdminMutation()` | Trang quản trị. **Không refetch khi focus**: mỗi `get_user` ghi audit `view_user`. Sau thao tác chỉ tải lại danh sách + nhật ký và chép dòng mới vào cache chi tiết — KHÔNG gọi lại `get_user` |
 
 ---
 

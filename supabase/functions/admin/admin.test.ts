@@ -131,7 +131,7 @@ Deno.test('get_user: ghi audit view_user TRƯỚC khi trả dữ liệu; ghi l�
   assertEquals(calls[0], { fn: 'admin_log_view', params: { p_admin: ADMIN, p_user: A } })
   const broken = fakeDeps({}, { admin_log_view: { data: null, error: { code: 'XX000', message: 'disk full' } } })
   const res = await handleAction(broken.deps, ADMIN, { action: 'get_user', userId: A })
-  assertEquals(res, { status: 500, body: { error: 'internal error' } })
+  assertEquals(res, { status: 500, body: { error: 'internal_error' } })
   assertEquals(broken.calls.map((c) => c.fn), ['admin_log_view'])
 })
 
@@ -179,7 +179,7 @@ Deno.test('suspend: RPC lỗi -> KHÔNG ban; P0002 -> 404, mã khác -> 500 khô
   assertEquals(p0002.bans.length, 0)
   const other = fakeDeps({}, { admin_set_suspended: { data: null, error: { code: 'XX000', message: 'relation user_settings' } } })
   assertEquals(await handleAction(other.deps, ADMIN, { action: 'suspend', userId: A, reason: 'lam dung api' }),
-    { status: 500, body: { error: 'internal error' } })
+    { status: 500, body: { error: 'internal_error' } })
 })
 
 Deno.test('revoke_keys: trả số key đã thu hồi', async () => {

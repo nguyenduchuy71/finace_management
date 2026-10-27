@@ -92,6 +92,6 @@ serve(async (req) => {
   } catch (e) {
     // Chi tiết chỉ vào log, không trả cho client.
     console.error('admin failed', String(e))
-    return json({ error: 'internal error' }, 500)
+    return json({ error: 'internal_error' }, 500)
   }
 })

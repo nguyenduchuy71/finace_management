@@ -5,10 +5,12 @@ import { useThemeStore } from '@/stores/themeStore'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/query-client'
 import { UnparsedCountBadge } from '@/features/unparsed/UnparsedCountBadge'
-import { NAV_ITEMS } from './nav-items'
+import { visibleNavItems } from './nav-items'
+import { useIsAdmin } from '@/hooks/useAdmin'
 
 export function AppHeader() {
   const { theme, toggleTheme } = useThemeStore()
+  const navItems = visibleNavItems(useIsAdmin())
 
   async function handleLogout() {
     // Clear TRƯỚC khi signOut: signOut() kích hoạt onAuthStateChange -> ProtectedRoute
@@ -32,7 +34,7 @@ export function AppHeader() {
 
         {/* Navigation — chỉ >= sm; điện thoại dùng MobileTabBar ở đáy */}
         <nav aria-label="Điều hướng chính" className="hidden sm:flex items-center gap-1">
-          {NAV_ITEMS.map(({ to, label, icon: Icon, showUnparsedBadge }) => (
+          {navItems.map(({ to, label, icon: Icon, showUnparsedBadge }) => (
             <NavLink
               key={to}
               to={to}

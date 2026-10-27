@@ -23,7 +23,9 @@ export function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       // Không log password / error object ra console
-      if (error) toast.error('Đăng nhập thất bại. Kiểm tra lại email và mật khẩu.')
+      // user_banned = admin đã khoá: báo "sai mật khẩu" thì user đi đổi mật khẩu vô ích.
+      if (error?.code === 'user_banned') toast.error('Tài khoản đang bị tạm khoá. Liên hệ quản trị để được mở khoá.')
+      else if (error) toast.error('Đăng nhập thất bại. Kiểm tra lại email và mật khẩu.')
     } catch {
       // signInWithPassword CÓ THỂ throw khi mất mạng (không chỉ trả { error }).
       // Thiếu try/catch thì submitting kẹt true -> nút disabled vĩnh viễn,

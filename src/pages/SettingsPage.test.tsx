@@ -45,7 +45,7 @@ beforeEach(() => {
     createdAt: '2026-10-01T10:00:00.000Z', lastUsedAt: null, revokedAt: null,
   }])
   vi.mocked(getUserSettings).mockResolvedValue({
-    ownerNames: ['NGUYEN VAN A'], privacyConsentAt: null, privacyPolicyVersion: '2026-10',
+    ownerNames: ['NGUYEN VAN A'], privacyConsentAt: null, privacyPolicyVersion: '2026-10', suspendedAt: null,
   })
   vi.mocked(updateOwnerNames).mockReset()
   vi.spyOn(console, 'error').mockImplementation(() => {})

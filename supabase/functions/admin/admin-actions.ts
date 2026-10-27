@@ -74,7 +74,7 @@ function rpcFailure(error: { code?: string; message: string }): ActionResult {
   if (error.code === 'P0002') return fail(404, 'user_not_found')
   if (error.code === '23514') return fail(400, 'invalid_reason')
   console.error('admin rpc failed', error.code, error.message)
-  return fail(500, 'internal error')
+  return fail(500, 'internal_error')
 }
 
 function readReason(v: unknown): string | null {

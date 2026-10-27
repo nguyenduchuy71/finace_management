@@ -18,7 +18,7 @@ import { OwnerNamesSection } from './OwnerNamesSection'
 const LABEL = 'Tên chủ tài khoản (mỗi dòng một tên)'
 
 function settingsWith(ownerNames: string[]) {
-  return { ownerNames, privacyConsentAt: null, privacyPolicyVersion: '2026-10' }
+  return { ownerNames, privacyConsentAt: null, privacyPolicyVersion: '2026-10', suspendedAt: null }
 }
 
 function renderSection() {

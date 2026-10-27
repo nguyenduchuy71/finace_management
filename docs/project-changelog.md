@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-10-27 — Trang quản trị + MFA TOTP (admin phase 2/2)
+
+Plan: `plans/261027-1049-admin-user-management/` (phase 2). Review: `plans/261027-1049-admin-user-management/reports/code-review-261027-1129-admin-branch-review.md`.
+
+### Thêm
+- Trang **`/admin`** (chỉ admin, tải riêng): danh sách user (tìm theo email, trạng thái, số key, giao dịch 30 ngày, tỉ lệ
+  parse), chi tiết user (chỉ metadata), Khoá / Mở khoá / Thu hồi mọi key (bắt lý do), nhật ký quản trị.
+- **Xác thực hai lớp TOTP** bắt buộc trước khi vào trang quản trị (thiết lập lần đầu bằng QR, sau đó nhập mã 6 số).
+- **Banner "Tài khoản đang bị tạm khoá"** cho user bị khoá — trước đó app hiện trống trơn (RLS lọc dữ liệu) như mất dữ liệu.
+
+### Thay đổi hành vi / cần biết
+- Đăng nhập khi bị khoá báo "Tài khoản đang bị tạm khoá" thay vì "kiểm tra email và mật khẩu".
+- Mã lỗi 500 của edge function đổi `internal error` → `internal_error` (parse-transaction, delete-account, admin).
+- Tab điện thoại "Thẻ tín dụng" hiện là "Thẻ" (5 mục cho admin không vừa 360px); trình đọc màn hình vẫn đọc tên đầy đủ.
+- Đăng xuất ở tab khác / hết phiên giờ xoá toàn bộ cache dữ liệu (trước chỉ khi bấm nút đăng xuất).
+
 ## 2026-10-27 — Quản trị user: khoá, thu hồi key, audit (admin phase 1/2)
 
 Plan: `plans/261027-1049-admin-user-management/` (phase 1, backend — chưa có UI).
