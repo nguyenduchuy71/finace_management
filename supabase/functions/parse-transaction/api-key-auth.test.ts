@@ -3,7 +3,7 @@ import { resolveCaller, sha256Hex, type AuthenticateRow } from './api-key-auth.t
 
 const KEY = 'vj_' + 'A'.repeat(40) + '-_9'
 const USER = 'aaaaaaaa-0000-4000-a000-000000000001'
-const LEGACY = { secret: 's3cret', userId: 'legacy-user', ownerNames: ['OWNER'] }
+const LEGACY = { secret: 's3cret', userId: 'legacy-user', ownerNames: ['OWNER'], isSuspended: () => Promise.resolve(false) }
 
 /** RPC giả: ghi lại hash nhận được, trả các dòng cho trước. */
 function rpc(rows: AuthenticateRow[] | null, error: { message: string } | null = null) {
@@ -19,20 +19,20 @@ Deno.test('sha256Hex khớp vector chuẩn', async () => {
 })
 
 Deno.test('key hợp lệ -> user + owner names, gửi hash (không phải plaintext) vào RPC', async () => {
-  const r = rpc([{ user_id: USER, owner_names: ['NGUYEN VAN A'], rate_limited: false }])
+  const r = rpc([{ user_id: USER, owner_names: ['NGUYEN VAN A'], rate_limited: false, suspended: false }])
   const got = await resolveCaller(bearer(KEY), r.fn, LEGACY)
   assertEquals(got, { ok: true, caller: { userId: USER, ownerNames: ['NGUYEN VAN A'] } })
   assertEquals(r.calls, [await sha256Hex(KEY)])
 })
 
 Deno.test('owner_names từ DB được chuẩn hoá như env: bỏ dấu, in hoa, bỏ null/rỗng/ngắn, bỏ trùng', async () => {
-  const r = rpc([{ user_id: USER, owner_names: ['Nguyễn Đức  Huy', null, '', 'ab', 'NGUYEN DUC HUY'], rate_limited: false }])
+  const r = rpc([{ user_id: USER, owner_names: ['Nguyễn Đức  Huy', null, '', 'ab', 'NGUYEN DUC HUY'], rate_limited: false, suspended: false }])
   const got = await resolveCaller(bearer(KEY), r.fn, LEGACY)
   assertEquals(got.ok && got.caller.ownerNames, ['NGUYEN DUC HUY'])
 })
 
 Deno.test('owner_names null -> mảng rỗng', async () => {
-  const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: null, rate_limited: false }]).fn, LEGACY)
+  const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: null, rate_limited: false, suspended: false }]).fn, LEGACY)
   assertEquals(got.ok && got.caller.ownerNames, [])
 })
 
@@ -48,8 +48,18 @@ Deno.test('key không tồn tại / đã thu hồi (0 dòng) -> 401', async () =
   assertEquals(await resolveCaller(bearer(KEY), rpc([]).fn, LEGACY), { ok: false, status: 401, error: 'unauthorized' })
 })
 
+Deno.test('user bị khoá -> 403 suspended, kể cả khi đồng thời bị rate limit', async () => {
+  const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: [], rate_limited: true, suspended: true }]).fn, LEGACY)
+  assertEquals(got, { ok: false, status: 403, error: 'suspended' })
+})
+
+Deno.test('user bị khoá nhưng CHƯA vượt rate limit -> 403 suspended (khoá không phụ thuộc rate limit)', async () => {
+  const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: [], rate_limited: false, suspended: true }]).fn, LEGACY)
+  assertEquals(got, { ok: false, status: 403, error: 'suspended' })
+})
+
 Deno.test('rate limited -> 429', async () => {
-  const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: [], rate_limited: true }]).fn, LEGACY)
+  const got = await resolveCaller(bearer(KEY), rpc([{ user_id: USER, owner_names: [], rate_limited: true, suspended: false }]).fn, LEGACY)
   assertEquals(got, { ok: false, status: 429, error: 'rate limited' })
 })
 
@@ -66,6 +76,22 @@ Deno.test('Bearer có mặt thì KHÔNG rơi về legacy dù secret đúng', asy
 Deno.test('legacy: secret đúng -> DEFAULT_USER_ID + OWNER_NAMES env', async () => {
   const got = await resolveCaller(new Headers({ 'x-shortcut-secret': 's3cret' }), rpc([]).fn, LEGACY)
   assertEquals(got, { ok: true, caller: { userId: 'legacy-user', ownerNames: ['OWNER'] } })
+})
+
+Deno.test('legacy: user DEFAULT_USER_ID bị admin khoá -> 403 suspended (secret đúng cũng vậy)', async () => {
+  const asked: string[] = []
+  const got = await resolveCaller(new Headers({ 'x-shortcut-secret': 's3cret' }), rpc([]).fn,
+    { ...LEGACY, isSuspended: (id) => { asked.push(id); return Promise.resolve(true) } })
+  assertEquals(got, { ok: false, status: 403, error: 'suspended' })
+  assertEquals(asked, ['legacy-user'])
+})
+
+Deno.test('legacy: không kiểm được khoá (thiếu hàm / lỗi DB) -> 500, KHÔNG cho qua', async () => {
+  const h = new Headers({ 'x-shortcut-secret': 's3cret' })
+  const { isSuspended: _omit, ...noCheck } = LEGACY
+  assertEquals(await resolveCaller(h, rpc([]).fn, noCheck), { ok: false, status: 500, error: 'auth unavailable' })
+  assertEquals(await resolveCaller(h, rpc([]).fn, { ...LEGACY, isSuspended: () => Promise.reject(new Error('db')) }),
+    { ok: false, status: 500, error: 'auth unavailable' })
 })
 
 Deno.test('legacy: secret sai / thiếu header / chưa cấu hình -> 401', async () => {

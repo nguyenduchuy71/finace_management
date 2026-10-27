@@ -79,8 +79,8 @@ jobs:
         working-directory: supabase/functions/parse-transaction
         run: |
           deno check index.ts ingest.ts backfill-unparsed.ts try-parse.ts api-key-auth.ts
-          deno check ../delete-account/index.ts
-          deno test --allow-all
+          deno check ../delete-account/index.ts ../admin/index.ts
+          deno test --allow-all . ../admin
 
   deploy:
     name: Deploy Vercel (${{ github.event_name == 'push' && 'production' || 'preview' }})
