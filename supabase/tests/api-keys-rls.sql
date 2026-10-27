@@ -53,6 +53,18 @@ select t.check('A chỉ thấy settings của mình', t.val('authenticated', :A,
   $$select count(*)::text from user_settings$$), '1');
 select t.check('A sửa owner_names', t.state('authenticated', :A,
   $$update user_settings set owner_names = '{NGUYEN VAN A}'$$), 'ok');
+select t.check('owner_names có NULL -> 23514', t.state('authenticated', :A,
+  $$update user_settings set owner_names = '{NULL}'$$), '23514');
+select t.check('owner_names rỗng -> 23514', t.state('authenticated', :A,
+  $$update user_settings set owner_names = '{"  "}'$$), '23514');
+select t.check('owner_names dài > 100 -> 23514', t.state('authenticated', :A,
+  $$update user_settings set owner_names = array[repeat('A', 101)]$$), '23514');
+select t.check('owner_names > 10 tên -> 23514', t.state('authenticated', :A,
+  $$update user_settings set owner_names = array_fill('ABC'::text, array[11])$$), '23514');
+select t.check('owner_names rỗng mảng vẫn được', t.state('authenticated', :A,
+  $$update user_settings set owner_names = '{}'$$), 'ok');
+select t.check('A sửa owner_names lại', t.state('authenticated', :A,
+  $$update user_settings set owner_names = '{NGUYEN VAN A}'$$), 'ok');
 select t.check('A không sửa consent', t.state('authenticated', :A,
   $$update user_settings set privacy_consent_at = null$$), '42501');
 select t.check('A không insert settings', t.state('authenticated', :A,

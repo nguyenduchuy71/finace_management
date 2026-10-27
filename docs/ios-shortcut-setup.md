@@ -26,16 +26,21 @@ gửi lặp; cùng giao dịch về qua cả SMS lẫn app (nội dung khác nha
 
 ```bash
 npx supabase db push
-S=$(openssl rand -hex 32) && printf 'SHORTCUT_SECRET=%s\n' "$S" > .env.deploy && chmod 600 .env.deploy
-npx supabase secrets set SHORTCUT_SECRET="$S" DEFAULT_USER_ID=<auth.users.id của bạn>
 npx supabase functions deploy parse-transaction
+npx supabase functions deploy delete-account
 ```
 
-`SHORTCUT_SECRET` phải là chuỗi ngẫu nhiên riêng — **không dùng anon key** (anon key
-nằm trong bundle JS, ai mở web cũng đọc được, rồi POST giao dịch giả vào DB của bạn).
-`.env.deploy` đã bị `.gitignore` chặn.
+Mỗi user tự tạo **API key** ở trang **Cài đặt** của web (`vj_…`, chỉ hiện một lần; DB chỉ giữ
+SHA-256). Mỗi iPhone/Shortcut nên dùng một key riêng để thu hồi riêng khi mất máy. Key thu hồi
+bị từ chối ngay request kế. Giới hạn: 10 key còn hiệu lực/user, 60 request/phút/key.
 
-Kiểm tra: không header → `401`; đúng secret + `{"text":"ping"}` → `200 no_match`.
+**Không dùng anon key** làm key cho Shortcut (anon key nằm trong bundle JS, ai mở web cũng đọc được).
+
+Kiểm tra: không header → `401`; key đúng + `{"text":"ping"}` → `200 no_match`.
+
+> **Legacy (gỡ ở phase 4 của plan SaaS):** header `x-shortcut-secret` + secret `SHORTCUT_SECRET`
+> và `DEFAULT_USER_ID` vẫn được nhận để Shortcut cũ không gãy. Chỉ chạy khi đặt CẢ hai secret.
+> Shortcut mới dùng `Authorization: Bearer <key>`.
 
 ## 2. Khai báo tài khoản/thẻ trong DB
 
@@ -60,15 +65,16 @@ Actions:
 2. **Get Contents of URL**
    - URL: `https://paiqxoewrgjtmaotfajg.supabase.co/functions/v1/parse-transaction`
    - Method: `POST`
-   - Headers: `x-shortcut-secret` = giá trị trong `.env.deploy`
+   - Headers: `Authorization` = `Bearer vj_…` (key tạo ở trang Cài đặt)
    - Request Body: **JSON**
      - `text` (Text) = *Dictionary* → Get Value for `text`
      - `source` (Text) = *Dictionary* → Get Value for `source`
 
-Secret chỉ nằm ở shortcut này; đổi secret thì chỉ sửa một chỗ.
+Key chỉ nằm ở shortcut này; đổi key (thu hồi + tạo mới) thì chỉ sửa một chỗ.
 
 Response để debug: `201 {inserted}` (đã ghi), `200 {skipped: duplicate | no_match | otp_or_security}`,
-`422 invalid_parse` (regex khớp nhưng ra số/ngày vô nghĩa), `401` sai secret.
+`422 invalid_parse` (regex khớp nhưng ra số/ngày vô nghĩa), `401` key sai/đã thu hồi, `429` quá 60 request/phút,
+`413` nội dung quá dài.
 
 ## 4. Mỗi bank một Automation
 
@@ -150,10 +156,11 @@ Sau khi deploy parser mới, chạy `backfill-unparsed.ts` (dry-run trước) đ
 | Triệu chứng | Nguyên nhân thường gặp |
 |---|---|
 | Automation không chạy | Chưa bật thông báo của app trong Settings → Notifications; hoặc đã thêm bộ lọc tiêu đề/nội dung |
-| `401` | Header `x-shortcut-secret` sai |
+| `401` | Header `Authorization: Bearer <key>` thiếu, sai, hoặc key đã thu hồi (trang Cài đặt hiện trạng thái key) |
+| `429` | Quá 60 request/phút với cùng một key — automation đang chạy lặp |
 | `no_match` với bank đã có parser | Thông báo ẩn nội dung ("Bạn có 1 thông báo mới") — bật hiển thị nội dung trong app ngân hàng; hoặc bank đổi định dạng — so `raw_text` với mẫu trong `parsers.test.ts` |
 | Có trong dashboard, không có trong danh sách | `bank_name` trong DB khác tên parser, hoặc số thẻ/TK không kết thúc bằng 4 ký tự trong thông báo |
 | Ghi 2 lần | Bank bật cả SMS và app cùng lúc — tắt automation của một kênh |
 | Tin có dấu tiếng Việt không khớp parser dù nhìn giống mẫu | iOS gửi Unicode NFD; edge function đã chuẩn hoá NFC (`normalizeInput`) — test thủ công bằng `try-parse.ts` (cũng chuẩn hoá) |
-| Trả nợ thẻ từ TK ngân hàng tính là chi; chuyển giữa TK của mình hiện ở cả thu lẫn chi | **Giới hạn đã biết khi chưa đặt `OWNER_NAMES`** (production hiện chưa đặt). Bật: `supabase secrets set OWNER_NAMES="TEN CHU TK"` (bỏ dấu không bắt buộc, nhiều tên phân tách `;`). Giao dịch cũ: sửa tay hoặc ghi lại qua hộp tin |
-| Trả nợ thẻ / chuyển giữa TK của mình làm phồng thu-chi | Giao dịch phải là `kind = internal_transfer`. Tự gắn khi nội dung có "THANH TOAN THE TIN DUNG", hoặc tên trong secret `OWNER_NAMES` là người gửi (tiền vào) / người nhận (tiền ra) |
+| Trả nợ thẻ từ TK ngân hàng tính là chi; chuyển giữa TK của mình hiện ở cả thu lẫn chi | **Chưa khai báo tên chủ tài khoản.** Nhập ở trang **Cài đặt → Nhận diện chuyển khoản nội bộ** (có dấu hay không đều được, mỗi dòng một tên). Đường legacy vẫn đọc secret `OWNER_NAMES`. Giao dịch cũ: sửa tay hoặc ghi lại qua hộp tin |
+| Trả nợ thẻ / chuyển giữa TK của mình làm phồng thu-chi | Giao dịch phải là `kind = internal_transfer`. Tự gắn khi nội dung có "THANH TOAN THE TIN DUNG", hoặc tên chủ TK (trang Cài đặt; legacy: secret `OWNER_NAMES`) là người gửi (tiền vào) / người nhận (tiền ra) |

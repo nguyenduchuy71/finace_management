@@ -30,6 +30,7 @@ function DeleteBody({ email, onDone, setBusy }: {
       // Thành công: phiên bị đăng xuất, ProtectedRoute đưa về /login — không cần đóng dialog.
     } catch (err) {
       setError((err as ApiError).message ?? 'Không xoá được tài khoản. Vui lòng thử lại.')
+    } finally {
       setBusy(false)
     }
   }

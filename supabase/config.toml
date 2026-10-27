@@ -22,6 +22,10 @@ enable_refresh_token_rotation = true
 # tới khi xong phase 3 (beta mời) — xem plans/261027-1012-saas-signup-api-key-credits/.
 # Production khi mở: bật xác nhận email, SMTP riêng, captcha Turnstile ([auth.captcha]).
 enable_signup = true
+# Khớp kiểm tra ở SignupPage (MIN_PASSWORD). Mặc định GoTrue là 6.
+minimum_password_length = 8
+# ⚠️ KHÔNG chạy `supabase config push`: lệnh đó đẩy toàn bộ [auth] (kể cả enable_signup = true
+# ở trên) lên project production. Cấu hình auth production chỉ chỉnh trên dashboard.
 
 [auth.email]
 # Bật email provider (đây là cách ĐĂNG NHẬP; chặn đăng ký dùng

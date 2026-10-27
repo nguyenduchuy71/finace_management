@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useUpdateOwnerNames, useUserSettings } from '@/hooks/useUserSettings'
 import { normalizeOwnerNames } from '@/services/user-settings'
-import { MAX_OWNER_NAMES } from '@/types/api-key'
+import { MAX_OWNER_NAMES, OWNER_NAME_LENGTH } from '@/types/api-key'
 import type { ApiError } from '@/types/api'
 
 /** Textarea mỗi dòng một tên; key = dữ liệu đã lưu nên lưu xong form tự đồng bộ. */
@@ -20,6 +20,12 @@ function OwnerNamesForm({ saved }: { saved: string[] }) {
     e.preventDefault()
     if (names.length > MAX_OWNER_NAMES) {
       setError(`Tối đa ${MAX_OWNER_NAMES} tên.`)
+      return
+    }
+    const { min, max } = OWNER_NAME_LENGTH
+    const bad = names.find((n) => n.length < min || n.length > max)
+    if (bad !== undefined) {
+      setError(`Mỗi tên ${min}–${max} ký tự (“${bad.slice(0, 30)}”).`)
       return
     }
     setError(null)
@@ -44,7 +50,7 @@ function OwnerNamesForm({ saved }: { saved: string[] }) {
       {error
         ? <p id="owner-names-error" role="alert" className="text-xs text-destructive">{error}</p>
         : <p id="owner-names-hint" className="text-xs text-muted-foreground">
-            Viết như trên thông báo ngân hàng (thường là chữ in hoa không dấu). Chỉ áp cho giao dịch nhận từ bây giờ.
+            Có dấu hay không dấu, hoa hay thường đều được. Chỉ áp cho giao dịch nhận từ bây giờ.
           </p>}
       <Button type="submit" size="sm" disabled={!dirty || update.isPending}>
         {update.isPending ? 'Đang lưu…' : 'Lưu'}

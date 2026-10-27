@@ -46,7 +46,8 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 Anon key nằm trong bundle JS của browser — **RLS ở DB là lớp bảo vệ duy nhất**.
 Production: set 2 biến này trong Vercel dashboard (không hardcode vào `vercel.json`).
 
-Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER_ID`.
+Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legacy** single-tenant — `SHORTCUT_SECRET`, `DEFAULT_USER_ID`,
+`OWNER_NAMES` (gỡ ở phase 4 của `plans/261027-1012-saas-signup-api-key-credits/`). User mới xác thực bằng API key riêng.
 
 ---
 
@@ -86,6 +87,8 @@ Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER
 /dashboard     → DashboardPage
 /accounts      → BankAccountsPage ("Giao dịch ngân hàng": ?view=inbox|recorded — hộp tin chưa phân loại / giao dịch theo TK)
 /credit-cards  → CreditCardsPage (?view=all = "Nhiều thẻ"; mặc định "Từng thẻ")
+/settings      → SettingsPage (API key cho Shortcut, tên chủ TK, xoá tài khoản)
+/signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
 ```
 
 Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `sm`) và thanh tab dưới `MobileTabBar` (< `sm`).
@@ -111,7 +114,9 @@ src/
 │   │                    #   CashbackSummary / CashbackRulesEditor / CashbackRuleForm, BankLogo
 │   ├── dashboard/       # StatCard, NetCashFlowCard, CategoryChart, DashboardDatePicker, BudgetProgressSection (bố cục bento)
 │   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton
-│   └── auth/            # AuthProvider, LoginPage, ProtectedRoute
+│   ├── settings/        # ApiKeysSection, CreateApiKeyDialog (key hiện 1 lần, chặn Esc/X), OwnerNamesSection,
+│   │                    #   DeleteAccountSection
+│   └── auth/            # AuthProvider, LoginPage, SignupPage, ProtectedRoute
 ├── components/
 │   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts
 │   ├── empty-state/     # EmptyState (icon + tiêu đề + mô tả + hành động)
@@ -170,6 +175,11 @@ unparsed_messages  tin không ghi được: user_id NOT NULL, raw_text (thườn
 transactions.kind  'normal'|'internal_transfer'|'cashback' — internal_transfer (chuyển giữa TK/thẻ của mình,
                gồm trả nợ thẻ) KHÔNG tính vào get_dashboard_stats
 accounts       unique (user_id, bank_name, account_number), check mask '^\*{4}[^\s*]{4}$', user insert/delete được
+user_settings  user_id PK (trigger handle_new_user tạo lúc đăng ký), owner_names text[] (≤ 10 tên, mỗi tên 3..100 ký tự,
+               không NULL — CHECK owner_names_ok), privacy_consent_at, privacy_policy_version. User chỉ sửa owner_names
+api_keys       id, user_id, name, prefix ('vj_'+6), last4, key_hash bytea UNIQUE (SHA-256), last_used_at, revoked_at, rl_*
+               authenticated KHÔNG đọc key_hash/rl_* (select('*') = 42501 → dùng danh sách cột), chỉ sửa name/revoked_at;
+               trigger api_keys_guard: tối đa 10 key còn hiệu lực/user, thu hồi là vĩnh viễn
 
 transactions.mcc  text|NULL, 4 chữ số — USER gán tay (SMS ngân hàng VN không có MCC)
 ```
@@ -185,7 +195,11 @@ qua RPC này**; vì nó thay toàn bộ bậc nên mọi lời gọi phải gử
 id giao dịch|null: kind normal/internal_transfer/cashback cần `p_tx` {amount ≠0 nguyên, transaction_date ISO **có offset**,
 account_id XOR card_id, description?, merchant_name?, category? ∈ 6 Category}; bank_name/source_type lấy từ TK/thẻ;
 card_reminder/promo không có p_tx. Lỗi 22023 (tham số / đã xử lý), P0002 (không thấy).
-Cả năm RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**.
+`create_api_key(p_name)` → key `vj_…` đầy đủ (lần DUY NHẤT; DB chỉ giữ SHA-256). `authenticate_api_key(p_key_hash hex)` →
+(user_id, owner_names, rate_limited): **chỉ `service_role`** (revoke khỏi public/anon/authenticated), một UPDATE…RETURNING tăng bộ
+đếm rate limit 60/phút/key + `last_used_at`; 0 dòng = key sai/đã thu hồi.
+Mọi RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**. Ngoại lệ DUY NHẤT: trigger
+`handle_new_user` trên `auth.users` (mẫu chuẩn Supabase, chạy dưới role GoTrue, không gọi được như RPC).
 
 **RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
 `transactions` insert/update kiểm thêm `card_id`/`account_id` **thuộc chính user**; `card_cashback_rules`
@@ -214,9 +228,11 @@ Form thẻ (`credit-card-form.ts`) vì thế **ép `card_number` dạng `****xxx
 ## Edge Function (`supabase/functions/parse-transaction/`)
 
 iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>" }` + header
-`x-shortcut-secret`. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
+`Authorization: Bearer vj_…` (API key của user, `api-key-auth.ts` → RPC `authenticate_api_key`; Bearer có mặt thì KHÔNG rơi về
+legacy). Legacy: `x-shortcut-secret` → `DEFAULT_USER_ID` (chỉ khi đặt cả 2 secret). Body > 16.000 ký tự → 413 trước `JSON.parse`.
+`user_settings.owner_names` từ DB **phải** qua `normalizeOwnerNames` (bỏ dấu/in hoa/bỏ null) như env — mô tả giao dịch đã chuẩn hoá. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
 Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP → chống trùng (cùng `raw_text` trong 10 phút)
-→ 19 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, secret `OWNER_NAMES`) → resolve TK/thẻ
+→ 19 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, tên chủ TK của user) → resolve TK/thẻ
 (phải khớp DUY NHẤT) → insert; **không khớp TK/thẻ thì KHÔNG ghi giao dịch mồ côi** mà vào hộp tin (`reason = no_account`);
 chống trùng kiểm cả `transactions` lẫn `unparsed_messages`;
 không khớp → `unparsed_messages` kèm `source`, `reason`, `user_id`, `suggested_kind` (`classify-unparsed.ts`, ưu tiên recall:
@@ -224,8 +240,8 @@ giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolv
 (chạy tay, dry-run mặc định). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
 Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
 (`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
-(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check: `shortcut-auth.ts`.
-**`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
+(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check (legacy + webhook): `shortcut-auth.ts`.
+**`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định; user nay tự nhập ở trang Cài đặt): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
 đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
 Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.
 Thứ tự deploy với migration 20261021100000: db push rồi deploy function ngay (function cũ không ghi user_id).
@@ -278,6 +294,8 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 | `useDebounced(value, delayMs)` | Debounced value |
 | `useUnparsedMessages(includePromo)` / `useUnparsedCount()` / `useResolveUnparsed()` | Hộp tin chưa phân loại (200 tin mới nhất, không phân trang) |
 | `useCreateAccount()` / `useUpdateAccount(a)` / `useDeleteAccount()` / `useAccountTransactionCount(id)` | CRUD tài khoản ngân hàng |
+| `useApiKeys()` / `useCreateApiKey()` / `useRevokeApiKey()` | API key cho Shortcut; `mutateAsync` của tạo trả key đầy đủ (không toast key) |
+| `useUserSettings()` / `useUpdateOwnerNames()` / `useDeleteMyAccount()` | Cài đặt user; xoá tài khoản qua edge function `delete-account` rồi `queryClient.clear()` |
 
 ---
 
@@ -409,7 +427,8 @@ Cổng 54321/54322 phải trống (các stack Supabase của dự án khác dùn
 Integration hộp tin seed `unparsed_messages` bằng service_role **local**: thêm `VITE_TEST_SERVICE_ROLE_KEY` (SERVICE_ROLE_KEY của
 `supabase status -o env`) vào `.env.test.local` — file chỉ nạp ở mode test, không vào bundle.
 
-**RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql` chạy trên Postgres 17 tạm
+**RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql`,
+`api-keys-rls.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
 
 ---

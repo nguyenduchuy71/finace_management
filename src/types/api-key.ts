@@ -28,6 +28,9 @@ export type UserSettings = z.infer<typeof UserSettingsSchema>
 /** Trần do CHECK `cardinality(owner_names) <= 10` ở DB. */
 export const MAX_OWNER_NAMES = 10
 
+/** Độ dài mỗi tên, khớp CHECK `owner_names_ok` ở DB (tên < 3 ký tự edge function bỏ qua). */
+export const OWNER_NAME_LENGTH = { min: 3, max: 100 } as const
+
 /**
  * Phiên bản chính sách bảo mật user đồng ý lúc đăng ký — gửi qua metadata signUp,
  * trigger `handle_new_user` ghi vào `user_settings`. Đổi nội dung chính sách thì tăng số này.

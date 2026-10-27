@@ -32,7 +32,12 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 /** Bước 1: đặt tên. Bước 2: hiện key ĐÚNG MỘT LẦN — đóng dialog là không xem lại được. */
-function CreateKeyBody({ onDone, setBusy }: { onDone: () => void; setBusy: (b: boolean) => void }) {
+function CreateKeyBody({ onDone, setBusy, onKeyShown }: {
+  onDone: () => void
+  setBusy: (b: boolean) => void
+  /** Báo dialog cha khoá Esc / nút X / click ngoài trong lúc key đang hiện. */
+  onKeyShown: () => void
+}) {
   const create = useCreateApiKey()
   const [name, setName] = useState('iPhone')
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +55,7 @@ function CreateKeyBody({ onDone, setBusy }: { onDone: () => void; setBusy: (b: b
     setBusy(true)
     try {
       setKey(await create.mutateAsync(trimmed))
+      onKeyShown()
     } catch (err) {
       setError((err as ApiError).message ?? 'Không tạo được key. Vui lòng thử lại.')
     } finally {
@@ -119,11 +125,18 @@ function CreateKeyBody({ onDone, setBusy }: { onDone: () => void; setBusy: (b: b
 
 export function CreateApiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [busy, setBusy] = useState(false)
+  // Key đang hiện: chỉ nút "Tôi đã lưu key" đóng được. Esc, nút X, click ngoài mà lỡ
+  // tay là mất key vĩnh viễn (DB chỉ giữ hash).
+  const [keyShown, setKeyShown] = useState(false)
+  const close = () => { setKeyShown(false); onOpenChange(false) }
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
-      {/* Chặn đóng bằng click ra ngoài khi đang hiện key: lỡ tay là mất key. */}
-      <DialogContent className="sm:max-w-lg" onInteractOutside={(e) => e.preventDefault()}>
-        {open && <CreateKeyBody setBusy={setBusy} onDone={() => onOpenChange(false)} />}
+    <Dialog open={open} onOpenChange={(next) => { if (!busy && !keyShown) onOpenChange(next) }}>
+      <DialogContent
+        className="sm:max-w-lg"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => { if (keyShown) e.preventDefault() }}
+      >
+        {open && <CreateKeyBody setBusy={setBusy} onKeyShown={() => setKeyShown(true)} onDone={close} />}
       </DialogContent>
     </Dialog>
   )

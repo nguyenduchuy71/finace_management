@@ -59,5 +59,6 @@ export async function revokeApiKey(id: string): Promise<void> {
     .update({ revoked_at: new Date().toISOString() })
     .eq('id', id)
     .is('revoked_at', null)
-  if (error) throw toApiError(error, API_KEY_ERRORS)
+  // 22023 ở đây chỉ có thể là trigger chặn sửa key đã thu hồi.
+  if (error) throw toApiError(error, { '22023': 'Key này đã bị thu hồi trước đó.' })
 }
