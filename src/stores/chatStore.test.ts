@@ -272,4 +272,22 @@ describe('chatStore', () => {
       expect(useChatStore.getState().messages[0].content).toBe('Previous message')
     })
   })
+
+  describe('resetForSignOut', () => {
+    it('xoá lịch sử chat, API key (cả state lẫn localStorage) và đóng panel', () => {
+      const s = useChatStore.getState()
+      s.addMessage({ role: 'user', content: 'Tháng này tôi chi bao nhiêu?' })
+      s.setApiConfig({ apiKey: 'sk-test', model: 'm' })
+      s.openChat()
+
+      useChatStore.getState().resetForSignOut()
+
+      const after = useChatStore.getState()
+      expect(after.messages).toEqual([])
+      expect(after.apiConfig).toBeNull()
+      expect(after.isOpen).toBe(false)
+      expect(JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]')).toEqual([])
+      expect(localStorage.getItem(API_CONFIG_KEY)).toBeNull()
+    })
+  })
 })

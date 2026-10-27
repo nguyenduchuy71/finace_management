@@ -2,6 +2,7 @@ import { createContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/query-client'
+import { useChatStore } from '@/stores/chatStore'
 
 interface AuthContextValue {
   session: Session | null
@@ -17,7 +18,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // trong lúc getSession() còn đang chạy, dù user đã đăng nhập.
   const [loading, setLoading] = useState(true)
   // User của phiên đã có dữ liệu trong cache. Đổi user hoặc mất phiên (hết hạn, đăng xuất ở tab
-  // khác — không đi qua nút đăng xuất của AppHeader) -> xoá cache, kể cả dữ liệu trang quản trị.
+  // khác — không đi qua nút đăng xuất của AppHeader) -> xoá cache, kể cả dữ liệu trang quản trị,
+  // và lịch sử chat + API key Claude trong localStorage (không gắn với user, máy dùng chung sẽ lộ).
   const cachedUserId = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
@@ -43,7 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       if (!active) return
       const nextUserId = next?.user.id ?? null
-      if (cachedUserId.current !== undefined && cachedUserId.current !== nextUserId) queryClient.clear()
+      if (cachedUserId.current !== undefined && cachedUserId.current !== nextUserId) {
+        queryClient.clear()
+        useChatStore.getState().resetForSignOut()
+      }
       cachedUserId.current = nextUserId
       setSession(next)
     })

@@ -30,6 +30,8 @@ interface ChatState {
   setApiConfig: (config: ApiConfig | null) => void
   toggleSettings: () => void
   setRegenerateCallback: (fn: (() => void) | null) => void
+  /** Đăng xuất / đổi user: xoá lịch sử chat (chứa số liệu tài chính) và API key khỏi localStorage. */
+  resetForSignOut: () => void
 }
 
 const HISTORY_KEY = 'finance-chat-history'
@@ -119,4 +121,10 @@ export const useChatStore = create<ChatState>()((set) => ({
   toggleSettings: () => set((s) => ({ showSettings: !s.showSettings })),
 
   setRegenerateCallback: (fn) => set({ regenerateCallback: fn }),
+
+  resetForSignOut: () => {
+    saveMessages([])
+    saveApiConfig(null)
+    set({ isOpen: false, messages: [], isLoading: false, apiConfig: null, showSettings: false, regenerateCallback: null })
+  },
 }))
