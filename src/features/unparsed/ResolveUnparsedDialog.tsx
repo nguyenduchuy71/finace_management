@@ -15,10 +15,10 @@ import {
   type ResolveFormErrors, type ResolveFormInput,
 } from '@/types/resolve-form'
 import { RESOLVE_KIND_LABEL, TX_RESOLVE_KINDS, type UnparsedMessage } from '@/types/unparsed'
-import type { ApiError } from '@/types/api'
 import type { BankAccount } from '@/types/account'
 import type { CreditCard } from '@/types/creditCard'
 import { suggestFromText } from '@/utils/unparsed-suggest'
+import { getErrorMessage } from '@/services/api-errors'
 
 const KIND_HINT: Record<(typeof TX_RESOLVE_KINDS)[number], string> = {
   normal: 'Tính vào thu/chi trên tổng quan.',
@@ -62,7 +62,7 @@ function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
       await resolve.mutateAsync({ messageId: message.id, kind: r.kind, tx: r.tx })
       onDone()
     } catch (err) {
-      setSubmitError((err as ApiError).message ?? 'Không ghi được giao dịch. Vui lòng thử lại.')
+      setSubmitError(getErrorMessage(err, 'Không ghi được giao dịch. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }

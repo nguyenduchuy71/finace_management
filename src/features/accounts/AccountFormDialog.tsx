@@ -13,9 +13,9 @@ import {
   EMPTY_ACCOUNT_FORM, accountToFormInput, validateAccountForm,
   type AccountFormErrors, type AccountFormInput,
 } from '@/types/account-form'
-import type { ApiError } from '@/types/api'
 import type { BankAccount } from '@/types/account'
 import { KNOWN_BANK_NAMES, canonicalBankName } from '@/features/creditCards/bank-branding'
+import { getErrorMessage } from '@/services/api-errors'
 
 const FIELD_ID: Record<keyof AccountFormInput, string> = {
   bankName: 'acc-bank',
@@ -70,7 +70,7 @@ function AccountFormBody({ account, onDone, setBusy }: {
       }
       onDone()
     } catch (err) {
-      setSubmitError((err as ApiError).message ?? 'Không lưu được tài khoản. Vui lòng thử lại.')
+      setSubmitError(getErrorMessage(err, 'Không lưu được tài khoản. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }

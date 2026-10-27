@@ -161,9 +161,10 @@ describe('CardFormDialog — thêm thẻ', () => {
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
   })
 
-  it('báo thẻ trùng bằng thông điệp riêng và giữ dialog mở', async () => {
+  // Thông điệp 23505 riêng cho thẻ do service đặt (CARD_ERRORS), component chỉ hiển thị.
+  it('báo thẻ trùng bằng thông điệp của service và giữ dialog mở', async () => {
     const u = userEvent.setup()
-    vi.mocked(createCreditCard).mockRejectedValue({ code: '23505', message: 'Dữ liệu đã tồn tại.' })
+    vi.mocked(createCreditCard).mockRejectedValue({ code: '23505', message: 'Thẻ này đã tồn tại (cùng ngân hàng và số thẻ).' })
     const { onOpenChange } = renderDialog()
     fillValid()
     await u.click(screen.getByRole('button', { name: 'Thêm thẻ' }))

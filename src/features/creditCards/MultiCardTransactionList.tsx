@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { AlertCircle, Receipt, SearchX } from 'lucide-react'
+import { Receipt, SearchX } from 'lucide-react'
 import { EmptyState } from '@/components/empty-state/EmptyState'
 import { useMultiCardTransactions } from '@/hooks/useMultiCardTransactions'
 import { useCreditCards } from '@/hooks/useCreditCards'
@@ -10,6 +10,7 @@ import { LoadMoreFooter } from '@/features/transactions/LoadMoreFooter'
 import { DayGroupHeader } from '@/features/transactions/DayGroupHeader'
 import { CreditCardTransactionRow } from './CreditCardTransactionRow'
 import { CreditCardTransactionListSkeleton } from './CreditCardTransactionListSkeleton'
+import { TransactionListError } from '@/features/transactions/TransactionListError'
 
 /**
  * Một dòng thời gian gộp giao dịch của nhiều thẻ, nhóm theo NGÀY (mỗi thẻ có ngày sao kê khác nhau
@@ -33,17 +34,7 @@ export function MultiCardTransactionList() {
 
   if (isLoading) return <CreditCardTransactionListSkeleton count={7} />
 
-  if (isError) {
-    return (
-      <div role="alert" className="flex flex-col items-center justify-center p-10 text-center">
-        <AlertCircle className="h-8 w-8 text-destructive mb-3" />
-        <p className="font-medium text-destructive">Không thể tải giao dịch thẻ</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          {(error as { message?: string })?.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.'}
-        </p>
-      </div>
-    )
-  }
+  if (isError) return <TransactionListError title="Không thể tải giao dịch thẻ" error={error} />
 
   if (allTransactions.length === 0) {
     return (

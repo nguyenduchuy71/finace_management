@@ -8,7 +8,7 @@ import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
 import { useCreateApiKey } from '@/hooks/useApiKeys'
-import type { ApiError } from '@/types/api'
+import { getErrorMessage } from '@/services/api-errors'
 
 /** Endpoint Shortcut gọi tới — hiện kèm key để user dán thẳng vào Shortcut. */
 export const INGEST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-transaction`
@@ -57,7 +57,7 @@ function CreateKeyBody({ onDone, setBusy, onKeyShown }: {
       setKey(await create.mutateAsync(trimmed))
       onKeyShown()
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không tạo được key. Vui lòng thử lại.')
+      setError(getErrorMessage(err, 'Không tạo được key. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }

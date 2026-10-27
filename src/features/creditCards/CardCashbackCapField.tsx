@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSetCardCashbackCap } from '@/hooks/useCashbackRules'
 import { CardCapFormSchema } from '@/types/cashback-form'
-import type { ApiError } from '@/types/api'
 import type { CreditCard } from '@/types/creditCard'
+import { getErrorMessage } from '@/services/api-errors'
 
 const FIELD_ID = 'card-cashback-cap'
 
@@ -30,7 +30,7 @@ export function CardCashbackCapField({ card, setBusy }: CardCashbackCapFieldProp
     try {
       await save.mutateAsync(parsed.data)
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không lưu được trần hoàn tiền.')
+      setError(getErrorMessage(err, 'Không lưu được trần hoàn tiền.'))
     } finally {
       setBusy(false)
     }

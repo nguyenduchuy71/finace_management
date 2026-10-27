@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { APP_NAME } from '@/components/layout/BrandMark'
 
 export function LoginPage() {
   const { session, loading } = useAuth()
@@ -41,7 +42,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm p-6">
         <Link to="/" className="mb-6 flex w-fit items-center gap-2" aria-label="Về trang chủ">
           <Wallet className="h-5 w-5 text-primary" />
-          <span className="heading-h3 tracking-tight">FinanceManager</span>
+          <span className="heading-h3 tracking-tight">{APP_NAME}</span>
         </Link>
 
         <form onSubmit={handleSubmit} className="space-y-4">

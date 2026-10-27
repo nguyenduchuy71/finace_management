@@ -6,8 +6,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { useAccountTransactionCount, useDeleteAccount } from '@/hooks/useAccountMutations'
 import { useFilterStore } from '@/stores/filterStore'
-import type { ApiError } from '@/types/api'
 import type { BankAccount } from '@/types/account'
+import { getErrorMessage } from '@/services/api-errors'
 
 /**
  * Xoá TK KÈM toàn bộ giao dịch, không hoàn tác được: nói rõ số giao dịch sẽ mất (đếm
@@ -35,7 +35,7 @@ function DeleteBody({ account, onDone, setBusy }: {
       setAccountId(null) // AccountTabs tự chọn TK đầu tiên còn lại
       onDone()
     } catch (err) {
-      setError((err as ApiError).message ?? 'Không xoá được tài khoản. Vui lòng thử lại.')
+      setError(getErrorMessage(err, 'Không xoá được tài khoản. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }

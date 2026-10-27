@@ -13,9 +13,9 @@ import {
   EMPTY_CARD_FORM, cardToFormInput, validateCardForm,
   type CardFormErrors, type CardFormInput,
 } from '@/types/credit-card-form'
-import type { ApiError } from '@/types/api'
 import type { CreditCard } from '@/types/creditCard'
 import { CARD_TYPE_LABEL, KNOWN_BANK_NAMES, canonicalBankName } from './bank-branding'
+import { getErrorMessage } from '@/services/api-errors'
 
 interface CardFormDialogProps {
   open: boolean
@@ -83,12 +83,7 @@ function CardFormBody({ card, onDone, setBusy }: {
       }
       onDone()
     } catch (err) {
-      const apiErr = err as ApiError
-      setSubmitError(
-        apiErr.code === '23505'
-          ? 'Thẻ này đã tồn tại (cùng ngân hàng và số thẻ).'
-          : apiErr.message ?? 'Không lưu được thẻ. Vui lòng thử lại.'
-      )
+      setSubmitError(getErrorMessage(err, 'Không lưu được thẻ. Vui lòng thử lại.'))
     } finally {
       setBusy(false)
     }
