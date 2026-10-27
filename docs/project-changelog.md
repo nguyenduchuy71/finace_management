@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-27 — Trang chủ giới thiệu (landing page)
+
+### Thêm
+- `/` là trang giới thiệu (tên hiển thị FinanceManager) công khai cho khách chưa đăng nhập (tính năng, 3 bước cài đặt, ngân hàng hỗ trợ, bảo mật, nút
+  đăng ký/đăng nhập, đổi theme sáng/tối). Đã đăng nhập vẫn vào thẳng `/accounts` như trước. Logo trang đăng nhập dẫn về `/`.
+
 ## 2026-10-27 — Rà soát bảo mật toàn dự án
 
 ### Sửa

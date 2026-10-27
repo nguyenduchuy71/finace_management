@@ -39,10 +39,10 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm p-6">
-        <div className="mb-6 flex items-center gap-2">
+        <Link to="/" className="mb-6 flex w-fit items-center gap-2" aria-label="Về trang chủ">
           <Wallet className="h-5 w-5 text-primary" />
           <span className="heading-h3 tracking-tight">FinanceManager</span>
-        </div>
+        </Link>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
