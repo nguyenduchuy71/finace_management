@@ -13,7 +13,7 @@ export function MobileTabBar() {
       aria-label="Điều hướng chính"
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-[env(safe-area-inset-bottom)] sm:hidden"
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {NAV_ITEMS.map(({ to, label, icon: Icon, showUnparsedBadge }) => (
           <li key={to}>
             <NavLink

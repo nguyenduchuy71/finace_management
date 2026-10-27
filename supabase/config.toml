@@ -18,8 +18,10 @@ site_url = "http://localhost:5173"
 additional_redirect_urls = ["http://localhost:5173"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
-# Single-user app: chặn người lạ tự đăng ký
-enable_signup = false
+# Local: bật để thử luồng đăng ký. PRODUCTION đặt ở dashboard Supabase và giữ TẮT
+# tới khi xong phase 3 (beta mời) — xem plans/261027-1012-saas-signup-api-key-credits/.
+# Production khi mở: bật xác nhận email, SMTP riêng, captcha Turnstile ([auth.captcha]).
+enable_signup = true
 
 [auth.email]
 # Bật email provider (đây là cách ĐĂNG NHẬP; chặn đăng ký dùng
@@ -51,3 +53,8 @@ entrypoint = "./functions/parse-transaction/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/parse-transaction/*.html" ]
+
+[functions.delete-account]
+enabled = true
+# Gateway kiểm JWT trước; function lấy user từ chính token đó rồi mới xoá.
+verify_jwt = true

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -60,6 +60,9 @@ export function LoginPage() {
           <Button type="submit" className="w-full" disabled={submitting}>
             {submitting ? 'Đang đăng nhập…' : 'Đăng nhập'}
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            Chưa có tài khoản? <Link to="/signup" className="text-primary underline">Đăng ký</Link>
+          </p>
         </form>
       </Card>
     </div>
