@@ -214,6 +214,8 @@ card_reminder/promo không có p_tx. Lỗi 22023 (tham số / đã xử lý), P0
 `admin_user_keys`, `admin_set_suspended`, `admin_revoke_user_keys`, `admin_log_view`, `admin_list_audit`: **chỉ `service_role`**, mỗi thay đổi ghi audit CÙNG transaction; gọi qua edge function `admin`.
 Mọi RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**. Ngoại lệ DUY NHẤT: trigger
 `handle_new_user` trên `auth.users` (mẫu chuẩn Supabase, chạy dưới role GoTrue, không gọi được như RPC).
+Từ migration `20261029100000` function mới **không** tự có EXECUTE cho PUBLIC/anon → mỗi RPC mới phải
+`grant execute ... to authenticated` (hoặc `service_role`) tường minh; `admin-rls.sql` fail nếu anon gọi được function nào.
 
 **RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
 **KHÔNG thêm policy "admin bypass"** vào bảng nào: admin chỉ đi qua edge function `admin` (service role) — 1 policy admin

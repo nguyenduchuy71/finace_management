@@ -238,3 +238,12 @@ revoke update, delete on public.admin_audit_log from service_role;
 select t.check('trigger chặn TRUNCATE', t.msg('postgres', null, $$truncate admin_audit_log$$), 'admin_audit_log là append-only');
 select t.check('7 bảng dữ liệu có policy restrictive not_suspended, user_settings không', (select
   (count(*) = 7 and bool_and(polpermissive = false))::text from pg_policy where polname = 'not_suspended'), 'true');
+
+-- 20261029100000: anon không EXECUTE được function nào của public (PUBLIC mặc định có EXECUTE)
+select t.check('anon không gọi được function nào trong public', (select coalesce(string_agg(p.proname, ',' order by p.proname), '')
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')
+    and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')), '');  -- bỏ function của extension
+create function public.zz_new_rpc() returns int language sql as 'select 1';
+select t.check('function tạo sau migration không tự mở cho anon', has_function_privilege('anon', 'public.zz_new_rpc()', 'execute')::text, 'false');
+drop function public.zz_new_rpc();
