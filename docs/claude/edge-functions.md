@@ -16,7 +16,8 @@ giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolv
 (chạy tay, dry-run mặc định). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
 Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
 (`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
-(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check (legacy + webhook): `shortcut-auth.ts`.
+(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng).
+**MoMo** (tin không có số TK, `account_ref: null`): `resolveRefs` gắn vào tài khoản `bank_name = 'MoMo'` của user nếu có ĐÚNG 1; 0 hoặc ≥ 2 thì vào hộp tin (`no_account`) — không đoán. Form TK chấp nhận mask bất kỳ 4 ký tự cho MoMo (vd 4 số cuối điện thoại). Secret check (legacy + webhook): `shortcut-auth.ts`.
 **`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định; user nay tự nhập ở trang Cài đặt): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
 đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
 Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.
