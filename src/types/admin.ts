@@ -2,7 +2,8 @@ import { z } from 'zod'
 
 /**
  * Dữ liệu trang quản trị — CHỈ metadata (function `admin` không trả số tiền, mô tả, raw_text).
- * Schema khớp response của supabase/functions/admin/admin-actions.ts.
+ * Schema camelCase; response của supabase/functions/admin/admin-actions.ts
+ * (snake_case ở `keys` / `entries`) được đổi tên trong services/admin.ts.
  */
 const iso = z.string().datetime({ offset: true })
 
@@ -30,9 +31,9 @@ export const AdminKeySchema = z.object({
   name: z.string(),
   prefix: z.string(),
   last4: z.string(),
-  created_at: iso,
-  last_used_at: iso.nullable(),
-  revoked_at: iso.nullable(),
+  createdAt: iso,
+  lastUsedAt: iso.nullable(),
+  revokedAt: iso.nullable(),
 })
 export type AdminKey = z.infer<typeof AdminKeySchema>
 
@@ -41,12 +42,12 @@ export type AuditAction = z.infer<typeof AuditActionSchema>
 
 export const AuditEntrySchema = z.object({
   id: z.number().int(),
-  admin_id: z.string(),
+  adminId: z.string(),
   action: AuditActionSchema,
-  target_user_id: z.string().nullable(),
+  targetUserId: z.string().nullable(),
   reason: z.string(),
   payload: z.record(z.string(), z.unknown()),
-  created_at: iso,
+  createdAt: iso,
 })
 export type AuditEntry = z.infer<typeof AuditEntrySchema>
 

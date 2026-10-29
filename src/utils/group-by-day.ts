@@ -1,7 +1,7 @@
 import { TZDate } from '@date-fns/tz'
 import { format, subDays } from 'date-fns'
+import { VN_TZ } from './dates'
 
-const VN_TZ = 'Asia/Ho_Chi_Minh'
 const WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy']
 
 export interface DayGroup<T> {

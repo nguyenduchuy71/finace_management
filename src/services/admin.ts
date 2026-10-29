@@ -2,9 +2,39 @@ import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import type { ApiError } from '@/types/api'
 import {
-  AdminKeySchema, AdminUserSchema, AuditEntrySchema,
+  AdminUserSchema, AuditActionSchema,
   type AdminKey, type AdminMutation, type AdminUser, type AuditEntry,
 } from '@/types/admin'
+
+const iso = z.string().datetime({ offset: true })
+
+// Response của function `admin` giữ snake_case ở `keys` / `entries` (cột DB); đổi sang camelCase tại biên
+// như mọi service khác (CLAUDE.md quyết định 4). `user` đã là camelCase (function tự dựng).
+const AdminKeyWireSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  prefix: z.string(),
+  last4: z.string(),
+  created_at: iso,
+  last_used_at: iso.nullable(),
+  revoked_at: iso.nullable(),
+}).transform((k): AdminKey => ({
+  id: k.id, name: k.name, prefix: k.prefix, last4: k.last4,
+  createdAt: k.created_at, lastUsedAt: k.last_used_at, revokedAt: k.revoked_at,
+}))
+
+const AuditEntryWireSchema = z.object({
+  id: z.number().int(),
+  admin_id: z.string(),
+  action: AuditActionSchema,
+  target_user_id: z.string().nullable(),
+  reason: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  created_at: iso,
+}).transform((e): AuditEntry => ({
+  id: e.id, adminId: e.admin_id, action: e.action, targetUserId: e.target_user_id,
+  reason: e.reason, payload: e.payload, createdAt: e.created_at,
+}))
 
 /**
  * Thông điệp theo mã lỗi function `admin`. MFA_REQUIRED để UI quay về màn nhập mã TOTP
@@ -68,7 +98,7 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
 
 /** Mỗi lần gọi ghi 1 dòng audit `view_user` ở server — đừng gọi lặp vô cớ. */
 export async function getAdminUser(userId: string): Promise<{ user: AdminUser; keys: AdminKey[] }> {
-  return call({ action: 'get_user', userId }, z.object({ user: AdminUserSchema, keys: z.array(AdminKeySchema) }))
+  return call({ action: 'get_user', userId }, z.object({ user: AdminUserSchema, keys: z.array(AdminKeyWireSchema) }))
 }
 
 export async function runAdminMutation(action: AdminMutation, userId: string, reason: string): Promise<void> {
@@ -77,6 +107,6 @@ export async function runAdminMutation(action: AdminMutation, userId: string, re
 
 /** 200 dòng mới nhất toàn hệ thống (function hỗ trợ lọc theo user, UI chưa cần — YAGNI). */
 export async function listAudit(): Promise<AuditEntry[]> {
-  const r = await call({ action: 'list_audit', limit: 200 }, z.object({ entries: z.array(AuditEntrySchema) }))
+  const r = await call({ action: 'list_audit', limit: 200 }, z.object({ entries: z.array(AuditEntryWireSchema) }))
   return r.entries
 }

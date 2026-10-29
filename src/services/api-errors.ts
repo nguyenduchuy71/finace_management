@@ -9,7 +9,7 @@ import type { ApiError } from '@/types/api'
 const ERROR_MESSAGES: Record<string, string> = {
   '42501': 'Bạn không có quyền xem dữ liệu này.',
   '23505': 'Dữ liệu đã tồn tại.',
-  P0002: 'Không tìm thấy thẻ (đã bị xoá hoặc không thuộc về bạn).',
+  P0002: 'Không tìm thấy dữ liệu (đã bị xoá hoặc không thuộc về bạn).',
   '23502': 'Thiếu thông tin bắt buộc.',
   '22007': 'Giá trị ngày tháng không hợp lệ.',
   '22P02': 'Dữ liệu gửi lên không đúng định dạng.',
@@ -32,6 +32,32 @@ export function toApiError(e: PostgrestError, overrides?: Record<string, string>
     // resolve_unparsed không phải "không tìm thấy thẻ").
     message: overrides?.[code] ?? ERROR_MESSAGES[code] ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.',
   }
+}
+
+/** Thông điệp "không thấy thẻ" dùng ở nhiều nơi (xoá thẻ, đặt trần hoàn tiền). */
+export const CARD_NOT_FOUND = 'Không tìm thấy thẻ (đã bị xoá hoặc không thuộc về bạn).'
+
+/** Lỗi NOT_FOUND với thông điệp riêng của thực thể (thẻ, rule, giao dịch...). */
+export function notFound(message: string): ApiError {
+  return { code: 'NOT_FOUND', message }
+}
+
+/**
+ * RLS lọc 0 dòng thì PostgREST vẫn báo thành công với mảng rỗng: gọi sau `.select('id')` của
+ * update/delete để không "lưu/xoá thành công" mà không đổi gì.
+ */
+export function requireAffected(data: unknown[] | null, message: string): void {
+  if (!data || data.length === 0) throw notFound(message)
+}
+
+/** Chạy query đếm (`select('id', { count: 'exact', head: true })`): ném ApiError khi lỗi, trả số dòng. */
+export async function countRows(
+  query: PromiseLike<{ count: number | null; error: PostgrestError | null }>,
+  overrides?: Record<string, string>,
+): Promise<number> {
+  const { count, error } = await query
+  if (error) throw toApiError(error, overrides)
+  return count ?? 0
 }
 
 /**

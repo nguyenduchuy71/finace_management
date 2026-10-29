@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { updateCardTransaction, type CardTransactionPatch } from '@/services/creditCards'
+import { updateCardTransaction } from '@/services/creditCards'
+import type { CardTransactionPatch } from '@/types/card-transaction-patch'
 import type { ApiError } from '@/types/api'
 import { QK } from './query-keys'
 

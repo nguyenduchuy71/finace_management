@@ -61,7 +61,7 @@ async function refreshAfterMutation(qc: ReturnType<typeof useQueryClient>, actio
   const now = new Date().toISOString()
   qc.setQueryData<Detail>(userKey(userId), (old) => old && {
     user: fresh ?? old.user,
-    keys: action === 'revoke_keys' ? old.keys.map((k) => (k.revoked_at ? k : { ...k, revoked_at: now })) : old.keys,
+    keys: action === 'revoke_keys' ? old.keys.map((k) => (k.revokedAt ? k : { ...k, revokedAt: now })) : old.keys,
   })
 }
 

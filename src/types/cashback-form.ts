@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MccSchema } from './creditCard'
 import { moneyAmountField } from './form-fields'
 import type { CashbackRule } from './cashback'
 
@@ -42,7 +43,7 @@ export const CashbackRuleFormSchema = z.object({
   // '' = rule mặc định cho mọi giao dịch không khớp rule MCC nào. Mã 4 chữ số ngoài danh sách vẫn nhận
   // (ngân hàng có thể dùng mã mới hơn bộ dữ liệu); khớp check `^[0-9]{4}$` ở DB.
   mcc: z.string()
-    .refine((v) => v === '' || /^\d{4}$/.test(v), 'MCC phải gồm 4 chữ số')
+    .refine((v) => v === '' || MccSchema.safeParse(v).success, 'MCC phải gồm 4 chữ số')
     .transform((v) => (v === '' ? null : v)),
   // Tối đa 2 số lẻ (khớp numeric(5,2) ở DB); chấp nhận dấu phẩy kiểu Việt: "5,5"
   ratePercent: ratePercentField,

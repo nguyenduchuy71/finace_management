@@ -1,18 +1,22 @@
-import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
-import type { ApiError } from '@/types/api'
-import { TransactionKindSchema } from '@/types/account'
-import type { Category } from '@/types/categories'
-import { CATEGORY_TAXONOMY } from '@/utils/categories'
-import { mapCreditCard, mapCreditCardTransaction, type CreditCardRow, type TransactionRow } from './mappers'
-import { toApiError } from './api-errors'
-import { encodeCursor } from './query-cursor'
-import {
-  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS, TX_PAGE_SIZE, EMPTY_TX_PAGE,
-  type TransactionFilters,
-} from './transactionQuery'
+import type { ApiError, PaginatedResponse } from '@/types/api'
+import { CardTransactionPatchSchema, type CardTransactionPatch } from '@/types/card-transaction-patch'
+import { MccSchema, type CreditCard, type CreditCardTransaction } from '@/types/creditCard'
+import { mapCreditCard, mapCreditCardTransaction, type CreditCardRow } from './mappers'
+import { toApiError, requireAffected } from './api-errors'
+import { fetchTransactionPage, type TxScope } from './transaction-fetch'
+import { TX_PAGE_SIZE, EMPTY_TX_PAGE, type TransactionFilters } from './transactionQuery'
 
-export async function getCreditCards() {
+/** Phạm vi query theo một thẻ, nhiều thẻ, hoặc mọi thẻ (`cardIds` rỗng). */
+export function cardScope(card: string | MultiCardSelection): TxScope {
+  return (q) => typeof card === 'string'
+    ? q.eq('card_id', card)
+    : card.cardIds.length > 0
+      ? q.in('card_id', [...card.cardIds])
+      : q.not('card_id', 'is', null)
+}
+
+export async function getCreditCards(): Promise<PaginatedResponse<CreditCard>> {
   const { data, error, count } = await supabase
     .from('credit_cards')
     .select('*', { count: 'exact' })
@@ -36,32 +40,17 @@ export async function getCreditCardTransactions(
   cursor?: string,
   limit = TX_PAGE_SIZE,
   filters?: TransactionFilters
-) {
+): Promise<PaginatedResponse<CreditCardTransaction>> {
   // Thẻ tín dụng chỉ có chi tiêu -> txType='income' luôn rỗng (giữ hành vi cũ của mock)
   if (filters?.txType === 'income') {
     return EMPTY_TX_PAGE
   }
 
-  const query = supabase.from('transactions').select(TX_COLUMNS, countOption(cursor))
   // Keyset (transaction_date, id) của applyTransactionFilters vẫn đúng khi gộp nhiều thẻ: thứ tự toàn cục.
-  const base = typeof card === 'string'
-    ? query.eq('card_id', card)
-    : card.cardIds.length > 0
-      ? query.in('card_id', [...card.cardIds])
-      : query.not('card_id', 'is', null)
-
-  const { data, error, count } = await applyTransactionFilters(base, cursor, limit, filters)
-  if (error) throw toApiError(error)
-
-  const { rows, hasMore } = paginate((data ?? []) as TransactionRow[], limit)
-  return {
-    data: rows.map(mapCreditCardTransaction),
-    nextCursor: hasMore ? encodeCursor(rows[rows.length - 1]) : null,
-    total: totalForPage(count, cursor),
-  }
+  return fetchTransactionPage(cardScope(card), mapCreditCardTransaction, { cursor, limit, filters })
 }
 
-const MccSchema = z.string().regex(/^\d{4}$/, 'MCC phải gồm 4 chữ số').nullable()
+const TX_NOT_FOUND = 'Không tìm thấy giao dịch.'
 
 /**
  * Gán (hoặc bỏ, bằng null) MCC cho một giao dịch thẻ. DB cũng có check 4 chữ số; validate ở
@@ -71,7 +60,7 @@ const MccSchema = z.string().regex(/^\d{4}$/, 'MCC phải gồm 4 chữ số').n
  * trả thành công với mảng rỗng, nên phải tự kiểm để không "lưu thành công" mà không lưu gì.
  */
 export async function updateCardTransactionMcc(txId: string, mcc: string | null): Promise<void> {
-  const parsed = MccSchema.safeParse(mcc)
+  const parsed = MccSchema.nullable().safeParse(mcc)
   if (!parsed.success) {
     throw { code: 'INVALID_MCC', message: parsed.error.issues[0].message } satisfies ApiError
   }
@@ -82,26 +71,8 @@ export async function updateCardTransactionMcc(txId: string, mcc: string | null)
     .eq('id', txId)
     .select('id')
   if (error) throw toApiError(error)
-  if (!data || data.length === 0) {
-    throw { code: 'NOT_FOUND', message: 'Không tìm thấy giao dịch.' } satisfies ApiError
-  }
+  requireAffected(data, TX_NOT_FOUND)
 }
-
-const CATEGORY_NAMES = Object.keys(CATEGORY_TAXONOMY) as [Category, ...Category[]]
-
-/** Các trường sửa được của giao dịch thẻ; trường vắng = giữ nguyên. null = xoá giá trị. */
-const CardTransactionPatchSchema = z.object({
-  amount: z.number().int().refine((n) => n !== 0, 'Số tiền phải khác 0'),
-  // Ngày phải có offset/Z: chuỗi không offset bị Postgres hiểu theo timezone của phiên.
-  transactionDate: z.string().datetime({ offset: true }),
-  merchantName: z.string().trim().max(200).nullable(),
-  description: z.string().trim().max(300).nullable(),
-  category: z.enum(CATEGORY_NAMES).nullable(),
-  kind: TransactionKindSchema,
-  mcc: MccSchema,
-}).partial().strict()
-
-export type CardTransactionPatch = z.input<typeof CardTransactionPatchSchema>
 
 /**
  * Sửa một giao dịch thẻ. Chỉ gửi trường có trong `patch` để không ghi đè những gì không đổi (vd giây
@@ -132,7 +103,5 @@ export async function updateCardTransaction(txId: string, patch: CardTransaction
     .not('card_id', 'is', null)
     .select('id')
   if (error) throw toApiError(error)
-  if (!data || data.length === 0) {
-    throw { code: 'NOT_FOUND', message: 'Không tìm thấy giao dịch.' } satisfies ApiError
-  }
+  requireAffected(data, TX_NOT_FOUND)
 }

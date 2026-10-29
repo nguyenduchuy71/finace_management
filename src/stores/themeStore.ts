@@ -1,4 +1,7 @@
 import { create } from 'zustand'
+import { readString, writeString } from '@/lib/persisted-json'
+
+const THEME_KEY = 'finance-theme'
 
 type Theme = 'light' | 'dark'
 
@@ -14,12 +17,11 @@ function applyTheme(theme: Theme) {
   } else {
     root.classList.remove('dark')
   }
-  localStorage.setItem('finance-theme', theme)
+  writeString(THEME_KEY, theme)
 }
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem('finance-theme') as Theme | null
-  return stored === 'dark' ? 'dark' : 'light'
+  return readString(THEME_KEY) === 'dark' ? 'dark' : 'light'
 }
 
 const initialTheme = getInitialTheme()

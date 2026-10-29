@@ -1,13 +1,12 @@
 import { supabase } from '@/lib/supabase'
-import { mapAccount, mapTransaction, type AccountRow, type TransactionRow } from './mappers'
-import { toApiError } from './api-errors'
-import { encodeCursor } from './query-cursor'
-import {
-  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS, TX_PAGE_SIZE,
-  type TransactionFilters,
-} from './transactionQuery'
+import type { BankAccount, Transaction } from '@/types/account'
+import type { PaginatedResponse } from '@/types/api'
+import { mapAccount, mapTransaction, type AccountRow } from './mappers'
+import { toApiError, countRows } from './api-errors'
+import { fetchTransactionPage } from './transaction-fetch'
+import { TX_PAGE_SIZE, type TransactionFilters } from './transactionQuery'
 
-export async function getAccounts() {
+export async function getAccounts(): Promise<PaginatedResponse<BankAccount>> {
   // RLS đã lọc theo user đang đăng nhập — không cần .eq('user_id', ...)
   const { data, error, count } = await supabase
     .from('accounts')
@@ -22,26 +21,13 @@ export async function getAccounts() {
   }
 }
 
-export async function getTransactions(
+export function getTransactions(
   accountId: string,
   cursor?: string,
   limit = TX_PAGE_SIZE,
   filters?: TransactionFilters
-) {
-  const base = supabase
-    .from('transactions')
-    .select(TX_COLUMNS, countOption(cursor))
-    .eq('account_id', accountId)
-
-  const { data, error, count } = await applyTransactionFilters(base, cursor, limit, filters)
-  if (error) throw toApiError(error)
-
-  const { rows, hasMore } = paginate((data ?? []) as TransactionRow[], limit)
-  return {
-    data: rows.map(mapTransaction),
-    nextCursor: hasMore ? encodeCursor(rows[rows.length - 1]) : null,
-    total: totalForPage(count, cursor),
-  }
+): Promise<PaginatedResponse<Transaction>> {
+  return fetchTransactionPage((q) => q.eq('account_id', accountId), mapTransaction, { cursor, limit, filters })
 }
 
 /**
@@ -57,12 +43,11 @@ export async function getTransactions(
  * Trả về > 0 nghĩa là cần bổ sung/sửa dữ liệu thẻ.
  */
 export async function getUnlinkedCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .is('account_id', null)
-    .is('card_id', null)
-
-  if (error) throw toApiError(error)
-  return count ?? 0
+  return countRows(
+    supabase
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .is('account_id', null)
+      .is('card_id', null),
+  )
 }
