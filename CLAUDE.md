@@ -48,10 +48,12 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 Anon key nằm trong bundle JS của browser — **RLS ở DB là lớp bảo vệ duy nhất**.
 Production: set 2 biến này trong Vercel dashboard (không hardcode vào `vercel.json`).
 
-Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legacy** single-tenant — `SHORTCUT_SECRET`, `DEFAULT_USER_ID`,
-`OWNER_NAMES` (gỡ ở phase 4 của `plans/261027-1012-saas-signup-api-key-credits/`). User mới xác thực bằng API key riêng.
-Thanh toán (phase 3, xem `docs/claude/edge-functions.md`): `MOMO_PARTNER_CODE/ACCESS_KEY/SECRET_KEY`, `ZALOPAY_APP_ID/KEY1/KEY2`, `PAYMENT_ENV=sandbox|production`,
-`PAYMENT_RETURN_URL` (https://<domain>/payment/return), `RECONCILE_SECRET`. Ví thiếu secret → ẩn + 503; production + key sandbox công khai → ví tắt.
+Biến pháp lý (đặt trong Vercel **Production**; `.env.example` để trống): `VITE_LEGAL_OPERATOR_NAME`, `VITE_LEGAL_CONTACT_EMAIL`,
+`VITE_DATA_REGION` — nguồn duy nhất là `src/config/legal-config.ts`, hiện trên `/privacy` và `/terms`. Trống thì dev thấy marker
+"[chưa điền]"; `vite build` với `VERCEL_ENV=production` **FAIL** khi thiếu (`src/config/legal-env-guard.ts`; local/CI verify vẫn qua).
+
+Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER_ID`, `OWNER_NAMES` cho đường **legacy**
+`x-shortcut-secret` (tài khoản chủ app) — **giữ lâu dài, không gỡ** (quyết định chủ app 2026-10-29). User mới xác thực bằng API key riêng.
 
 ---
 
@@ -94,6 +96,7 @@ Thanh toán (phase 3, xem `docs/claude/edge-functions.md`): `MOMO_PARTNER_CODE/A
 /settings      → SettingsPage (số dư + lịch sử credit, nạp credit MoMo/ZaloPay + lịch sử đơn, API key cho Shortcut, tên chủ TK, xoá tài khoản)
 /payment/return → PaymentReturnPage (?order=<id>; ví đưa user về; CHỈ hiển thị + poll trạng thái đơn, không bao giờ cộng credit)
 /signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
+/privacy, /terms → PrivacyPage / TermsPage (public, lazy; nội dung tĩnh trong features/legal/; version = PRIVACY_POLICY_VERSION ở types/api-key.ts — đổi nội dung thì tăng số này)
 /admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```
 

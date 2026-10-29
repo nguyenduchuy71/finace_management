@@ -22,6 +22,7 @@ src/
 │   ├── credits/         # CreditBalanceBadge (header; cảnh báo < 10 credit hoặc có tin treo), CreditSection + CreditLedgerList (/settings; list dùng chung drawer admin)
 │   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata + sổ cái credit), AdminCreditDialog (điều chỉnh ±credit), AdminActionDialog (lý do 5..500), AdminAuditList,
 │   │                    #   SuspensionBadge (Hoạt động / Bị khoá / Lệch trạng thái)
+│   ├── legal/           # PrivacyPage, TermsPage (default export, lazy), LegalLayout (+ LegalValue: marker "[chưa điền]" khi env trống)
 │   ├── landing/         # LandingPage + Header/Hero/Features/HowItWorks/Security (trang chủ công khai, số liệu minh hoạ tĩnh)
 │   └── auth/            # AuthProvider (xoá cache khi đổi user / mất phiên), LoginPage (báo riêng user_banned), SignupPage,
 │                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây)
@@ -38,6 +39,7 @@ src/
 │                        #   useCycleCashback, useNow, useListboxKeyboard,
 │                        #   useCredits (useCreditBalance / useCreditLedger / useHeldCount),
 │                        #   useDashboardStats, useBudgetAlerts, useDebounced, useCountUp, useAuth
+├── config/              # legal-config (đọc VITE_LEGAL_*), legal-env-guard (thuần; vite.config.ts dùng), supported-banks
 ├── lib/supabase.ts      # Supabase client singleton
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
 ├── services/            # supabase-js: accounts, account-mutations, creditCards, credit-card-mutations, cashbackRules,

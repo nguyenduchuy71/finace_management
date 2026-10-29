@@ -167,3 +167,16 @@ tx_id đã thấy → duplicate; khoá dòng đơn rồi kiểm lại (2 IPN son
 ngay cả khi lớp trên hỏng) + `replay_held_messages` trong khối EXCEPTION (replay lỗi chỉ cảnh báo, không rollback credit đã trả).
 **Xử lý đơn `mismatch` (chưa có tab admin):** xác minh ở cổng thanh toán + `payment_events`, rồi cộng tay bằng action `adjust_credit` của function `admin`
 (ghi audit) hoặc đánh dấu hoàn tiền ngoài app; không có đường tự động.
+
+**Retention `raw_text` (migration `20261102100000`):** `purge_raw_text(p_days int default 30)` → `{transactions, unparsed_messages}`:
+`transactions.raw_text = NULL` (cũ hơn N ngày theo `created_at`); tin hộp tin **đã resolved** cũ hơn N ngày (`received_at`) →
+`raw_text = ''` (cột NOT NULL) + `parsed_payload = NULL`. **Không bao giờ đụng tin chưa resolved**: tin `no_credit` đang treo cần
+`parsed_payload` để replay, tin lạ cần `raw_text` để user phân loại. Theo lô 1000 dòng (`for update skip locked`). Chỉ `service_role`.
+Không ảnh hưởng chống trùng (cửa sổ 10 phút) và `backfill-unparsed` (chỉ đọc tin chưa resolved; chỉ lệch khi tin chưa resolved
+> N ngày có giao dịch mồ côi do lần chạy trước crash — `findExisting` so `raw_text` đã bị xoá nên sẽ không nhận ra). Lịch `pg_cron`
+`purge-raw-text` `0 20 * * *` (= 03:00 ICT) chỉ được tạo khi `pg_available_extensions` có `pg_cron` (local Supabase có; migration KHÔNG fail
+nếu thiếu). **Production:** bật Database → Extensions → `pg_cron`, rồi chạy lại khối `do $cron$` cuối file migration (hoặc
+`select cron.schedule('purge-raw-text','0 20 * * *','select public.purge_raw_text(30)')`); kiểm `select * from cron.job_run_details`.
+**`parse_rate_by_source`** (view `security_invoker`, chỉ `service_role`/SQL): mỗi `(window_days 7|30, source)` có `inserted`, `held`
+(no_credit chưa replay), `no_match`, `invalid` (`invalid_parse`/`invalid_payload`), `no_account`, `parse_rate_pct`. `inserted` đếm
+`transactions.bank_name` trừ giao dịch user tự tạo từ hộp tin; không UI. Đọc: `select * from parse_rate_by_source order by 1,2;`

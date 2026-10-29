@@ -66,6 +66,11 @@ export function LoginPage() {
           <p className="text-center text-sm text-muted-foreground">
             Chưa có tài khoản? <Link to="/signup" className="text-primary underline">Đăng ký</Link>
           </p>
+          <p className="text-center text-xs text-muted-foreground">
+            <Link to="/privacy" className="underline">Chính sách bảo mật</Link>
+            {' · '}
+            <Link to="/terms" className="underline">Điều khoản sử dụng</Link>
+          </p>
         </form>
       </Card>
     </div>
