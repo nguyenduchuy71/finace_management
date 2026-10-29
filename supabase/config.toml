@@ -69,6 +69,11 @@ enabled = true
 # Gateway kiểm JWT trước; function lấy user từ chính token đó rồi mới xoá.
 verify_jwt = true
 
+[functions.resolve-unparsed]
+enabled = true
+# Gateway kiểm JWT; function còn getUser(token) để lấy user id rồi gọi RPC resolve_unparsed_charged (trừ 1 credit).
+verify_jwt = true
+
 [functions.admin]
 enabled = true
 # Gateway kiểm JWT; function kiểm thêm app_metadata.role = 'admin' + aal2.

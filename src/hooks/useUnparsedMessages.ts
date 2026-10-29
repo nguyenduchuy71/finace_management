@@ -29,7 +29,7 @@ export interface ResolveVars {
 
 /**
  * Xử lý tin. Tạo giao dịch thì mọi thứ dẫn xuất từ giao dịch phải tải lại: danh sách
- * TK/thẻ, dashboard, chi tiêu chu kỳ (hoàn tiền ước tính).
+ * TK/thẻ, dashboard, chi tiêu chu kỳ (hoàn tiền ước tính) — và số dư credit (ghi giao dịch trừ 1 credit).
  */
 export function useResolveUnparsed() {
   const qc = useQueryClient()
@@ -37,13 +37,14 @@ export function useResolveUnparsed() {
     mutationFn: ({ messageId, kind, tx }: ResolveVars) => resolveUnparsed(messageId, kind, tx),
     onSuccess: async (txId, { kind }) => {
       const keys = [KEY, ...(txId
-        ? [QK.transactions, QK.creditCardTransactions, QK.dashboardStats, QK.cardCycleExpenses]
+        ? [QK.transactions, QK.creditCardTransactions, QK.dashboardStats, QK.cardCycleExpenses, QK.credits]
         : [])]
       await Promise.all(keys.map((queryKey) => qc.invalidateQueries({ queryKey })))
       toast.success(txId ? `Đã ghi giao dịch (${RESOLVE_KIND_LABEL[kind]})` : `Đã đánh dấu: ${RESOLVE_KIND_LABEL[kind]}`)
     },
-    // Tin có thể đã được xử lý ở tab/thiết bị khác (22023) hoặc bị xoá (P0002): tải lại
-    // hộp để tin đó biến mất thay vì user bấm mãi vẫn lỗi.
-    onError: () => qc.invalidateQueries({ queryKey: KEY }),
+    // Tin có thể đã được xử lý ở tab/thiết bị khác (invalid_request) hoặc bị xoá (not_found): tải lại
+    // hộp để tin đó biến mất thay vì user bấm mãi vẫn lỗi. Số dư cũng tải lại: hết credit (insufficient_credit)
+    // thường do số dư hiển thị đã cũ.
+    onError: () => Promise.all([qc.invalidateQueries({ queryKey: KEY }), qc.invalidateQueries({ queryKey: QK.credits })]),
   })
 }

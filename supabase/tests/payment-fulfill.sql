@@ -105,12 +105,21 @@ select :'stage' = 'seq' as is_seq, :'stage' = 'setup' as is_setup, :'stage' = 'a
   select t.check('replay: tin treo thành giao dịch, trừ 1 credit (500 - 1)', t.bal(:B) || '|' ||
     t.n(format($$select count(*)::text from transactions where user_id = %L$$, :B)) || '|' ||
     t.n(format($$select count(*)::text from unparsed_messages where user_id = %L and not resolved$$, :B)), '499|1|0');
-  -- 10. tin treo HỎNG làm replay ném lỗi -> credit đã nạp vẫn commit (replay chỉ là việc phụ)
+  -- 10. replay ném lỗi KHÔNG lường trước -> credit đã nạp vẫn commit (replay chỉ là việc phụ).
+  -- Tin dữ liệu hỏng (22xxx / 23xxx) giờ được replay tự bỏ qua (H3, xem credit-security-fixes.sql) nên không còn làm replay ném lỗi;
+  -- ca này mô phỏng lỗi ngoài dự kiến bằng trigger giả ném XX000 khi ghi giao dịch của tin 'RAW broken'.
   insert into auth.users values ('aaaaaaaa-0000-4000-a000-0000000000a3', null);
   select _apply_credit('aaaaaaaa-0000-4000-a000-0000000000a3', -99, 'adjust', 'drain:c');
+  insert into credit_cards(id,user_id,bank_name,card_name,card_number,card_type,statement_date,payment_due_date)
+    values ('aaaaaaaa-1111-4000-a000-0000000000a3', 'aaaaaaaa-0000-4000-a000-0000000000a3', 'OCB', 'C', '****9586', 'visa', 5, 25);
   insert into unparsed_messages (user_id, raw_text, source, reason, parsed_payload)
-    values ('aaaaaaaa-0000-4000-a000-0000000000a3', 'RAW broken', 't', 'no_credit', '{"tx":{"amount":"khong-phai-so"},"refs":{}}');
-  select t.check('replay thật sự ném lỗi với tin hỏng (điều kiện của ca)', (t.sqlstate($$select replay_held_messages('aaaaaaaa-0000-4000-a000-0000000000a3')$$) <> 'ok' )::text, 'true');
+    values ('aaaaaaaa-0000-4000-a000-0000000000a3', 'RAW broken', 't', 'no_credit',
+      jsonb_build_object('tx', jsonb_build_object('bank_name','OCB','amount',-1000,'currency','VND','transaction_date','2026-10-30T10:00:00+07:00',
+        'raw_text','RAW broken','source_type','credit_card','kind','normal'), 'refs', '{"card_id":"aaaaaaaa-1111-4000-a000-0000000000a3"}'::jsonb));
+  create function public.t_boom() returns trigger language plpgsql as $f$
+    begin if new.raw_text = 'RAW broken' then raise exception 'boom' using errcode = 'XX000'; end if; return new; end $f$;
+  create trigger t_boom before insert on public.transactions for each row execute function public.t_boom();
+  select t.check('replay thật sự ném lỗi (điều kiện của ca)', (t.sqlstate($$select replay_held_messages('aaaaaaaa-0000-4000-a000-0000000000a3')$$) <> 'ok' )::text, 'true');
   create table t.refs3 as select t.order_ref('aaaaaaaa-0000-4000-a000-0000000000a3', 'momo', 'p50k') as c1;
   select t.check('tin hỏng: fulfill vẫn paid', t.ful('momo', (select c1 from t.refs3), 'TC', 50000), 'paid');
   select t.check('tin hỏng: credit vẫn được cộng + đơn paid', t.bal('aaaaaaaa-0000-4000-a000-0000000000a3') || '|' || t.st((select c1 from t.refs3)), '501|paid');

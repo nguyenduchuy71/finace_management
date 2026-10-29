@@ -35,11 +35,16 @@ Integration hộp tin seed `unparsed_messages` bằng service_role **local**: th
 `payment-fulfill.sql` (3 giai đoạn seq/setup/assert, có tranh chấp nhiều session — hướng dẫn ở đầu file). Deno: `_shared/*.test.ts`.
 
 **RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql`,
-`api-keys-rls.sql`, `admin-rls.sql`, `credit-ledger-rls.sql` chạy trên Postgres 17 tạm
+`api-keys-rls.sql`, `admin-rls.sql`, `credit-ledger-rls.sql`, `credit-security-fixes.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
 `credit-concurrency.sql` cần nhiều session `psql` thật chạy song song (3 giai đoạn, lệnh ở đầu file): `FOR UPDATE` của `ingest_transaction` —
 bỏ nó (hoặc bỏ kiểm số dư) là test đỏ. Trong file SQL, subquery cùng câu SELECT với lời gọi hàm ghi chỉ thấy dữ liệu TRƯỚC khi ghi:
 đọc trạng thái sau hành động bằng câu lệnh riêng hoặc hàm plpgsql (`t.cnt`, `t.bal`).
+`scratch-stub.sql` cho `auth.users.email_confirmed_at` mặc định `now()` (user test coi như đã xác nhận email — nếu không sẽ không có credit chào mừng); ca chưa xác nhận
+insert `email_confirmed_at = null` tường minh. `credit-security-fixes.sql` phủ C1 (insert giao dịch bị chặn), phân loại tính phí (trừ 1 / unlimited / hết credit / người khác / khoá),
+credit chào mừng sau xác nhận email, replay bỏ dòng hỏng, thứ tự replay, admin cộng → replay, `discard_backfilled_tx`.
+**Seed giao dịch trong integration test**: `authenticated` không INSERT được `transactions` → dùng `createServiceClient()` (`src/test/integration-admin.ts`); phân loại tin
+dùng `resolveViaRpc` (`src/test/integration-resolve.ts`, RPC service_role vì local không `functions serve`) và hoàn credit đã trừ bằng `restoreCreditAfterTest`.
 Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số dư test user về 1 rồi khôi phục (xoá dòng sổ cái do test tạo, tính lại `balance = sum(delta)`).
 
 ---
@@ -53,6 +58,10 @@ Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số
 - GitHub secrets bắt buộc: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (`vercel link` → `.vercel/project.json`).
   Thiếu thì job deploy fail rõ ràng (không deploy gì).
 - Integration test không chạy ở CI (cần stack Supabase + seed bị gitignore) → chạy local trước khi merge.
+- **Migration `20261101100000` (sửa bảo mật credit): `supabase db push` rồi deploy NGAY** `supabase functions deploy resolve-unparsed`, `parse-transaction`
+  (`--no-verify-jwt`), `admin`, và deploy web (Vercel qua CI) — web cũ gọi RPC `resolve_unparsed` đã bị DROP (hộp tin lỗi), `parse-transaction` cũ không map
+  `no_account`, và không có function `resolve-unparsed` thì web mới không phân loại được. Production **phải bật email confirmations + SMTP** trước/cùng lúc (credit chào mừng
+  giờ chỉ cấp sau xác nhận; user đã có đã được backfill từ migration trước).
 - Deploy function thanh toán (thủ công, sau `db push`): `supabase functions deploy create-payment`;
   `supabase functions deploy payment-ipn-momo --no-verify-jwt`; `supabase functions deploy payment-ipn-zalopay --no-verify-jwt`;
   `supabase functions deploy payment-reconcile --no-verify-jwt` (+ `supabase secrets set` các biến thanh toán ở CLAUDE.md).

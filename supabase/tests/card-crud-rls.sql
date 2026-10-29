@@ -136,8 +136,9 @@ select t.check('A không chèn giao dịch vào tài khoản của B', t.state('
  $$insert into transactions(user_id,bank_name,amount,transaction_date,account_id) values ('aaaaaaaa-0000-4000-a000-000000000001','X',-1,now(),'bbbbbbbb-2222-4000-a000-000000000001')$$),'42501');
 select t.check('A không sửa giao dịch của mình sang thẻ B', t.state('authenticated', :A,
  $$update transactions set card_id='bbbbbbbb-1111-4000-a000-000000000001' where card_id='aaaaaaaa-1111-4000-a000-000000000002'$$),'42501');
-select t.check('A chèn giao dịch vào thẻ của mình', t.state('authenticated', :A,
- $$insert into transactions(user_id,bank_name,amount,transaction_date,card_id) values ('aaaaaaaa-0000-4000-a000-000000000001','SHB',-1,now(),'aaaaaaaa-1111-4000-a000-000000000002')$$),'ok');
-select t.check('A chèn giao dịch chưa gắn thẻ/TK vẫn được (card_id null)', t.state('authenticated', :A,
- $$insert into transactions(user_id,bank_name,amount,transaction_date) values ('aaaaaaaa-0000-4000-a000-000000000001','X',-1,now())$$),'ok');
+-- C1 (migration 20261101100000): authenticated KHÔNG còn INSERT transactions (policy own_tx_insert bị gỡ, grant bị thu hồi).
+select t.check('A không chèn giao dịch vào thẻ của mình (C1: không còn đường ghi không trừ credit)', t.state('authenticated', :A,
+ $$insert into transactions(user_id,bank_name,amount,transaction_date,card_id) values ('aaaaaaaa-0000-4000-a000-000000000001','SHB',-1,now(),'aaaaaaaa-1111-4000-a000-000000000002')$$),'42501');
+select t.check('A không chèn giao dịch chưa gắn thẻ/TK (C1)', t.state('authenticated', :A,
+ $$insert into transactions(user_id,bank_name,amount,transaction_date) values ('aaaaaaaa-0000-4000-a000-000000000001','X',-1,now())$$),'42501');
 select t.check('không có giao dịch của A trỏ vào thẻ B', (select count(*)::text from transactions where user_id='aaaaaaaa-0000-4000-a000-000000000001' and card_id='bbbbbbbb-1111-4000-a000-000000000001'),'0');

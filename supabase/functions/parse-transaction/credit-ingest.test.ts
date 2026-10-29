@@ -34,3 +34,10 @@ Deno.test('ingestParsed: RPC lỗi hoặc trạng thái lạ -> throw (không co
     await assertRejects(() => ingestParsed(fakeDb({ data, error: null }).db, TX, {}, USER, null))
   }
 })
+
+Deno.test('ingestParsed: P0002 / 23503 (TK-thẻ biến mất) -> no_account thay vì throw; lỗi khác vẫn throw', async () => {
+  for (const code of ['P0002', '23503']) {
+    assertEquals(await ingestParsed(fakeDb({ data: null, error: { code, message: 'x' } }).db, TX, { card_id: 'c' }, USER, null), { status: 'no_account' })
+  }
+  await assertRejects(() => ingestParsed(fakeDb({ data: null, error: { code: '22023', message: 'x' } }).db, TX, {}, USER, null))
+})

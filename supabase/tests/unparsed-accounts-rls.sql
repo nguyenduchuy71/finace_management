@@ -72,41 +72,41 @@ select t.check('A update tin của B = 0 dòng', t.val('authenticated', :A,
 select t.check('A không gắn transaction_id của B', t.state('authenticated', :A,
  $$update unparsed_messages set transaction_id='bbbbbbbb-4444-4000-a000-000000000001' where id='aaaaaaaa-3333-4000-a000-000000000004'$$), '42501');
 
--- ===== resolve_unparsed
-select t.check('A resolve tin normal vào TK của mình -> tạo giao dịch', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000001','normal',
+-- ===== resolve_unparsed_charged (service_role, p_user = A; hàm cũ resolve_unparsed đã bị gỡ — H1)
+select t.check('A resolve tin normal vào TK của mình -> tạo giao dịch', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000001','normal',
    '{"amount":-84000,"transaction_date":"2026-10-19T16:35:00+07:00","description":"chuyen khoan","account_id":"aaaaaaaa-2222-4000-a000-000000000001"}')$$), 'ok');
 select t.check('giao dịch lấy bank_name/source_type từ TK, raw_text từ tin', t.val('authenticated', :A,
  $$select bank_name||'|'||source_type||'|'||raw_text||'|'||kind from transactions where account_id='aaaaaaaa-2222-4000-a000-000000000001'$$),
  'BIDV|bank|A msg 1|normal');
 select t.check('tin đã resolved + liên kết giao dịch', t.val('authenticated', :A,
  $$select (resolved and kind='normal' and transaction_id is not null)::text from unparsed_messages where id='aaaaaaaa-3333-4000-a000-000000000001'$$), 'true');
-select t.check('resolve lần 2 -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000001','promo')$$), '22023');
-select t.check('A resolve tin của B -> P0002', t.state('authenticated', :A,
- $$select resolve_unparsed('bbbbbbbb-3333-4000-a000-000000000001','promo')$$), 'P0002');
-select t.check('A resolve vào thẻ của B -> P0002', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000002','normal',
+select t.check('resolve lần 2 -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000001','promo')$$), '22023');
+select t.check('A resolve tin của B -> P0002', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'bbbbbbbb-3333-4000-a000-000000000001','promo')$$), 'P0002');
+select t.check('A resolve vào thẻ của B -> P0002', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000002','normal',
    '{"amount":-1000,"transaction_date":"2026-10-19T00:00:00Z","card_id":"bbbbbbbb-1111-4000-a000-000000000001"}')$$), 'P0002');
-select t.check('thiếu p_tx với normal -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000002','normal')$$), '22023');
-select t.check('cả account_id lẫn card_id -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000002','normal',
+select t.check('thiếu p_tx với normal -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000002','normal')$$), '22023');
+select t.check('cả account_id lẫn card_id -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000002','normal',
    '{"amount":-1000,"transaction_date":"2026-10-19T00:00:00Z","card_id":"aaaaaaaa-1111-4000-a000-000000000001","account_id":"aaaaaaaa-2222-4000-a000-000000000001"}')$$), '22023');
-select t.check('amount 0 -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000002','normal',
+select t.check('amount 0 -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000002','normal',
    '{"amount":0,"transaction_date":"2026-10-19T00:00:00Z","card_id":"aaaaaaaa-1111-4000-a000-000000000001"}')$$), '22023');
-select t.check('promo kèm p_tx -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000003','promo','{"amount":1}')$$), '22023');
-select t.check('kind lạ -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000003','bogus')$$), '22023');
+select t.check('promo kèm p_tx -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000003','promo','{"amount":1}')$$), '22023');
+select t.check('kind lạ -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000003','bogus')$$), '22023');
 select t.check('lỗi giữa chừng không để lại tin resolved', t.val('authenticated', :A,
  $$select count(*)::text from unparsed_messages where resolved$$), '1');
-select t.check('A resolve internal_transfer vào thẻ của mình', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000002','internal_transfer',
+select t.check('A resolve internal_transfer vào thẻ của mình', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000002','internal_transfer',
    '{"amount":100000,"transaction_date":"2026-10-20T11:29:00+07:00","card_id":"aaaaaaaa-1111-4000-a000-000000000001"}')$$), 'ok');
-select t.check('A gắn nhãn promo không tạo giao dịch', t.val('authenticated', :A,
- $$select coalesce(resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000003','promo')::text,'null')$$), 'null');
+select t.check('A gắn nhãn promo không tạo giao dịch', t.val('service_role', null,
+ $$select coalesce(resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000003','promo')::text,'null')$$), 'null');
 
 -- ===== dashboard loại internal_transfer
 select t.check('dashboard: tổng thu/chi bỏ qua internal_transfer', t.val('authenticated', :A,
@@ -129,8 +129,9 @@ select t.check('A xoá TK của mình kèm 1 giao dịch', t.val('authenticated'
  $$select delete_bank_account('aaaaaaaa-2222-4000-a000-000000000001')::text$$), '1');
 select t.check('tin liên kết giao dịch đã xoá -> transaction_id null', t.val('authenticated', :A,
  $$select (transaction_id is null)::text from unparsed_messages where id='aaaaaaaa-3333-4000-a000-000000000001'$$), 'true');
-select t.check('anon không gọi được resolve_unparsed', t.state('anon', null,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000004','promo')$$), '42501');
+select t.check('anon / authenticated không gọi được resolve_unparsed_charged', t.state('anon', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001','aaaaaaaa-3333-4000-a000-000000000004','promo')$$)
+ || t.state('authenticated', :A, $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001','aaaaaaaa-3333-4000-a000-000000000004','promo')$$), '4250142501');
 
 -- ===== bất biến sau resolve + validate tham số (review phase 01: M1-M4)
 select t.check('không bỏ resolved của tin đã xử lý', t.state('authenticated', :A,
@@ -139,18 +140,18 @@ select t.check('không đổi kind của tin đã xử lý', t.state('authentica
  $$update unparsed_messages set kind='normal' where id='aaaaaaaa-3333-4000-a000-000000000003'$$), '22023');
 select t.check('không gắn 1 giao dịch cho 2 tin', t.state('authenticated', :A,
  $$update unparsed_messages set transaction_id=(select transaction_id from unparsed_messages where id='aaaaaaaa-3333-4000-a000-000000000002') where id='aaaaaaaa-3333-4000-a000-000000000004'$$), '23505');
-select t.check('ngày không có múi giờ -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000004','normal',
+select t.check('ngày không có múi giờ -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000004','normal',
    '{"amount":-1000,"transaction_date":"2026-10-19","card_id":"aaaaaaaa-1111-4000-a000-000000000001"}')$$), '22023');
-select t.check('amount thập phân -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000004','normal',
+select t.check('amount thập phân -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000004','normal',
    '{"amount":"1.5","transaction_date":"2026-10-19T00:00:00Z","card_id":"aaaaaaaa-1111-4000-a000-000000000001"}')$$), '22023');
-select t.check('card_id không phải uuid -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000004','normal',
+select t.check('card_id không phải uuid -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000004','normal',
    '{"amount":-1,"transaction_date":"2026-10-19T00:00:00Z","card_id":"xyz"}')$$), '22023');
-select t.check('category lạ -> 22023', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000004','normal',
+select t.check('category lạ -> 22023', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000004','normal',
    '{"amount":-1,"transaction_date":"2026-10-19T00:00:00Z","card_id":"aaaaaaaa-1111-4000-a000-000000000001","category":"Hack"}')$$), '22023');
-select t.check('ngày có offset +07:00 và category hợp lệ -> ok', t.state('authenticated', :A,
- $$select resolve_unparsed('aaaaaaaa-3333-4000-a000-000000000004','normal',
+select t.check('ngày có offset +07:00 và category hợp lệ -> ok', t.state('service_role', null,
+ $$select resolve_unparsed_charged('aaaaaaaa-0000-4000-a000-000000000001', 'aaaaaaaa-3333-4000-a000-000000000004','normal',
    '{"amount":-1,"transaction_date":"2026-10-19T08:00:00+07:00","card_id":"aaaaaaaa-1111-4000-a000-000000000001","category":"Ăn uống"}')$$), 'ok');

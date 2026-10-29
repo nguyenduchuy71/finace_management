@@ -1,16 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
-import { getUnparsedCount, getUnparsedMessages, resolveUnparsed } from './unparsed-messages'
+import { getUnparsedCount, getUnparsedMessages } from './unparsed-messages'
+import { getCreditBalance } from './credits'
+import { resolveViaRpc, restoreCreditAfterTest } from '@/test/integration-resolve'
 import { createAccount, deleteAccount, updateAccount, countAccountTransactions } from './account-mutations'
 import { getTransactions } from './accounts'
 import { getDashboardStats } from './dashboard'
 import type { AccountFormValues } from '@/types/account-form'
+import type { ResolveKind, ResolveTxInput } from '@/types/unparsed'
 
 // Migration 20261021100000: hộp tin chưa phân loại, transactions.kind, CRUD tài khoản.
 // Dùng chung DB với services.integration.test.ts (assert tổng cố định theo seed) -> dọn
 // sạch mọi thứ tạo ra, kể cả khi lần chạy trước crash. Ca chéo 2 user: supabase/tests/
 // unparsed-accounts-rls.sql.
+//
+// Phân loại tin tốn 1 credit và đi qua edge function (resolve-unparsed); local không serve function nên test gọi
+// RPC resolve_unparsed_charged bằng service_role (xem src/test/integration-resolve.ts). Credit đã trừ được hoàn ở cleanup.
 //
 // Client không có quyền insert unparsed_messages (chỉ edge function, service_role) -> seed
 // bằng service_role key của Supabase LOCAL (VITE_TEST_SERVICE_ROLE_KEY trong .env.test.local,
@@ -36,6 +42,12 @@ const DAY = { dateFrom: '2031-03-01T00:00:00.000Z', dateTo: '2031-03-01T23:59:59
 
 let userId = ''
 let accountId = ''
+const chargedTxIds: string[] = []
+async function resolve(messageId: string, kind: ResolveKind, tx?: ResolveTxInput) {
+  const id = await resolveViaRpc(admin, userId, messageId, kind, tx)
+  if (id) chargedTxIds.push(id)
+  return id
+}
 const msg: Record<'tx' | 'internal' | 'promo' | 'reminder', string> = { tx: '', internal: '', promo: '', reminder: '' }
 
 async function seedMessage(text: string, suggested: string) {
@@ -54,6 +66,7 @@ async function cleanup() {
   // Xoá TK qua RPC -> giao dịch đi kèm bị xoá theo; tin liên kết về transaction_id null.
   for (const a of accounts ?? []) await deleteAccount(a.id)
   await admin.from('unparsed_messages').delete().like('raw_text', `${MARK}%`)
+  await restoreCreditAfterTest(admin, userId, chargedTxIds)
 }
 
 beforeAll(async () => {
@@ -87,7 +100,8 @@ describe('hộp tin chưa phân loại', () => {
 
   it('resolve normal tạo giao dịch trong TK, dashboard tính vào chi', async () => {
     const before = await getDashboardStats(DAY)
-    const txId = await resolveUnparsed(msg.tx, 'normal', {
+    const credit = await getCreditBalance()
+    const txId = await resolve(msg.tx, 'normal', {
       amount: -84000, transactionDate: '2031-03-01T09:00:00+07:00', description: 'chuyển khoản', accountId,
     })
     expect(txId).toMatch(/^[0-9a-f-]{36}$/)
@@ -98,12 +112,14 @@ describe('hộp tin chưa phân loại', () => {
 
     const after = await getDashboardStats(DAY)
     expect(after.totalExpense - before.totalExpense).toBe(84000)
+    // Phân loại thủ công tốn 1 credit (user unlimited thì miễn phí).
+    expect((await getCreditBalance()).balance).toBe(credit.balance - (credit.unlimited ? 0 : 1))
     expect(mine((await getUnparsedMessages()).data.map((m) => m.id))).not.toContain(msg.tx)
   })
 
   it('resolve internal_transfer tạo giao dịch nhưng dashboard KHÔNG đổi', async () => {
     const before = await getDashboardStats(DAY)
-    const txId = await resolveUnparsed(msg.internal, 'internal_transfer', {
+    const txId = await resolve(msg.internal, 'internal_transfer', {
       amount: 500000, transactionDate: '2031-03-01T10:00:00+07:00', accountId,
     })
     const tx = (await getTransactions(accountId)).data.find((t) => t.id === txId)
@@ -114,16 +130,18 @@ describe('hộp tin chưa phân loại', () => {
   })
 
   it('đánh dấu nhắc thẻ / quảng cáo không tạo giao dịch', async () => {
-    expect(await resolveUnparsed(msg.reminder, 'card_reminder')).toBeNull()
-    expect(await resolveUnparsed(msg.promo, 'promo')).toBeNull()
+    const credit = await getCreditBalance()
+    expect(await resolve(msg.reminder, 'card_reminder')).toBeNull()
+    expect(await resolve(msg.promo, 'promo')).toBeNull()
+    expect((await getCreditBalance()).balance).toBe(credit.balance) // không tạo giao dịch -> miễn phí
     expect(mine((await getUnparsedMessages(true)).data.map((m) => m.id))).toEqual([])
     expect(await countAccountTransactions(accountId)).toBe(2)
   })
 
   it('xử lý lại tin đã xử lý -> lỗi thân thiện, không tạo giao dịch thứ hai', async () => {
-    await expect(resolveUnparsed(msg.tx, 'normal', {
+    await expect(resolve(msg.tx, 'normal', {
       amount: -84000, transactionDate: '2031-03-01T09:00:00+07:00', accountId,
-    })).rejects.toMatchObject({ code: '22023', message: expect.stringContaining('đã được xử lý') })
+    })).rejects.toMatchObject({ code: '22023' })
     expect(await countAccountTransactions(accountId)).toBe(2)
   })
 })

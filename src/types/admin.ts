@@ -64,7 +64,10 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
 /** Hành động admin thay đổi user — mỗi cái bắt lý do. */
 export type AdminMutation = 'suspend' | 'unsuspend' | 'revoke_keys'
 
-/** Khớp function `admin` (MAX_CREDIT_DELTA): chặn gõ nhầm thêm số 0. */
+/**
+ * Khớp function `admin` (MAX_CREDIT_DELTA ở supabase/functions/admin/admin-actions.ts): chặn gõ nhầm thêm số 0.
+ * Hai runtime không import chung được nên giữ 2 hằng số; credit-delta-limit.test.ts fail nếu lệch.
+ */
 export const MAX_CREDIT_ADJUST = 1_000_000
 
 /** "+50", "-3", "12" -> số nguyên; còn lại (rỗng, số thực, 0, quá trần) -> null. */

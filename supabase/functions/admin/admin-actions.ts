@@ -2,15 +2,12 @@
 // Chỉ trả METADATA: email + mốc thời gian từ GoTrue, số đếm từ RPC admin_user_stats. Không có
 // số tiền, mô tả, raw_text, tên người chuyển (RPC không chọn các cột đó).
 
-import { isAdminUser, type GoTrueUser } from './admin-auth.ts'
+import { isAdminUser } from './admin-auth.ts'
+import { parseRate, toUserView, type AuthUser, type StatsRow } from './admin-views.ts'
 
-/** Các trường của GoTrue User mà admin được thấy. */
-export type AuthUser = GoTrueUser & {
-  email?: string
-  created_at: string
-  last_sign_in_at?: string | null
-  banned_until?: string | null
-}
+// Re-export: test và index.ts import từ đây.
+export { parseRate }
+export type { AuthUser }
 
 export type RpcResult = { data: unknown; error: { code?: string; message: string } | null }
 
@@ -25,61 +22,20 @@ export interface AdminDeps {
 
 export type ActionResult = { status: number; body: unknown }
 
-type StatsRow = {
-  user_id: string
-  suspended_at: string | null
-  suspended_reason: string | null
-  consent_at: string | null
-  keys_active: number
-  keys_last_used_at: string | null
-  tx_count_30d: number
-  unparsed_30d: Record<string, number>
-  credit_balance: number
-  credit_unlimited: boolean
-}
-
-/** Trần mỗi lần điều chỉnh: chặn gõ nhầm thêm số 0 (và tràn int4). */
+/**
+ * Trần mỗi lần điều chỉnh: chặn gõ nhầm thêm số 0 (và tràn int4). PHẢI bằng MAX_CREDIT_ADJUST ở src/types/admin.ts
+ * (2 runtime — Deno / web — không import chung được; src/types/credit-delta-limit.test.ts so khớp 2 giá trị).
+ */
 const MAX_CREDIT_DELTA = 1_000_000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ok = (body: unknown): ActionResult => ({ status: 200, body })
 const fail = (status: number, error: string): ActionResult => ({ status, body: { error } })
 
-/**
- * Tỉ lệ tin ghi thành giao dịch trên tin "trông như giao dịch" (bỏ OTP/promo vốn không lưu,
- * no_account là lỗi cấu hình TK của user chứ không phải parser). null khi chưa có tin nào.
- */
-export function parseRate(tx: number, unparsed: Record<string, number>): number | null {
-  const failed = (unparsed.no_match ?? 0) + (unparsed.invalid_parse ?? 0)
-  return tx + failed === 0 ? null : Math.round((tx / (tx + failed)) * 1000) / 1000
-}
-
-function toUserView(u: AuthUser, s: StatsRow | undefined) {
-  const unparsed = s?.unparsed_30d ?? {}
-  return {
-    id: u.id,
-    email: u.email ?? null,
-    isAdmin: isAdminUser(u),
-    createdAt: u.created_at,
-    lastSignInAt: u.last_sign_in_at ?? null,
-    bannedUntil: u.banned_until ?? null,
-    suspendedAt: s?.suspended_at ?? null,
-    suspendedReason: s?.suspended_reason ?? null,
-    consentAt: s?.consent_at ?? null,
-    keysActive: s?.keys_active ?? 0,
-    keysLastUsedAt: s?.keys_last_used_at ?? null,
-    txCount30d: s?.tx_count_30d ?? 0,
-    unparsed30d: unparsed,
-    parseRate30d: parseRate(s?.tx_count_30d ?? 0, unparsed),
-    creditBalance: s?.credit_balance ?? 0,
-    creditUnlimited: s?.credit_unlimited ?? false,
-  }
-}
-
 /** Lỗi RPC -> HTTP. Không trả message gốc (lộ tên bảng/ràng buộc). */
 function rpcFailure(error: { code?: string; message: string }): ActionResult {
   if (error.code === 'P0002') return fail(404, 'user_not_found')
   if (error.code === '23514') return fail(400, 'invalid_reason')
-  // admin_adjust_credit: 22003 = trừ quá số dư, 22023 = delta 0.
+  // admin_adjust_credit: 22003 = trừ quá số dư, 22023 = delta 0 hoặc cộng vượt trần số dư int4.
   if (error.code === '22003') return fail(400, 'insufficient_credit')
   if (error.code === '22023') return fail(400, 'invalid_delta')
   console.error('admin rpc failed', error.code, error.message)
