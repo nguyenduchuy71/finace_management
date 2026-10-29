@@ -51,3 +51,23 @@ Break-glass gỡ ban: `update auth.users set banned_until = null where id = '…
 Break-glass mất điện thoại TOTP: `delete from auth.mfa_factors where user_id = '<admin id>'` rồi đăng nhập lại và enroll lại.
 TOTP: `config.toml` `[auth.mfa.totp]` chỉ cho local — **production bật ở dashboard** (Authentication → Multi-Factor).
 Test: `docker run --rm -v "$PWD/supabase/functions:/f" -w /f/parse-transaction denoland/deno:2.1.4 test --allow-all . ../admin` (`credit-ingest.ts` nằm trong danh sách `deno check` của CI)
+
+---
+
+## Thanh toán MoMo + ZaloPay (`supabase/functions/{create-payment,payment-ipn-momo,payment-ipn-zalopay,payment-reconcile}` + `_shared/payment-*.ts`)
+
+Redirect → ví → IPN server-to-server. **Chỉ IPN có chữ ký hoặc query API mới cộng credit** (`fulfill_order`); trang `/payment/return` chỉ là UI.
+Logic nằm trong `_shared/` (handler nhận `{db, cfg, fetchFn}` để test không chạm mạng), `index.ts` chỉ nối `Deno.env` + supabase-js.
+- `create-payment` (JWT; user lấy từ `getUser(token)`, không nhận user_id/URL từ body): GET → ví đang bật; POST `{action:'create', provider, package_id}` → `{order_id, pay_url}`;
+  `{action:'refresh', order_id}` → hỏi provider nếu đơn pending và ≥ 15s chưa hỏi. `redirectUrl` = `PAYMENT_RETURN_URL` + `?order=<id>` (không có open redirect).
+- `payment-ipn-momo` (`--no-verify-jwt`): thứ tự cấu hình bật (503) → parse (400/413) → partnerCode + HMAC (400, **không chạm DB, không ghi log DB**) → settle. 204 = đã ghi (kể cả duplicate/mismatch), 500 = lỗi DB (MoMo gọi lại).
+- `payment-ipn-zalopay` (`--no-verify-jwt`): MAC = HMAC(key2, chuỗi `data` THÔ). `return_code` 1 đã ghi / -1 MAC-dữ liệu sai / 0 lỗi DB (gọi lại).
+- `payment-reconcile` (`--no-verify-jwt` + header `x-reconcile-secret` = `RECONCILE_SECRET`, so constant-time): đơn pending > 120s, ≤ 50/lần → query provider → settle; rồi `expire_stale_orders`.
+  **Chưa nối pg_cron** (pg_cron→pg_net cần secret lưu trong DB/Vault): gọi bằng scheduler ngoài mỗi ~5 phút, vd
+  `curl -X POST -H "x-reconcile-secret: $RECONCILE_SECRET" https://<ref>.supabase.co/functions/v1/payment-reconcile`. Khi chưa có scheduler, đối soát vẫn chạy khi user mở trang return (`refresh`).
+- Chữ ký (HMAC-SHA256 hex, `key=value` nối `&`, không URL-encode): xem đầu `momo.ts` / `zalopay.ts`; test dùng vector tính bằng `openssl dgst -sha256 -hmac`.
+- `payment-config.ts`: thiếu secret / `PAYMENT_ENV` sai / `PAYMENT_RETURN_URL` không hợp lệ (production cần https) → tắt. Production + key sandbox công khai (MoMo `MOMO`, `MOMOBKUN20180529`,
+  accessKey `F8BBA842ECF85`/`klm05TvNBzhg7h7j`; ZaloPay app_id `2553`, `554`) → ví tắt + log lỗi.
+- Chưa kiểm với spec chữ/sandbox thật: URL production MoMo, mã trả IPN MoMo (204), response query MoMo không có chữ ký kiểm chứng được (tin TLS + khớp partnerCode/orderId, số tiền vẫn so với DB),
+  mọi thứ của ZaloPay (host, mã callback, MAC query). `test-payment.momo.vn` chặn curl (403) → chưa chạy sandbox MoMo thật.
+- Test: `deno test --allow-all . ../admin ../_shared` (từ `parse-transaction`).

@@ -80,7 +80,8 @@ jobs:
         run: |
           deno check index.ts ingest.ts credit-ingest.ts backfill-unparsed.ts try-parse.ts api-key-auth.ts
           deno check ../delete-account/index.ts ../admin/index.ts
-          deno test --allow-all . ../admin
+          deno check ../create-payment/index.ts ../payment-ipn-momo/index.ts ../payment-ipn-zalopay/index.ts ../payment-reconcile/index.ts
+          deno test --allow-all . ../admin ../_shared
 
   deploy:
     name: Deploy Vercel (${{ github.event_name == 'push' && 'production' || 'preview' }})

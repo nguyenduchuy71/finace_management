@@ -31,6 +31,9 @@ Cổng 54321/54322 phải trống (các stack Supabase của dự án khác dùn
 Integration hộp tin seed `unparsed_messages` bằng service_role **local**: thêm `VITE_TEST_SERVICE_ROLE_KEY` (SERVICE_ROLE_KEY của
 `supabase status -o env`) vào `.env.test.local` — file chỉ nạp ở mode test, không vào bundle.
 
+**Thanh toán:** `src/services/payments.integration.test.ts` (tạo đơn bằng service_role, fulfill, tự dọn); SQL: `supabase/tests/payment-orders-rls.sql`,
+`payment-fulfill.sql` (3 giai đoạn seq/setup/assert, có tranh chấp nhiều session — hướng dẫn ở đầu file). Deno: `_shared/*.test.ts`.
+
 **RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql`,
 `api-keys-rls.sql`, `admin-rls.sql`, `credit-ledger-rls.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
@@ -50,6 +53,9 @@ Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số
 - GitHub secrets bắt buộc: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (`vercel link` → `.vercel/project.json`).
   Thiếu thì job deploy fail rõ ràng (không deploy gì).
 - Integration test không chạy ở CI (cần stack Supabase + seed bị gitignore) → chạy local trước khi merge.
+- Deploy function thanh toán (thủ công, sau `db push`): `supabase functions deploy create-payment`;
+  `supabase functions deploy payment-ipn-momo --no-verify-jwt`; `supabase functions deploy payment-ipn-zalopay --no-verify-jwt`;
+  `supabase functions deploy payment-reconcile --no-verify-jwt` (+ `supabase secrets set` các biến thanh toán ở CLAUDE.md).
 - Install: `npm ci`; Build: `tsc -b && vite build` → `dist/`; Region: `sfo1`
 - Env: `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` đặt trong Vercel dashboard. Job deploy dùng `vercel deploy`
   (**build trên Vercel**), KHÔNG `vercel pull` + `--prebuilt`: biến loại Sensitive không kéo về được (`vercel pull` ghi
