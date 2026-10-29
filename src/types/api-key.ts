@@ -37,4 +37,4 @@ export const OWNER_NAME_LENGTH = { min: 3, max: 100 } as const
  * Phiên bản chính sách bảo mật user đồng ý lúc đăng ký — gửi qua metadata signUp,
  * trigger `handle_new_user` ghi vào `user_settings`. Đổi nội dung chính sách thì tăng số này.
  */
-export const PRIVACY_POLICY_VERSION = '2026-10'
+export const PRIVACY_POLICY_VERSION = '2026-11'

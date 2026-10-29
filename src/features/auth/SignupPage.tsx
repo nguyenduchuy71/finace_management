@@ -111,7 +111,9 @@ export function SignupPage() {
               <span>
                 Tôi đồng ý cho ứng dụng lưu và xử lý nội dung thông báo ngân hàng tôi gửi lên (gồm số tiền,
                 số dư, tên người giao dịch) để ghi và thống kê giao dịch của riêng tôi. Tôi có thể xoá tài khoản
-                cùng toàn bộ dữ liệu bất cứ lúc nào trong Cài đặt.
+                cùng toàn bộ dữ liệu bất cứ lúc nào trong Cài đặt. Tôi đã đọc{' '}
+                <Link to="/privacy" target="_blank" className="text-primary underline">Chính sách bảo mật</Link>{' '}
+                và <Link to="/terms" target="_blank" className="text-primary underline">Điều khoản sử dụng</Link>.
               </span>
             </label>
 

@@ -15,8 +15,12 @@ import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { PaymentReturnPage } from '@/pages/PaymentReturnPage'
 
-// Chunk riêng: chỉ admin tải.
+// Chunk riêng: trang pháp lý (công khai, nội dung tĩnh) và admin chỉ tải khi vào.
+const PrivacyPage = lazy(() => import('@/features/legal/PrivacyPage'))
+const TermsPage = lazy(() => import('@/features/legal/TermsPage'))
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
+
+const LegalFallback = () => <p className="p-6 text-sm text-muted-foreground">Đang tải…</p>
 
 export function App() {
   return (
@@ -27,6 +31,8 @@ export function App() {
             <Route index element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/privacy" element={<Suspense fallback={<LegalFallback />}><PrivacyPage /></Suspense>} />
+            <Route path="/terms" element={<Suspense fallback={<LegalFallback />}><TermsPage /></Suspense>} />
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />

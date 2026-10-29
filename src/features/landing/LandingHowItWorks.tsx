@@ -1,12 +1,9 @@
+import { SUPPORTED_BANKS } from '@/config/supported-banks'
+
 const STEPS = [
   { title: 'Tạo tài khoản', description: 'Đăng ký bằng email, thêm tài khoản ngân hàng và thẻ tín dụng (chỉ 4 số cuối).' },
   { title: 'Lấy API key', description: 'Tạo key riêng trong trang Cài đặt. Key chỉ hiện một lần và thu hồi được bất cứ lúc nào.' },
   { title: 'Cài iOS Shortcut', description: 'Shortcut chạy khi có thông báo ngân hàng và gửi nội dung về FinanceManager. Từ đó mọi thứ tự động.' },
-]
-
-const BANKS = [
-  'LPBank', 'BIDV', 'Vietinbank', 'Sacombank', 'VPBank', 'HDBank', 'SHB',
-  'MSB', 'OCB', 'UOB', 'Woori', 'Cake', 'MoMo',
 ]
 
 export function LandingHowItWorks() {
@@ -31,7 +28,7 @@ export function LandingHowItWorks() {
         <div className="mt-14 text-center">
           <p className="heading-label text-muted-foreground">Đọc được thông báo của</p>
           <ul className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Ngân hàng được hỗ trợ">
-            {BANKS.map((bank) => (
+            {SUPPORTED_BANKS.map((bank) => (
               <li key={bank} className="rounded-full border bg-card px-3 py-1 text-sm">{bank}</li>
             ))}
           </ul>

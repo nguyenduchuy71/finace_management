@@ -70,3 +70,16 @@ Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số
   (**build trên Vercel**), KHÔNG `vercel pull` + `--prebuilt`: biến loại Sensitive không kéo về được (`vercel pull` ghi
   `"[SENSITIVE]"`), build trên runner đóng gói chuỗi đó làm URL → production trắng trang "Invalid supabaseUrl" (2026-10-21).
   `vite.config.ts` làm `vite build` FAIL khi `VITE_SUPABASE_URL` không phải URL http(s) hợp lệ.
+
+---
+
+## Checklist bật `enable_signup` (production) — chỉ tài liệu, làm tay
+
+Production giữ `enable_signup = false` cho tới khi đủ TẤT CẢ:
+1. Email confirmations bật + SMTP riêng (credit chào mừng chỉ cấp sau khi xác nhận email) + captcha production.
+2. `credit_settings` / `credit_packages` đúng giá; ít nhất 1 ví (MoMo hoặc ZaloPay) có merchant production, `supabase secrets set` key
+   production, `PAYMENT_ENV=production`, thử nạp thật gói nhỏ nhất.
+3. Biến pháp lý đã đặt ở Vercel Production: `VITE_LEGAL_OPERATOR_NAME`, `VITE_LEGAL_CONTACT_EMAIL`, `VITE_DATA_REGION`
+   (thiếu thì build production FAIL); đọc lại `/privacy`, `/terms` trên bản deploy, nên nhờ luật sư rà.
+4. `pg_cron` bật ở production và job `purge-raw-text` có trong `cron.job` (xem `database-schema.md`); `parse_rate_by_source` beta ≥ 90%.
+5. Rồi mới bật signup (config Auth qua Management API, xem memory production-supabase-ops).

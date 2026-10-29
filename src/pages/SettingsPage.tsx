@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { CreditSection } from '@/features/credits/CreditSection'
@@ -15,6 +16,11 @@ export function SettingsPage() {
       <ApiKeysSection />
       <OwnerNamesSection />
       <DeleteAccountSection />
+      <p className="text-center text-xs text-muted-foreground">
+        <Link to="/privacy" className="underline">Chính sách bảo mật</Link>
+        {' · '}
+        <Link to="/terms" className="underline">Điều khoản sử dụng</Link>
+      </p>
     </div>
   )
 }
