@@ -23,6 +23,8 @@ export const AdminUserSchema = z.object({
   txCount30d: z.number().int(),
   unparsed30d: z.record(z.string(), z.number().int()),
   parseRate30d: z.number().nullable(),
+  creditBalance: z.number().int(),
+  creditUnlimited: z.boolean(),
 })
 export type AdminUser = z.infer<typeof AdminUserSchema>
 
@@ -37,7 +39,7 @@ export const AdminKeySchema = z.object({
 })
 export type AdminKey = z.infer<typeof AdminKeySchema>
 
-export const AuditActionSchema = z.enum(['suspend', 'unsuspend', 'revoke_keys', 'view_user'])
+export const AuditActionSchema = z.enum(['suspend', 'unsuspend', 'revoke_keys', 'view_user', 'adjust_credit'])
 export type AuditAction = z.infer<typeof AuditActionSchema>
 
 export const AuditEntrySchema = z.object({
@@ -56,10 +58,21 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   unsuspend: 'Mở khoá',
   revoke_keys: 'Thu hồi key',
   view_user: 'Xem chi tiết',
+  adjust_credit: 'Điều chỉnh credit',
 }
 
 /** Hành động admin thay đổi user — mỗi cái bắt lý do. */
 export type AdminMutation = 'suspend' | 'unsuspend' | 'revoke_keys'
+
+/** Khớp function `admin` (MAX_CREDIT_DELTA): chặn gõ nhầm thêm số 0. */
+export const MAX_CREDIT_ADJUST = 1_000_000
+
+/** "+50", "-3", "12" -> số nguyên; còn lại (rỗng, số thực, 0, quá trần) -> null. */
+export function parseCreditDelta(text: string): number | null {
+  if (!/^[+-]?\d{1,7}$/.test(text.trim())) return null
+  const n = Number(text.trim())
+  return n !== 0 && Math.abs(n) <= MAX_CREDIT_ADJUST ? n : null
+}
 
 /** Khớp kiểm ở function + CHECK admin_audit_log.reason. */
 export const ADMIN_REASON_LENGTH = { min: 5, max: 500 } as const

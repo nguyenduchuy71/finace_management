@@ -6,7 +6,10 @@ import {
 import { useAdminUser } from '@/hooks/useAdmin'
 import { formatDisplayDateTime } from '@/utils/dates'
 import { formatParseRate, suspensionState, type AdminMutation, type AdminUser } from '@/types/admin'
+import { CreditLedgerList } from '@/features/credits/CreditLedgerList'
+import { UNLIMITED_LABEL } from '@/types/credit'
 import { AdminActionDialog } from './AdminActionDialog'
+import { AdminCreditDialog } from './AdminCreditDialog'
 import { SuspensionBadge } from './SuspensionBadge'
 
 const when = (iso: string | null) => (iso ? formatDisplayDateTime(iso) : '—')
@@ -24,11 +27,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function Detail({ userId }: { userId: string }) {
   const detail = useAdminUser(userId)
   const [action, setAction] = useState<AdminMutation | null>(null)
+  const [adjusting, setAdjusting] = useState(false)
 
   if (detail.isPending) return <p className="text-sm text-muted-foreground">Đang tải…</p>
   if (detail.isError) return <p role="alert" className="text-sm text-destructive">{detail.error.message}</p>
 
-  const { user, keys } = detail.data
+  const { user, keys, ledger = [] } = detail.data
   const unparsed = Object.entries(user.unparsed30d)
   const suspended = user.suspendedAt !== null
   // Cùng logic với SuspensionBadge: 'mismatch' (ban lỗi giữa chừng) hiện cả hai nút để hoàn tất.
@@ -48,7 +52,15 @@ function Detail({ userId }: { userId: string }) {
           {unparsed.length === 0 ? '0' : unparsed.map(([r, n]) => `${r}: ${n}`).join(', ')}
         </Row>
         <Row label="Tỉ lệ parse (30 ngày)">{formatParseRate(user.parseRate30d)}</Row>
+        <Row label="Số dư credit">
+          {user.creditUnlimited ? UNLIMITED_LABEL : <span className="money">{user.creditBalance}</span>}
+        </Row>
       </dl>
+
+      <div>
+        <h3 className="mb-1 font-medium">Sổ cái credit (20 dòng gần nhất)</h3>
+        <CreditLedgerList entries={ledger} />
+      </div>
 
       <div>
         <h3 className="mb-1 font-medium">API key ({activeKeys.length} còn hiệu lực)</h3>
@@ -79,10 +91,12 @@ function Detail({ userId }: { userId: string }) {
           <Button type="button" size="sm" variant="outline" onClick={() => setAction('revoke_keys')} disabled={activeKeys.length === 0}>
             Thu hồi mọi key
           </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAdjusting(true)}>Điều chỉnh credit</Button>
         </div>
       )}
 
       <AdminActionDialog action={action} user={user} onClose={() => setAction(null)} />
+      <AdminCreditDialog open={adjusting} user={user} onClose={() => setAdjusting(false)} />
     </div>
   )
 }

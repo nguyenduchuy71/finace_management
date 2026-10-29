@@ -12,16 +12,15 @@ const DOC_MAX_TEXT = 2000
 const KEY = 'vj_' + 'a'.repeat(43)
 const USER = '00000000-0000-0000-0000-000000000001'
 
-function setup(opts: { dup?: boolean; insert?: 'no_account' | 'inserted' } = {}) {
+function setup(opts: { dup?: boolean; insert?: 'no_account' | 'inserted' | 'held' | 'held_full' } = {}) {
   const calls: string[] = []
   const store = {
     isDuplicate: () => { calls.push('dup'); return Promise.resolve(!!opts.dup) },
     saveUnparsed: (_t: string, _s: string | null, reason: string) => { calls.push(`unparsed:${reason}`); return Promise.resolve() },
     insertTx: () => {
       calls.push('insert')
-      return Promise.resolve(opts.insert === 'no_account'
-        ? { kind: 'no_account' as const }
-        : { kind: 'inserted' as const, refs: { account_id: 'acc-1' } })
+      if (opts.insert && opts.insert !== 'inserted') return Promise.resolve({ kind: opts.insert })
+      return Promise.resolve({ kind: 'inserted' as const, refs: { account_id: 'acc-1' } })
     },
   } as unknown as IngestStore
   const handler = createHandler({
@@ -120,4 +119,16 @@ Deno.test('regex khớp nhưng dữ liệu vô nghĩa -> 422 invalid_parse, lưu
   const res = await call(send('TK 03xxx265 -0VND 01092026 19:35 SD:44VND ND: x'))
   assertEquals([res.status, await res.json()], [422, { skipped: 'invalid_parse', bank: 'LPBank' }])
   assertEquals(calls, ['dup', 'unparsed:invalid_parse'])
+})
+
+Deno.test('hết credit, tin được giữ -> 202 skipped no_credit (không trả dữ liệu giao dịch)', async () => {
+  const { call } = setup({ insert: 'held' })
+  const res = await call(send(LPBANK))
+  assertEquals([res.status, await res.json()], [202, { skipped: 'no_credit' }])
+})
+
+Deno.test('hết credit và đủ trần tin treo -> 402, tin không được lưu', async () => {
+  const { call } = setup({ insert: 'held_full' })
+  const res = await call(send(LPBANK))
+  assertEquals([res.status, await res.json()], [402, { error: 'no_credit', held: false }])
 })

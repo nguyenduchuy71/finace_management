@@ -11,7 +11,7 @@ import {
  * `raw_text` là nguyên văn thông báo (số dư, tên, STK) — cần để user đọc và phân loại,
  * RLS chỉ cho chính chủ đọc.
  */
-const UNPARSED_COLUMNS = 'id, raw_text, source, received_at, suggested_kind'
+const UNPARSED_COLUMNS = 'id, raw_text, source, received_at, suggested_kind, reason'
 
 /**
  * Hộp tin chỉ chứa phần parser bỏ sót (vài tin/ngày sau khi lọc quảng cáo), nên lấy
@@ -25,6 +25,7 @@ interface UnparsedRow {
   source: string | null
   received_at: string
   suggested_kind: string | null
+  reason: string | null
 }
 
 function mapUnparsed(row: UnparsedRow): UnparsedMessage {
@@ -35,6 +36,7 @@ function mapUnparsed(row: UnparsedRow): UnparsedMessage {
     source: row.source,
     receivedAt: toISO(row.received_at),
     suggestedKind: row.suggested_kind,
+    onHold: row.reason === 'no_credit',
   })
 }
 
@@ -71,7 +73,7 @@ export async function getUnparsedCount(): Promise<number> {
 
 const RESOLVE_ERRORS: Record<string, string> = {
   P0002: 'Không tìm thấy tin, tài khoản hoặc thẻ (có thể đã bị xoá).',
-  '22023': 'Tin đã được xử lý hoặc dữ liệu giao dịch không hợp lệ.',
+  '22023': 'Tin đã được xử lý, đang chờ nạp credit, hoặc dữ liệu giao dịch không hợp lệ.',
   '23503': 'Tài khoản hoặc thẻ vừa bị xoá. Chọn lại nguồn tiền.',
 }
 

@@ -78,7 +78,7 @@ jobs:
       - name: Edge function — type check & parser tests
         working-directory: supabase/functions/parse-transaction
         run: |
-          deno check index.ts ingest.ts backfill-unparsed.ts try-parse.ts api-key-auth.ts
+          deno check index.ts ingest.ts credit-ingest.ts backfill-unparsed.ts try-parse.ts api-key-auth.ts
           deno check ../delete-account/index.ts ../admin/index.ts
           deno test --allow-all . ../admin
 

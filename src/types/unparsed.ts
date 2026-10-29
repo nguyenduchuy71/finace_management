@@ -15,6 +15,8 @@ export const UnparsedMessageSchema = z.object({
   source: z.string().nullable(),
   receivedAt: z.string().datetime(),
   suggestedKind: SuggestedKindSchema.nullable(),
+  /** Hết credit nên tin được giữ (reason no_credit): chờ nạp, user KHÔNG tự ghi được. */
+  onHold: z.boolean().optional(),
 })
 
 export type SuggestedKind = z.infer<typeof SuggestedKindSchema>

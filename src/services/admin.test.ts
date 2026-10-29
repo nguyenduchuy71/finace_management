@@ -5,7 +5,7 @@ vi.mock('@/lib/supabase', () => ({ supabase: { functions: { invoke: vi.fn() } } 
 
 import { supabase } from '@/lib/supabase'
 import { adminKey, adminKeyWire, adminUser, auditEntry, auditEntryWire } from '@/test/fixtures/admin'
-import { getAdminUser, listAdminUsers, listAudit, runAdminMutation } from './admin'
+import { adjustAdminCredit, getAdminUser, listAdminUsers, listAudit, runAdminMutation } from './admin'
 
 const invoke = vi.mocked(supabase.functions.invoke)
 type InvokeResult = Awaited<ReturnType<typeof supabase.functions.invoke>>
@@ -163,5 +163,34 @@ describe('lỗi function -> ApiError (code + message tiếng Việt)', () => {
     invoke.mockResolvedValue(httpError(403, { error: 'forbidden', email: 'x@y.z' }))
     await expect(listAdminUsers()).rejects.toBeTruthy()
     expect(console.error).toHaveBeenCalledWith('[admin]', 'forbidden')
+  })
+})
+
+describe('credit', () => {
+  it('getAdminUser đổi sổ cái snake_case sang camelCase; thiếu ledger -> mảng rỗng', async () => {
+    invoke.mockResolvedValue(ok({
+      user: adminUser({ id: 'u1' }), keys: [],
+      ledger: [{ id: 3, delta: -1, kind: 'usage', created_at: '2026-10-30T10:00:00Z' }],
+    }))
+    expect((await getAdminUser('u1')).ledger).toEqual([{ id: 3, delta: -1, kind: 'usage', createdAt: '2026-10-30T10:00:00Z' }])
+    invoke.mockResolvedValue(ok({ user: adminUser({ id: 'u1' }), keys: [] }))
+    expect((await getAdminUser('u1')).ledger).toEqual([])
+  })
+
+  it('adjustAdminCredit gửi adjust_credit kèm delta + lý do, trả số dư mới', async () => {
+    invoke.mockResolvedValue(ok({ balance: 15 }))
+    expect(await adjustAdminCredit('u1', -5, 'hoan tac nhap nham')).toBe(15)
+    expect(invoke).toHaveBeenCalledWith('admin', {
+      body: { action: 'adjust_credit', userId: 'u1', delta: -5, reason: 'hoan tac nhap nham' },
+    })
+  })
+
+  it('insufficient_credit / invalid_delta -> thông điệp tiếng Việt, không lộ mã', async () => {
+    invoke.mockResolvedValue(httpError(400, { error: 'insufficient_credit' }))
+    await expect(adjustAdminCredit('u1', -999, 'tru qua tay')).rejects.toEqual({
+      code: 'insufficient_credit', message: 'Số dư không đủ để trừ.',
+    })
+    invoke.mockResolvedValue(httpError(400, { error: 'invalid_delta' }))
+    await expect(adjustAdminCredit('u1', 0, 'khong doi gi')).rejects.toMatchObject({ code: 'invalid_delta' })
   })
 })

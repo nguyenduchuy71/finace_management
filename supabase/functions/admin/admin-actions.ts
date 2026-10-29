@@ -34,8 +34,12 @@ type StatsRow = {
   keys_last_used_at: string | null
   tx_count_30d: number
   unparsed_30d: Record<string, number>
+  credit_balance: number
+  credit_unlimited: boolean
 }
 
+/** Trần mỗi lần điều chỉnh: chặn gõ nhầm thêm số 0 (và tràn int4). */
+const MAX_CREDIT_DELTA = 1_000_000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const ok = (body: unknown): ActionResult => ({ status: 200, body })
 const fail = (status: number, error: string): ActionResult => ({ status, body: { error } })
@@ -66,6 +70,8 @@ function toUserView(u: AuthUser, s: StatsRow | undefined) {
     txCount30d: s?.tx_count_30d ?? 0,
     unparsed30d: unparsed,
     parseRate30d: parseRate(s?.tx_count_30d ?? 0, unparsed),
+    creditBalance: s?.credit_balance ?? 0,
+    creditUnlimited: s?.credit_unlimited ?? false,
   }
 }
 
@@ -73,8 +79,16 @@ function toUserView(u: AuthUser, s: StatsRow | undefined) {
 function rpcFailure(error: { code?: string; message: string }): ActionResult {
   if (error.code === 'P0002') return fail(404, 'user_not_found')
   if (error.code === '23514') return fail(400, 'invalid_reason')
+  // admin_adjust_credit: 22003 = trừ quá số dư, 22023 = delta 0.
+  if (error.code === '22003') return fail(400, 'insufficient_credit')
+  if (error.code === '22023') return fail(400, 'invalid_delta')
   console.error('admin rpc failed', error.code, error.message)
   return fail(500, 'internal_error')
+}
+
+/** Số nguyên khác 0 trong ±MAX_CREDIT_DELTA; số thực, chuỗi, 0, NaN bị chặn trước khi chạm DB. */
+function isValidDelta(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v !== 0 && Math.abs(v) <= MAX_CREDIT_DELTA
 }
 
 function readReason(v: unknown): string | null {
@@ -123,13 +137,15 @@ export async function handleAction(
       // Ghi dấu vết TRƯỚC khi trả dữ liệu: ghi lỗi thì không trả (fail closed).
       const logged = await deps.rpc('admin_log_view', { p_admin: adminId, p_user: user.id })
       if (logged.error) return rpcFailure(logged.error)
-      const [stats, keys] = await Promise.all([
+      const [stats, keys, ledger] = await Promise.all([
         deps.rpc('admin_user_stats', { p_user_ids: [user.id] }),
         deps.rpc('admin_user_keys', { p_user: user.id }),
+        deps.rpc('admin_user_ledger', { p_user: user.id, p_limit: 20 }),
       ])
       if (stats.error) return rpcFailure(stats.error)
       if (keys.error) return rpcFailure(keys.error)
-      return ok({ user: toUserView(user, (stats.data as StatsRow[])[0]), keys: keys.data })
+      if (ledger.error) return rpcFailure(ledger.error)
+      return ok({ user: toUserView(user, (stats.data as StatsRow[])[0]), keys: keys.data, ledger: ledger.data })
     }
 
     case 'suspend':
@@ -162,6 +178,20 @@ export async function handleAction(
       const res = await deps.rpc('admin_revoke_user_keys', { p_admin: adminId, p_user: target.user.id, p_reason: reason })
       if (res.error) return rpcFailure(res.error)
       return ok({ revoked: res.data })
+    }
+
+    case 'adjust_credit': {
+      const reason = readReason(body.reason)
+      if (!reason) return fail(400, 'invalid_reason')
+      const delta = body.delta
+      if (!isValidDelta(delta)) return fail(400, 'invalid_delta')
+      const target = await loadTarget(deps, adminId, body.userId)
+      if ('error' in target) return target.error
+      const res = await deps.rpc('admin_adjust_credit', {
+        p_admin: adminId, p_user: target.user.id, p_delta: delta, p_reason: reason,
+      })
+      if (res.error) return rpcFailure(res.error)
+      return ok({ balance: res.data })
     }
 
     case 'list_audit': {

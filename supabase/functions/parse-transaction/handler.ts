@@ -45,6 +45,9 @@ export function createHandler({ authenticate, legacy, store }: HandlerDeps) {
         if (result.kind === 'no_account') {
           return json({ skipped: 'no_account', bank: parsed.bank_name, account_ref: parsed.account_ref }, 200)
         }
+        // Hết credit: tin đã được giữ (202, Shortcut không coi là lỗi); quá trần tin treo thì 402 và tin không được lưu.
+        if (result.kind === 'held') return json({ skipped: 'no_credit' }, 202)
+        if (result.kind === 'held_full') return json({ error: 'no_credit', held: false }, 402)
         // KHÔNG vọng `raw_text` về response: nó chứa nguyên văn thông báo
         // (số TK, số dư, tên người chuyển). Chỉ trả field cần cho Shortcut debug.
         const inserted = { ...parsed, ...result.refs } as Record<string, unknown>

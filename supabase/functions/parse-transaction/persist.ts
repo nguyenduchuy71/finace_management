@@ -2,7 +2,8 @@
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifyUnparsed } from './classify-unparsed.ts'
-import { insertTransaction, resolveRefs, type Refs } from './ingest.ts'
+import { ingestParsed } from './credit-ingest.ts'
+import { resolveRefs, type Refs } from './ingest.ts'
 import type { ParsedTransaction } from './types.ts'
 
 /** Shortcut gửi lại / automation chạy 2 lần trong khoảng này -> coi là trùng. */
@@ -11,6 +12,10 @@ const DEDUP_WINDOW_MS = 10 * 60_000
 export type InsertResult =
   | { kind: 'no_account' }
   | { kind: 'inserted'; refs: Refs }
+  /** Hết credit: tin giữ trong hộp tin, sẽ được ghi khi nạp (replay_held_messages). */
+  | { kind: 'held' }
+  /** Hết credit và đã đủ trần tin treo — tin KHÔNG được lưu. */
+  | { kind: 'held_full' }
 
 export function createIngestStore(supabase: SupabaseClient) {
   /**
@@ -55,7 +60,7 @@ export function createIngestStore(supabase: SupabaseClient) {
   }
 
   /**
-   * Ghi giao dịch + resolve FK. Chưa có TK/thẻ khớp -> KHÔNG ghi giao dịch mồ côi (dashboard
+   * Ghi giao dịch + trừ credit (một RPC nguyên tử) + resolve FK. Chưa có TK/thẻ khớp -> KHÔNG ghi giao dịch mồ côi (dashboard
    * đếm, danh sách không hiện) mà đưa vào hộp tin; tạo TK rồi chạy backfill-unparsed.ts.
    */
   async function insertTx(
@@ -66,8 +71,9 @@ export function createIngestStore(supabase: SupabaseClient) {
       await saveUnparsed(parsed.raw_text, source, 'no_account', userId, 'transaction')
       return { kind: 'no_account' }
     }
-    await insertTransaction(supabase, parsed, refs, userId)
-    return { kind: 'inserted', refs }
+    // Chỉ giao dịch GHI được mới bị trừ: tin no_account ở trên, OTP, trùng, no_match đều miễn phí.
+    const res = await ingestParsed(supabase, parsed, refs, userId, source)
+    return res.status === 'inserted' ? { kind: 'inserted', refs } : { kind: res.status }
   }
 
   return { isDuplicate, saveUnparsed, insertTx }

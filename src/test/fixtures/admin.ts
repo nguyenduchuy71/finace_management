@@ -16,6 +16,8 @@ export const adminUser = (over: Partial<AdminUser> & { id: string }): AdminUser 
   txCount30d: 0,
   unparsed30d: {},
   parseRate30d: null,
+  creditBalance: 100,
+  creditUnlimited: false,
   ...over,
 })
 

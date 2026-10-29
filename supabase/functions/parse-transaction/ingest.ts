@@ -1,6 +1,7 @@
 // Bước nạp dùng chung giữa edge function (index.ts) và script backfill-unparsed.ts:
 // parse -> chốt kind -> resolve FK -> insert. Nhận Supabase client (service_role)
-// làm tham số để script chạy ngoài edge runtime dùng lại đúng logic này.
+// làm tham số để script chạy ngoài edge runtime dùng lại đúng logic này. Ghi giao dịch KHÔNG nằm ở đây:
+// mọi insert đi qua credit-ingest.ts (RPC ingest_transaction) để trừ credit nguyên tử.
 
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { parsers } from './parsers.ts'
@@ -84,20 +85,4 @@ export async function resolveRefs(
   if (error || data?.length !== 1) return {}
   const id = data[0].id as string
   return isBank ? { account_id: id } : { card_id: id }
-}
-
-/** Ghi giao dịch (đã resolve FK), trả id. */
-export async function insertTransaction(
-  db: SupabaseClient,
-  tx: ParsedTransaction,
-  refs: Refs,
-  userId: string,
-): Promise<string> {
-  const { data, error } = await db
-    .from('transactions')
-    .insert({ ...tx, ...refs, user_id: userId })
-    .select('id')
-    .single()
-  if (error) throw error
-  return data.id
 }

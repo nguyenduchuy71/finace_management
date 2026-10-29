@@ -32,8 +32,12 @@ Integration hộp tin seed `unparsed_messages` bằng service_role **local**: th
 `supabase status -o env`) vào `.env.test.local` — file chỉ nạp ở mode test, không vào bundle.
 
 **RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql`,
-`api-keys-rls.sql`, `admin-rls.sql` chạy trên Postgres 17 tạm
+`api-keys-rls.sql`, `admin-rls.sql`, `credit-ledger-rls.sql` chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
+`credit-concurrency.sql` cần nhiều session `psql` thật chạy song song (3 giai đoạn, lệnh ở đầu file): `FOR UPDATE` của `ingest_transaction` —
+bỏ nó (hoặc bỏ kiểm số dư) là test đỏ. Trong file SQL, subquery cùng câu SELECT với lời gọi hàm ghi chỉ thấy dữ liệu TRƯỚC khi ghi:
+đọc trạng thái sau hành động bằng câu lệnh riêng hoặc hàm plpgsql (`t.cnt`, `t.bal`).
+Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số dư test user về 1 rồi khôi phục (xoá dòng sổ cái do test tạo, tính lại `balance = sum(delta)`).
 
 ---
 
