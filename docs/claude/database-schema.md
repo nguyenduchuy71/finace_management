@@ -51,21 +51,39 @@ credit_settings 1 dòng (id boolean PK = true): welcome_credits int ≥ 0 (seed 
 unparsed_messages.parsed_payload jsonb {tx, refs} — chỉ có khi reason = 'no_credit' (tin hợp lệ bị giữ vì hết credit)
 ```
 
-**Credit (migration 20261030100000):** mỗi giao dịch do parser ghi THÀNH CÔNG (API key hoặc `x-shortcut-secret` — cùng RPC) trừ 1.
-OTP / trùng / promo / no_match / invalid / no_account miễn phí; `resolve_unparsed` (user tự phân loại) cũng miễn phí NHƯNG từ chối
-tin `reason = 'no_credit'` (22023) — nếu không, hết credit thì tự resolve từng tin treo là ghi miễn phí.
+**Credit (migration 20261030100000 + sửa lỗi bảo mật 20261101100000):** mỗi giao dịch GHI THÀNH CÔNG trừ 1 credit. **Chỉ có 2 đường ghi
+`transactions`**: parser/backfill (`ingest_transaction`, service_role) và phân loại thủ công (`resolve_unparsed_charged`, service_role). `authenticated`
+**không có quyền INSERT `transactions`** (đã `revoke insert` + bỏ policy `own_tx_insert`; vẫn select/update/delete giao dịch của mình) — seed test
+integration phải dùng service_role. OTP / trùng / promo / no_match / invalid / no_account miễn phí; phân loại thủ công TỐN 1 (xem dưới).
 - `ingest_transaction(p_user, p_tx jsonb, p_refs jsonb, p_source)` → `{status:'inserted'|'held', id}` | `{status:'held_full'}`:
-  khoá hàng số dư (`FOR UPDATE`) → còn ≥ 1: insert giao dịch + `_apply_credit(-1,'usage', tx.id)`; hết: lưu `unparsed_messages`
-  (`no_credit` + `parsed_payload`), trần 300 tin treo/user (đếm trong cùng khoá) → `held_full` (HTTP 402). `p_refs` đúng một của
-  `account_id`/`card_id` và PHẢI thuộc `p_user` (service_role bỏ qua RLS nên kiểm trong `_insert_parsed_tx`, lỗi `P0002`).
-- `replay_held_messages(p_user)` → số giao dịch đã ghi: tin treo cũ nhất trước, tới khi hết credit; TK/thẻ đã xoá trong lúc treo →
-  reason đổi `no_account` (không trừ). Phase 3 gọi sau khi nạp; phase 2 gọi tay (SQL / service role).
+  khoá hàng số dư (`FOR UPDATE`) → nếu có tin treo và còn credit thì `replay_held_messages` TRƯỚC (tin mới không chen hàng; replay lỗi chỉ
+  cảnh báo) → còn ≥ 1: insert giao dịch + `_apply_credit(-1,'usage', tx.id)`; hết: lưu `unparsed_messages`
+  (`no_credit` + `parsed_payload`), trần 300 tin treo/user (đếm trong cùng khoá) → `held_full` (HTTP 402, tin KHÔNG lưu — chấp nhận, Shortcut sẽ báo lỗi).
+  `p_refs` đúng một của `account_id`/`card_id` và PHẢI thuộc `p_user` (service_role bỏ qua RLS nên kiểm trong `_insert_parsed_tx`, lỗi `P0002`;
+  edge function đổi `P0002`/`23503` thành tin `no_account` thay vì 500).
+- `replay_held_messages(p_user)` → số giao dịch đã ghi: tin treo cũ nhất trước, tới khi hết credit. Mỗi dòng một subtransaction: TK/thẻ đã xoá
+  (`P0002`/FK) → `reason = 'no_account'`; payload hỏng (class 22 / 23: `22023`, `22P02`, `22007`...) → `reason = 'invalid_payload'` + cảnh báo —
+  cả hai ra khỏi hàng đợi, hiện ở hộp tin để user tự phân loại (tốn 1 credit). Gọi từ: `fulfill_order` (nạp), `admin_adjust_credit` (cộng), `ingest_transaction`.
+- `resolve_unparsed_charged(p_user, p_msg_id, p_kind, p_tx jsonb)` → id giao dịch|null (**thay `resolve_unparsed`, đã DROP** — không để lại đường ghi
+  miễn phí chờ ai grant nhầm). Chỉ `service_role`, gọi qua edge function `resolve-unparsed` (user từ JWT). Khoá số dư rồi tới tin (cùng thứ tự ingest/replay);
+  kind normal/internal_transfer/cashback cần `p_tx` {amount ≠0 nguyên, transaction_date ISO **có offset**, account_id XOR card_id THUỘC `p_user`,
+  description?, merchant_name?, category? ∈ 6 Category} và TRỪ 1 (`usage`, ref = id giao dịch; unlimited miễn phí); card_reminder/promo miễn phí.
+  Lỗi: `22003` hết credit (báo sau khi đầu vào hợp lệ) | `42501` user bị khoá (kiểm `user_settings.suspended_at` tường minh — service_role bỏ qua
+  RLS `not_suspended`) | `P0002` tin/TK/thẻ không thấy hoặc không của user | `22023` tham số sai / đã xử lý / tin `no_credit`.
+- `discard_backfilled_tx(p_user, p_tx_id)` → bool: xoá giao dịch + hoàn credit (`refund`, ref = tx id) trong MỘT transaction, chạy lại an toàn (backfill `lostRace`).
 - `_apply_credit(p_user, p_delta, p_kind, p_ref)` → bool: ghi sổ cái `on conflict (kind, ref) do nothing` (false = đã áp, KHÔNG cộng lần 2)
-  rồi cộng số dư (âm → CHECK 23514, rollback cả dòng sổ cái). `_ensure_credit_account(p_user)`: tạo ví + tặng `welcome_credits`
-  (`ref = 'welcome:'||id`, idempotent) — gọi từ trigger `handle_new_user`, backfill của migration, và tự chữa khi ingest thiếu hàng số dư.
-- Mọi hàm trên + `admin_adjust_credit`, `admin_user_ledger`: **chỉ `service_role`**, `security invoker`.
-- `admin_adjust_credit(p_admin, p_user, p_delta, p_reason)` → số dư mới: ghi audit `adjust_credit` rồi `_apply_credit(delta,'adjust','audit:'||audit.id)`
-  CÙNG transaction; trừ quá số dư → `22003` (rollback cả audit); delta 0 → `22023`. `admin_user_stats` trả thêm `credit_balance`, `credit_unlimited`.
+  rồi cộng số dư (âm → CHECK 23514, rollback cả dòng sổ cái). `_ensure_credit_account(p_user)`: CHỈ tạo hàng ví (số dư 0).
+  `_grant_welcome_credit(p_user)`: tặng `welcome_credits` (`ref = 'welcome:'||id`, idempotent).
+- **Credit chào mừng chỉ sau khi xác nhận email:** trigger `handle_new_user` (insert `auth.users`) tặng nếu `email_confirmed_at` không null; trigger
+  `on_auth_user_confirmed` (update `email_confirmed_at` null → có giá trị) tặng khi xác nhận. Local `enable_confirmations = false` → GoTrue xác nhận ngay lúc
+  đăng ký → hành vi như cũ (100 credit). **Production phải bật confirmations + SMTP** (phase 4) — nếu không, rào chống tạo nhiều TK lấy credit không có tác dụng.
+- Mọi hàm trên + `admin_adjust_credit`, `admin_user_ledger`: **chỉ `service_role`**, `security invoker`. Trigger `guard_unparsed_update` chặn
+  `authenticated` đánh dấu `resolved` lên tin `no_credit` bằng UPDATE trực tiếp (chỉ replay / RPC resolve mới được).
+- `admin_adjust_credit(p_admin, p_user, p_delta, p_reason)` → số dư mới SAU replay: ghi audit `adjust_credit` rồi `_apply_credit(delta,'adjust','audit:'||audit.id)`
+  CÙNG transaction; delta > 0 thì `replay_held_messages` (khối EXCEPTION: replay lỗi không rollback điều chỉnh); trừ quá số dư → `22003` (rollback cả audit);
+  cộng vượt int4 → `22023`; delta 0 → `22023`. `admin_user_stats` trả thêm `credit_balance`, `credit_unlimited`.
+- Sổ cái `credit_ledger` không có trigger chặn DELETE vì xoá user cascade qua FK cần xoá được dòng (UPDATE/TRUNCATE bị chặn, DELETE chỉ owner/service_role).
+- Trần điều chỉnh admin có 2 bản vì Deno/web không import chung: `MAX_CREDIT_DELTA` (admin-actions.ts) = `MAX_CREDIT_ADJUST` (src/types/admin.ts); test `credit-delta-limit.test.ts` so khớp.
 
 **Chủ app "không giới hạn" (`credit_balances.unlimited`):** `ingest_transaction` / `replay_held_messages` ghi KHÔNG trừ (không có dòng sổ cái —
 `delta <> 0` nên không ghi dòng 0) và không bao giờ giữ tin; áp cho cả đường API key lẫn legacy vì cùng một RPC. UI hiện "Không giới hạn".
@@ -74,7 +92,7 @@ Không role client nào có quyền ghi cột này — chỉ SQL / service_role.
 update public.credit_balances set unlimited = true where user_id = '<uuid>';   -- gỡ: set unlimited = false
 ```
 Backfill của migration cấp ví + credit chào mừng cho mọi user có sẵn → deploy không chặn ai. Seed integration (gitignored) KHÔNG cần sửa:
-test credit tự đưa số dư về 1 rồi khôi phục.
+test credit tự đưa số dư về 1 rồi khôi phục; test phân loại hoàn credit đã trừ ở cleanup (`src/test/integration-resolve.ts`).
 
 **RPC:** `get_dashboard_stats(p_date_from, p_date_to)` → JSON khớp `DashboardStatsSchema`.
 `delete_credit_card(p_card_id)` → số giao dịch đã xoá: xoá thẻ **kèm toàn bộ giao dịch** nguyên tử (khoá dòng
@@ -83,10 +101,8 @@ trần: FK `transactions.card_id` là `on delete set null` nên giao dịch thà
 `save_cashback_rule(p_card_id, p_rule_id, p_mcc, p_rate, p_min, p_cap, p_tiers jsonb)` → id rule: lưu rule **và thay toàn bộ bậc**
 trong một transaction (bậc tăng dần chặt, bậc đầu > `p_min`, ≤ 5 bậc, sai → `22023`; rule lạ → `P0002`). **Ghi rule hoàn tiền luôn
 qua RPC này**; vì nó thay toàn bộ bậc nên mọi lời gọi phải gửi đủ danh sách bậc hiện có.
-`delete_bank_account(p_account_id)` → như `delete_credit_card` cho TK. `resolve_unparsed(p_msg_id, p_kind, p_tx jsonb)` →
-id giao dịch|null: kind normal/internal_transfer/cashback cần `p_tx` {amount ≠0 nguyên, transaction_date ISO **có offset**,
-account_id XOR card_id, description?, merchant_name?, category? ∈ 6 Category}; bank_name/source_type lấy từ TK/thẻ;
-card_reminder/promo không có p_tx. Lỗi 22023 (tham số / đã xử lý), P0002 (không thấy).
+`delete_bank_account(p_account_id)` → như `delete_credit_card` cho TK. Phân loại tin hộp thư: `resolve_unparsed_charged` (mục Credit ở trên;
+bank_name/source_type lấy từ TK/thẻ; card_reminder/promo không có p_tx).
 `create_api_key(p_name)` → key `vj_…` đầy đủ (lần DUY NHẤT; DB chỉ giữ SHA-256). `authenticate_api_key(p_key_hash hex)` →
 (user_id, owner_names, rate_limited, suspended): **chỉ `service_role`** (revoke khỏi public/anon/authenticated), một UPDATE…RETURNING tăng bộ
 đếm rate limit 60/phút/key + `last_used_at`; 0 dòng = key sai/đã thu hồi.

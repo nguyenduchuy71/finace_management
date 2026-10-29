@@ -73,6 +73,11 @@ export function createIngestStore(supabase: SupabaseClient) {
     }
     // Chỉ giao dịch GHI được mới bị trừ: tin no_account ở trên, OTP, trùng, no_match đều miễn phí.
     const res = await ingestParsed(supabase, parsed, refs, userId, source)
+    if (res.status === 'no_account') {
+      // TK/thẻ bị xoá giữa lúc resolveRefs và RPC: coi như chưa có TK/thẻ — giữ tin ở hộp thay vì 500 và mất tin.
+      await saveUnparsed(parsed.raw_text, source, 'no_account', userId, 'transaction')
+      return { kind: 'no_account' }
+    }
     return res.status === 'inserted' ? { kind: 'inserted', refs } : { kind: res.status }
   }
 

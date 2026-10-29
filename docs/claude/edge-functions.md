@@ -16,7 +16,8 @@ chủ app `unlimited` không bị trừ/giữ (cả đường legacy `x-shortcut
 chống trùng kiểm cả `transactions` lẫn `unparsed_messages`;
 không khớp → `unparsed_messages` kèm `source`, `reason`, `user_id`, `suggested_kind` (`classify-unparsed.ts`, ưu tiên recall:
 giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolve FK) + `credit-ingest.ts` (ghi + trừ credit) dùng chung với `backfill-unparsed.ts`
-(chạy tay, dry-run mặc định; ghi qua cùng RPC nên cũng trừ credit, hết credit thì tin giữ nguyên trong hộp, xoá giao dịch do lostRace thì hoàn credit). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
+(chạy tay, dry-run mặc định; ghi qua cùng RPC nên cũng trừ credit, hết credit thì tin giữ nguyên trong hộp, xoá giao dịch do lostRace thì xoá + hoàn credit NGUYÊN TỬ qua RPC `discard_backfilled_tx`, chạy lại an toàn).
+TK/thẻ bị xoá giữa `resolveRefs` và RPC (`P0002`/`23503`): `ingestParsed` trả `no_account` → tin vào hộp tin (`persist.ts`), không 500. Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
 Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
 (`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
 (`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng).
@@ -25,6 +26,17 @@ Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDB
 đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
 Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.
 Thứ tự deploy với migration 20261021100000: db push rồi deploy function ngay (function cũ không ghi user_id). Tương tự migration 20261030100000 (credit): `db push` rồi deploy `parse-transaction` + `admin` ngay — function cũ insert thẳng, không trừ credit; function mới chạy trên DB cũ thì thiếu RPC `ingest_transaction` (500, tin mất).
+Migration 20261101100000 (sửa bảo mật credit): `db push` rồi deploy `resolve-unparsed` + `parse-transaction` + `admin` NGAY và deploy web — web cũ gọi RPC `resolve_unparsed` đã bị gỡ (hộp tin lỗi), `parse-transaction` cũ không map `no_account`.
+
+## Edge Function `resolve-unparsed` (`supabase/functions/resolve-unparsed/`)
+
+Phân loại thủ công tin ở hộp "Chưa phân loại" (`verify_jwt = true`; user lấy từ `getUser(token)`, KHÔNG nhận user_id từ body). POST
+`{message_id, kind, tx?}` → RPC `resolve_unparsed_charged` (service_role): tạo giao dịch TỐN 1 credit (unlimited miễn phí; card_reminder/promo miễn phí).
+Mã lỗi: 401 `unauthorized` | 402 `insufficient_credit` (UI: "Hết credit — nạp thêm để phân loại.") | 403 `suspended` | 404 `not_found` |
+400 `invalid_request` (tham số sai / đã xử lý / tin đang treo chờ nạp) | 409 `account_gone` | 500 `internal_error`. `tx` chỉ nhận 7 trường
+(amount, transaction_date, description, merchant_name, category, account_id, card_id); validate chi tiết nằm ở RPC. Web gọi qua
+`src/services/unparsed-messages.ts` (`supabase.functions.invoke`). Test: `handler.test.ts` (Deno). Integration local không `functions serve` nên gọi RPC bằng
+service_role (`src/test/integration-resolve.ts`); lớp HTTP chỉ có Deno test + `unparsed-messages.test.ts`.
 
 **Giới hạn `text` 2000 ký tự (`MAX_TEXT_LENGTH`) — không được bỏ.** Regex parser chạy đồng bộ
 và có độ phức tạp phi tuyến với input dài (đo thật: 203KB = 8.665ms trước khi neo regex SHB).
@@ -50,7 +62,7 @@ Gán admin (SQL, 1 lần): `update auth.users set raw_app_meta_data = raw_app_me
 Break-glass gỡ ban: `update auth.users set banned_until = null where id = '…'` + `update user_settings set suspended_at = null …`.
 Break-glass mất điện thoại TOTP: `delete from auth.mfa_factors where user_id = '<admin id>'` rồi đăng nhập lại và enroll lại.
 TOTP: `config.toml` `[auth.mfa.totp]` chỉ cho local — **production bật ở dashboard** (Authentication → Multi-Factor).
-Test: `docker run --rm -v "$PWD/supabase/functions:/f" -w /f/parse-transaction denoland/deno:2.1.4 test --allow-all . ../admin` (`credit-ingest.ts` nằm trong danh sách `deno check` của CI)
+Test: `docker run --rm -v "$PWD/supabase/functions:/f" -w /f/parse-transaction denoland/deno:2.1.4 test --allow-all . ../admin ../_shared ../resolve-unparsed` (`credit-ingest.ts` nằm trong danh sách `deno check` của CI)
 
 ---
 
@@ -70,4 +82,4 @@ Logic nằm trong `_shared/` (handler nhận `{db, cfg, fetchFn}` để test kh�
   accessKey `F8BBA842ECF85`/`klm05TvNBzhg7h7j`; ZaloPay app_id `2553`, `554`) → ví tắt + log lỗi.
 - Chưa kiểm với spec chữ/sandbox thật: URL production MoMo, mã trả IPN MoMo (204), response query MoMo không có chữ ký kiểm chứng được (tin TLS + khớp partnerCode/orderId, số tiền vẫn so với DB),
   mọi thứ của ZaloPay (host, mã callback, MAC query). `test-payment.momo.vn` chặn curl (403) → chưa chạy sandbox MoMo thật.
-- Test: `deno test --allow-all . ../admin ../_shared` (từ `parse-transaction`).
+- Test: `deno test --allow-all . ../admin ../_shared ../resolve-unparsed` (từ `parse-transaction`).

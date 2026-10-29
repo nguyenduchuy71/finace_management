@@ -60,7 +60,9 @@ function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
     <form onSubmit={onSubmit} noValidate className="space-y-4">
       <DialogHeader>
         <DialogTitle>Ghi thành giao dịch</DialogTitle>
-        <DialogDescription>Kiểm tra lại số tiền và thời điểm — đây là giá trị đoán từ thông báo.</DialogDescription>
+        <DialogDescription>
+          Kiểm tra lại số tiền và thời điểm — đây là giá trị đoán từ thông báo. Ghi giao dịch thủ công tốn 1 credit.
+        </DialogDescription>
       </DialogHeader>
 
       <p className="max-h-32 overflow-y-auto whitespace-pre-line rounded-md bg-muted p-3 text-xs">{message.rawText}</p>

@@ -175,17 +175,19 @@ select t.check('tin treo: reason no_credit, chưa resolved, payload có tx + ref
   from unparsed_messages where user_id = :B), 'true');
 select t.check('B đọc được tin treo của mình, A không thấy', t.val('authenticated', :B, $$select count(*)::text from unparsed_messages$$)
   || t.val('authenticated', :A, $$select count(*)::text from unparsed_messages$$), '10');
-select t.check('resolve_unparsed tin no_credit -> 22023 (không vượt thanh toán), không ghi giao dịch', t.state('authenticated', :B, format(
-  $$select resolve_unparsed(%L, 'normal', '{"amount":-1000,"transaction_date":"2026-10-30T10:00:00+07:00","card_id":"bbbbbbbb-1111-4000-a000-000000000001"}')$$,
-  (select id from unparsed_messages where user_id = :B))) || t.cnt('transactions', :B), '220230');
-select t.check('... kể cả gắn nhãn promo cũng bị từ chối', t.state('authenticated', :B, format(
-  $$select resolve_unparsed(%L, 'promo')$$, (select id from unparsed_messages where user_id = :B))), '22023');
--- tin thường (không treo) vẫn resolve miễn phí
+-- H1: resolve_unparsed (authenticated, miễn phí) đã bị gỡ; phân loại thủ công = resolve_unparsed_charged (service_role, trừ 1 credit).
+select t.check('resolve_unparsed_charged tin no_credit -> 22023 (chờ nạp), không ghi giao dịch', t.state('service_role', null, format(
+  $$select resolve_unparsed_charged(%L, %L, 'normal', '{"amount":-1000,"transaction_date":"2026-10-30T10:00:00+07:00","card_id":"bbbbbbbb-1111-4000-a000-000000000001"}')$$,
+  :B, (select id from unparsed_messages where user_id = :B))) || t.cnt('transactions', :B), '220230');
+select t.check('... kể cả gắn nhãn promo cũng bị từ chối', t.state('service_role', null, format(
+  $$select resolve_unparsed_charged(%L, %L, 'promo')$$, :B, (select id from unparsed_messages where user_id = :B))), '22023');
+-- tin thường + hết credit (số dư 0) -> 22003, không ghi gì; tin promo thì miễn phí dù số dư 0
 insert into unparsed_messages(user_id, raw_text, reason) values (:B, 'TIN BINH THUONG', 'no_match');
-select t.check('tin no_match resolve miễn phí: tạo giao dịch, không đụng số dư / sổ cái', t.state('authenticated', :B, format(
-  $$select resolve_unparsed(%L, 'normal', '{"amount":-2000,"transaction_date":"2026-10-30T10:00:00+07:00","card_id":"bbbbbbbb-1111-4000-a000-000000000001"}')$$,
-  (select id from unparsed_messages where user_id = :B and raw_text = 'TIN BINH THUONG')))
-  || t.bal(:B) || t.cnt('credit_ledger', :B, $c$kind = 'usage'$c$), 'ok00');
+select t.check('tin no_match, số dư 0 -> 22003 (hết credit), không giao dịch, không đụng sổ cái', t.state('service_role', null, format(
+  $$select resolve_unparsed_charged(%L, %L, 'normal', '{"amount":-2000,"transaction_date":"2026-10-30T10:00:00+07:00","card_id":"bbbbbbbb-1111-4000-a000-000000000001"}')$$,
+  :B, (select id from unparsed_messages where user_id = :B and raw_text = 'TIN BINH THUONG')))
+  || t.bal(:B) || t.cnt('transactions', :B) || t.cnt('credit_ledger', :B, $c$kind = 'usage'$c$), '22003000');
+delete from unparsed_messages where raw_text = 'TIN BINH THUONG';
 delete from transactions where user_id = :B;   -- dọn để các ca replay đếm gọn
 update unparsed_messages set resolved = false, transaction_id = null where false;
 
@@ -235,8 +237,8 @@ update credit_balances set unlimited = true where user_id = :U;   -- SQL của c
 select t.check('unlimited: ingest 3 tin -> cả 3 inserted, số dư vẫn 0', (t.ing(:U, 'u2', :'CARD_U')::jsonb ->> 'status')
   || (t.ing(:U, 'u3', :'CARD_U')::jsonb ->> 'status') || (t.ing(:U, 'u4', :'CARD_U')::jsonb ->> 'status') || t.bal(:U), 'insertedinsertedinserted0');
 select t.check('... không có dòng usage nào (không ghi dòng delta 0)', t.cnt('credit_ledger', :U, $c$kind = 'usage'$c$), '0');
-select t.check('... replay ghi nốt tin treo cũ, không trừ', t.val('service_role', null, format($$select replay_held_messages(%L)::text$$, :U))
-  || t.bal(:U) || t.cnt('transactions', :U), '104');
+select t.check('... tin treo u1 đã được ingest(u2) phát lại TRƯỚC (M2): replay tay = 0, đủ 4 giao dịch, không trừ', t.val('service_role', null, format($$select replay_held_messages(%L)::text$$, :U))
+  || t.bal(:U) || t.cnt('transactions', :U), '004');
 select t.check('U đọc được cờ unlimited (UI)', t.val('authenticated', :U, $$select unlimited::text from credit_balances$$), 'true');
 
 -- ===== admin_adjust_credit
