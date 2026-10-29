@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { useChatStore } from '@/stores/chatStore'
 import type { ChatMessage as ChatMessageType } from '@/stores/chatStore'
+import { triggerRegenerate } from './regenerate-registry'
 
 interface ChatMessageProps {
   message: ChatMessageType
@@ -19,10 +20,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
   // useShallow: ChatMessage render 1 lần cho MỖI tin nhắn. Subscribe cả store
   // khiến mọi bong bóng chat re-parse ReactMarkdown mỗi khi `messages` đổi
   // (tức là mỗi lần có tin nhắn mới) — 50 tin là 50 lần parse thừa.
-  const { deleteMessage, regenerateCallback, isLoading } = useChatStore(
+  const { deleteMessage, isLoading } = useChatStore(
     useShallow((s) => ({
       deleteMessage: s.deleteMessage,
-      regenerateCallback: s.regenerateCallback,
       isLoading: s.isLoading,
     }))
   )
@@ -59,9 +59,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
   function handleRegenerate() {
     // Delete this assistant message first, then trigger regenerate
     deleteMessage(message.id)
-    if (regenerateCallback && !isLoading) {
-      regenerateCallback()
-    }
+    if (!isLoading) triggerRegenerate()
   }
 
   if (isUser) {

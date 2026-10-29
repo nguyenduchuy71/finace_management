@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { readJSON, writeJSON, removeKey } from '@/lib/persisted-json'
+import { normalizeChatModel } from './chat-models'
 
 export interface ChatMessage {
   id: string
@@ -10,7 +11,7 @@ export interface ChatMessage {
 
 export interface ApiConfig {
   apiKey: string
-  model: string  // e.g. 'claude-3-5-sonnet-20241022'
+  model: string  // một trong CHAT_MODELS (chat-models.ts)
 }
 
 interface ChatState {
@@ -19,7 +20,6 @@ interface ChatState {
   isLoading: boolean
   apiConfig: ApiConfig | null
   showSettings: boolean
-  regenerateCallback: (() => void) | null
   // Actions
   toggleChat: () => void
   closeChat: () => void
@@ -29,7 +29,6 @@ interface ChatState {
   setLoading: (loading: boolean) => void
   setApiConfig: (config: ApiConfig | null) => void
   toggleSettings: () => void
-  setRegenerateCallback: (fn: (() => void) | null) => void
   /** Đăng xuất / đổi user: xoá lịch sử chat (chứa số liệu tài chính) và API key khỏi localStorage. */
   resetForSignOut: () => void
 }
@@ -42,7 +41,11 @@ const isApiConfig = (v: unknown): v is ApiConfig | null => typeof v === 'object'
 
 const loadMessages = () => readJSON<ChatMessage[]>(HISTORY_KEY, [], isMessageList)
 const saveMessages = (messages: ChatMessage[]) => { writeJSON(HISTORY_KEY, messages) }
-const loadApiConfig = () => readJSON<ApiConfig | null>(API_CONFIG_KEY, null, isApiConfig)
+// Chuyển model cũ (Claude 3.x) sang mặc định ngay khi đọc để người dùng cũ không bị lỗi 404 từ API
+function loadApiConfig(): ApiConfig | null {
+  const config = readJSON<ApiConfig | null>(API_CONFIG_KEY, null, isApiConfig)
+  return config ? { ...config, model: normalizeChatModel(config.model) } : null
+}
 
 // Lỗi storage (Safari private / bị chặn): vẫn dùng được trong phiên, chỉ không nhớ sau khi tải lại
 function saveApiConfig(config: ApiConfig | null) {
@@ -60,7 +63,6 @@ export const useChatStore = create<ChatState>()((set) => ({
   isLoading: false,
   apiConfig: loadApiConfig(),
   showSettings: false,
-  regenerateCallback: null,
 
   toggleChat: () => set((s) => ({ isOpen: !s.isOpen })),
   closeChat: () => set({ isOpen: false }),
@@ -96,11 +98,9 @@ export const useChatStore = create<ChatState>()((set) => ({
 
   toggleSettings: () => set((s) => ({ showSettings: !s.showSettings })),
 
-  setRegenerateCallback: (fn) => set({ regenerateCallback: fn }),
-
   resetForSignOut: () => {
     saveMessages([])
     saveApiConfig(null)
-    set({ isOpen: false, messages: [], isLoading: false, apiConfig: null, showSettings: false, regenerateCallback: null })
+    set({ isOpen: false, messages: [], isLoading: false, apiConfig: null, showSettings: false })
   },
 }))

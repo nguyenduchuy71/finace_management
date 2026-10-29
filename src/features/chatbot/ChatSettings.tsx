@@ -11,13 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useChatStore } from '@/stores/chatStore'
-
-const MODEL_OPTIONS = [
-  { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Khuyên dùng)' },
-  { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Nhanh)' },
-  { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Mạnh nhất)' },
-  { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Tiết kiệm)' },
-] as const
+import { CHAT_MODELS, DEFAULT_CHAT_MODEL } from '@/stores/chat-models'
 
 export function ChatSettings() {
   const { apiConfig, setApiConfig, toggleSettings, clearMessages } = useChatStore(
@@ -30,7 +24,7 @@ export function ChatSettings() {
   )
 
   const [apiKey, setApiKey] = useState(apiConfig?.apiKey ?? '')
-  const [model, setModel] = useState(apiConfig?.model ?? 'claude-3-5-sonnet-20241022')
+  const [model, setModel] = useState(apiConfig?.model ?? DEFAULT_CHAT_MODEL)
   const [showKey, setShowKey] = useState(false)
   const [error, setError] = useState('')
 
@@ -51,7 +45,7 @@ export function ChatSettings() {
   function handleClearConfig() {
     setApiConfig(null)
     setApiKey('')
-    setModel('claude-3-5-sonnet-20241022')
+    setModel(DEFAULT_CHAT_MODEL)
     setError('')
     toggleSettings()
   }
@@ -124,7 +118,7 @@ export function ChatSettings() {
             <SelectValue placeholder="Chọn model..." />
           </SelectTrigger>
           <SelectContent>
-            {MODEL_OPTIONS.map((opt) => (
+            {CHAT_MODELS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value} className="text-sm">
                 {opt.label}
               </SelectItem>

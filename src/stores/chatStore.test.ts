@@ -14,7 +14,6 @@ describe('chatStore', () => {
       isLoading: false,
       apiConfig: null,
       showSettings: false,
-      regenerateCallback: null,
     })
   })
 
@@ -197,13 +196,13 @@ describe('chatStore', () => {
 
   describe('setApiConfig', () => {
     it('sets apiConfig to a new config', () => {
-      const config = { apiKey: 'test-key', model: 'claude-3-5-sonnet-20241022' }
+      const config = { apiKey: 'test-key', model: 'claude-sonnet-5-5' }
       useChatStore.getState().setApiConfig(config)
       expect(useChatStore.getState().apiConfig).toEqual(config)
     })
 
     it('persists apiConfig to localStorage', () => {
-      const config = { apiKey: 'persist-key', model: 'claude-3-5-sonnet-20241022' }
+      const config = { apiKey: 'persist-key', model: 'claude-sonnet-5-5' }
       useChatStore.getState().setApiConfig(config)
 
       const stored = localStorage.getItem(API_CONFIG_KEY)
@@ -212,7 +211,7 @@ describe('chatStore', () => {
     })
 
     it('removes apiConfig from localStorage when set to null', () => {
-      useChatStore.getState().setApiConfig({ apiKey: 'some-key', model: 'claude-3-5-sonnet-20241022' })
+      useChatStore.getState().setApiConfig({ apiKey: 'some-key', model: 'claude-sonnet-5-5' })
       useChatStore.getState().setApiConfig(null)
 
       expect(useChatStore.getState().apiConfig).toBeNull()
@@ -230,20 +229,6 @@ describe('chatStore', () => {
       useChatStore.setState({ showSettings: true })
       useChatStore.getState().toggleSettings()
       expect(useChatStore.getState().showSettings).toBe(false)
-    })
-  })
-
-  describe('setRegenerateCallback', () => {
-    it('stores a regenerate callback function', () => {
-      const callback = () => {}
-      useChatStore.getState().setRegenerateCallback(callback)
-      expect(useChatStore.getState().regenerateCallback).toBe(callback)
-    })
-
-    it('clears the callback with null', () => {
-      useChatStore.getState().setRegenerateCallback(() => {})
-      useChatStore.getState().setRegenerateCallback(null)
-      expect(useChatStore.getState().regenerateCallback).toBeNull()
     })
   })
 
