@@ -19,6 +19,14 @@ export function parseVND(numStr: string): number {
   return parseFloat(numStr.replace(/[,.]/g, ''))
 }
 
+/**
+ * Số tiền của định dạng bank CHỈ ghi số dương nhưng luôn là chi tiêu (không có dấu): -parseVND.
+ * Định dạng có dấu +/- trong text thì dùng parseVND (giữ dấu) — đừng đổi sang hàm này.
+ */
+export function outflow(numStr: string): number {
+  return -parseVND(numStr)
+}
+
 /** Lấy 4 ký tự cuối làm mã nhận diện thẻ/TK.
  *
  * Dùng KÝ TỰ chứ không phải chữ số, vì mỗi bank mask một kiểu:

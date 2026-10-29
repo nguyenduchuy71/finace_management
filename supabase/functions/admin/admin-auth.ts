@@ -4,6 +4,8 @@
 // nên role đọc từ GoTrue là đáng tin. aal nằm trong claim của access token: đọc payload SAU
 // KHI getUser đã xác nhận token với GoTrue — không tự kiểm chữ ký.
 
+import { bearerToken } from '../_shared/http.ts'
+
 export type AdminAuthResult =
   | { ok: true; adminId: string }
   | { ok: false; status: 401 | 403; error: 'unauthorized' | 'forbidden' | 'mfa_required' }
@@ -14,9 +16,7 @@ export type GoTrueUser = { id: string; app_metadata?: Record<string, unknown> }
 export type GetUser = (token: string) =>
   PromiseLike<{ data: { user: GoTrueUser | null }; error: unknown }>
 
-export function bearerToken(headers: Headers): string | null {
-  return /^Bearer\s+(\S+)$/i.exec(headers.get('authorization') ?? '')?.[1] ?? null
-}
+export { bearerToken }
 
 /** Claim `aal` của JWT ('aal1' | 'aal2'), null nếu không đọc được. */
 export function tokenAal(token: string): string | null {
