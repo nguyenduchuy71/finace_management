@@ -2,7 +2,7 @@
 
 ## Overview
 
-Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions, kèm quản lý thẻ (thêm/sửa/xoá), gán MCC cho giao dịch thẻ và hoàn tiền ước tính theo rule của từng thẻ (`docs/credit-card-cashback.md`). Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`. Giao diện thương hiệu **"Ví Jade"** (sáng/tối, xem [Styling](#styling--ví-jade)).
+Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions, kèm quản lý thẻ (thêm/sửa/xoá), gán MCC cho giao dịch thẻ và hoàn tiền ước tính theo rule của từng thẻ (`docs/credit-card-cashback.md`). Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`; mỗi giao dịch ghi thành công trừ 1 **credit** (RPC `ingest_transaction` nguyên tử, hết credit thì tin được giữ, nạp lại thì replay — xem `docs/claude/database-schema.md`). Giao diện thương hiệu **"Ví Jade"** (sáng/tối, xem [Styling](#styling--ví-jade)).
 
 ---
 
@@ -89,7 +89,7 @@ Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legac
 /dashboard     → DashboardPage
 /accounts      → BankAccountsPage ("Giao dịch ngân hàng": ?view=inbox|recorded — hộp tin chưa phân loại / giao dịch theo TK)
 /credit-cards  → CreditCardsPage (?view=all = "Nhiều thẻ"; mặc định "Từng thẻ")
-/settings      → SettingsPage (API key cho Shortcut, tên chủ TK, xoá tài khoản)
+/settings      → SettingsPage (số dư + lịch sử credit, API key cho Shortcut, tên chủ TK, xoá tài khoản)
 /signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
 /admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```
@@ -124,6 +124,8 @@ All routes wrapped in `<AppShell>` (header + layout + chat button/panel).
     không đoán `1.5` / `1,000.000` (từng bị đọc thành 15đ / 1.000.000đ).
 11. **Không cắt cụt im lặng:** `exportTransactions` báo lỗi khi vượt 100 trang (50.000 dòng) thay vì trả mảng thiếu —
     dữ liệu thiếu làm CSV và hoàn tiền ước tính sai mà không ai biết.
+12. **Credit nguyên tử:** giao dịch từ parser/backfill chỉ ghi qua RPC `ingest_transaction` (insert + trừ 1 credit cùng transaction, khoá `FOR UPDATE`
+    hàng số dư); không `.from('transactions').insert` trong edge function. Client chỉ ĐỌC số dư/sổ cái. Chủ app đặt `credit_balances.unlimited` bằng SQL.
 
 ---
 

@@ -178,8 +178,8 @@ select t.check('7 hàm admin + authenticate_api_key: INVOKER, chỉ service_role
     and p.proname in ('admin_user_stats','admin_user_keys','admin_set_suspended','admin_revoke_user_keys','admin_list_audit','admin_log_view','authenticate_api_key')), 'true');
 
 -- Chữ ký cột: thêm cột (vd nội dung giao dịch, key_hash) là vỡ ngay.
-select t.check('admin_user_stats: đúng 8 cột, không cột nội dung', pg_get_function_result('public.admin_user_stats(uuid[])'::regprocedure),
-  'TABLE(user_id uuid, suspended_at timestamp with time zone, suspended_reason text, consent_at timestamp with time zone, keys_active integer, keys_last_used_at timestamp with time zone, tx_count_30d integer, unparsed_30d jsonb)');
+select t.check('admin_user_stats: đúng 10 cột (thêm số dư credit), không cột nội dung', pg_get_function_result('public.admin_user_stats(uuid[])'::regprocedure),
+  'TABLE(user_id uuid, suspended_at timestamp with time zone, suspended_reason text, consent_at timestamp with time zone, keys_active integer, keys_last_used_at timestamp with time zone, tx_count_30d integer, unparsed_30d jsonb, credit_balance integer, credit_unlimited boolean)');
 select t.check('admin_user_keys: không trả key_hash', pg_get_function_result('public.admin_user_keys(uuid)'::regprocedure),
   'TABLE(id uuid, name text, prefix text, last4 text, created_at timestamp with time zone, last_used_at timestamp with time zone, revoked_at timestamp with time zone)');
 select t.check('admin_list_audit: đúng cột audit', pg_get_function_result('public.admin_list_audit(uuid,integer,integer)'::regprocedure),
@@ -236,8 +236,8 @@ select t.check('trigger chặn DELETE dù service_role có quyền', t.msg('serv
 revoke update, delete on public.admin_audit_log from service_role;
 
 select t.check('trigger chặn TRUNCATE', t.msg('postgres', null, $$truncate admin_audit_log$$), 'admin_audit_log là append-only');
-select t.check('7 bảng dữ liệu có policy restrictive not_suspended, user_settings không', (select
-  (count(*) = 7 and bool_and(polpermissive = false))::text from pg_policy where polname = 'not_suspended'), 'true');
+select t.check('9 bảng dữ liệu có policy restrictive not_suspended (gồm credit_ledger, credit_balances), user_settings không', (select
+  (count(*) = 9 and bool_and(polpermissive = false))::text from pg_policy where polname = 'not_suspended'), 'true');
 
 -- 20261029100000: anon không EXECUTE được function nào của public (PUBLIC mặc định có EXECUTE)
 select t.check('anon không gọi được function nào trong public', (select coalesce(string_agg(p.proname, ',' order by p.proname), '')

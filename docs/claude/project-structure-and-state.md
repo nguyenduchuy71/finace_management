@@ -7,7 +7,7 @@ src/
 ├── pages/               # DashboardPage, BankAccountsPage, CreditCardsPage
 ├── features/
 │   ├── accounts/        # AccountTabs, RecordedTransactionsView, AccountFormDialog, DeleteAccountDialog
-│   ├── unparsed/        # UnparsedInbox, UnparsedMessageItem, ResolveUnparsedDialog, UnparsedCountBadge
+│   ├── unparsed/        # UnparsedInbox, UnparsedMessageItem (tin `no_credit` → "Chờ nạp credit", ẩn nút phân loại), ResolveUnparsedDialog, UnparsedCountBadge
 │   ├── transactions/    # TransactionList (nhóm theo ngày), TransactionRow, TransactionListSkeleton, TransactionEmptyState,
 │   │                    #   DayGroupHeader, LoadMoreFooter, TransactionListError (lỗi tải dùng chung 3 danh sách)
 │   ├── creditCards/     # CreditCardSelector + MultiCardPicker (cùng dùng CardSearchListbox), CardVisual (thẻ vật lý),
@@ -19,7 +19,8 @@ src/
 │   ├── chatbot/         # ChatPanel, ChatMessage, ChatInput, ChatSettings, ChatButton, chat-context (prompt + lịch sử, hàm thuần)
 │   ├── settings/        # ApiKeysSection, CreateApiKeyDialog (key hiện 1 lần, chặn Esc/X), OwnerNamesSection,
 │   │                    #   DeleteAccountSection, SuspendedBanner (AppShell — user bị khoá thấy app TRỐNG vì RLS)
-│   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata), AdminActionDialog (lý do 5..500), AdminAuditList,
+│   ├── credits/         # CreditBalanceBadge (header; cảnh báo < 10 credit hoặc có tin treo), CreditSection + CreditLedgerList (/settings; list dùng chung drawer admin)
+│   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata + sổ cái credit), AdminCreditDialog (điều chỉnh ±credit), AdminActionDialog (lý do 5..500), AdminAuditList,
 │   │                    #   SuspensionBadge (Hoạt động / Bị khoá / Lệch trạng thái)
 │   ├── landing/         # LandingPage + Header/Hero/Features/HowItWorks/Security (trang chủ công khai, số liệu minh hoạ tĩnh)
 │   └── auth/            # AuthProvider (xoá cache khi đổi user / mất phiên), LoginPage (báo riêng user_banned), SignupPage,
@@ -35,11 +36,12 @@ src/
 ├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useMultiCardTransactions,
 │                        #   useCreditCardMutations, useUpdateTransactionMcc, useUpdateCardTransaction, useCashbackRules,
 │                        #   useCycleCashback, useNow, useListboxKeyboard,
+│                        #   useCredits (useCreditBalance / useCreditLedger / useHeldCount),
 │                        #   useDashboardStats, useBudgetAlerts, useDebounced, useCountUp, useAuth
 ├── lib/supabase.ts      # Supabase client singleton
 ├── lib/query-client.ts  # QueryClient dùng chung (AppHeader `.clear()` khi đăng xuất) — tách khỏi App.tsx vì file đó chỉ export component
 ├── services/            # supabase-js: accounts, account-mutations, creditCards, credit-card-mutations, cashbackRules,
-│                        #   dashboard, exports, unparsed-messages; mappers (snake_case→camelCase + Zod),
+│                        #   dashboard, exports, unparsed-messages, credits (số dư / sổ cái / số tin treo — chỉ ĐỌC); mappers (snake_case→camelCase + Zod),
 │                        #   api-errors (toApiError; getErrorMessage cho catch ở component), query-cursor (keyset cursor, sanitizeSearch), transactionQuery (filter)
 ├── stores/              # filterStore, dashboardStore, budgetStore, categoryOverrideStore, chatStore, themeStore
 ├── types/               # api.ts, account.ts, creditCard.ts, credit-card-form.ts, cashback.ts, cashback-form.ts,
