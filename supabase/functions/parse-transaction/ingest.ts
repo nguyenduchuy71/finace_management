@@ -48,31 +48,38 @@ function escapeLike(s: string): string {
   return s.replace(/([\\%_])/g, '\\$1')
 }
 
+/** Tên bank_name MoMo đặt trong parser và trong bảng accounts (so khớp chính xác). */
+const MOMO_BANK_NAME = 'MoMo'
+
 export type Refs = { account_id?: string; card_id?: string }
 
 /**
  * Tìm account_id / card_id từ (bank_name, account_ref).
  * Không khớp, hoặc khớp NHIỀU (2 TK cùng bank cùng đuôi) -> {}. Caller không được
  * insert khi {}: row FK null KHÔNG hiện trong danh sách nhưng dashboard vẫn đếm.
+ *
+ * Ngoại lệ MoMo: tin không có số TK (account_ref null) nên gắn theo "ví MoMo duy nhất" của user.
+ * Đúng 1 tài khoản bank_name 'MoMo' -> gắn; 0 hoặc >= 2 -> {} (vào hộp tin, reason no_account).
  */
 export async function resolveRefs(
   db: SupabaseClient,
   p: ParsedTransaction,
   userId: string,
 ): Promise<Refs> {
-  if (!p.account_ref) return {}
-
   const isBank = p.source_type === 'bank'
+  const isMoMoWallet = !p.account_ref && isBank && p.bank_name === MOMO_BANK_NAME
+  if (!p.account_ref && !isMoMoWallet) return {}
+
   const table = isBank ? 'accounts' : 'credit_cards'
   const column = isBank ? 'account_number' : 'card_number'
 
-  const { data, error } = await db
+  let query = db
     .from(table)
     .select('id')
     .eq('user_id', userId)
     .eq('bank_name', p.bank_name)
-    .like(column, `%${escapeLike(p.account_ref)}`)
-    .limit(2)
+  if (p.account_ref) query = query.like(column, `%${escapeLike(p.account_ref)}`)
+  const { data, error } = await query.limit(2)
 
   if (error || data?.length !== 1) return {}
   const id = data[0].id as string

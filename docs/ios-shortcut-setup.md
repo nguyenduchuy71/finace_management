@@ -50,6 +50,8 @@ Giao dịch chỉ hiện trong danh sách khi gắn được vào `accounts`/`cr
   `VPBank`, `WOORIVN`, `UOB`, `Sacombank`, `MoMo`, `BIDV`, `OCB`, `Vietinbank`, `Cake`).
 - `account_number`/`card_number` phải **kết thúc bằng 4 ký tự cuối** in trong thông báo
   (vd thông báo ghi `4074***2789` → số thẻ lưu kết thúc bằng `2789`).
+- **MoMo** không in số TK trong thông báo: tạo ĐÚNG MỘT tài khoản `bank_name = MoMo` (số TK dạng `****` + 4 ký tự bất kỳ,
+  vd 4 số cuối điện thoại), mọi giao dịch MoMo tự gắn vào đó. Có 0 hoặc ≥ 2 tài khoản MoMo thì tin vào hộp "Chưa phân loại".
 
 Sai một trong hai → giao dịch vẫn vào dashboard nhưng không hiện trong danh sách
 (xem `getUnlinkedCount()`).
