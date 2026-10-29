@@ -107,8 +107,8 @@ bank_name/source_type lấy từ TK/thẻ; card_reminder/promo không có p_tx).
 (user_id, owner_names, rate_limited, suspended): **chỉ `service_role`** (revoke khỏi public/anon/authenticated), một UPDATE…RETURNING tăng bộ
 đếm rate limit 60/phút/key + `last_used_at`; 0 dòng = key sai/đã thu hồi.
 `authenticate_api_key` trả thêm `suspended` → parse-transaction `403 suspended` (tin KHÔNG lưu, kiểm trước rate limit).
-`admin_list_orders(p_status, p_provider, p_user, p_limit)` + `admin_resolve_order(p_admin, p_order, p_option, p_reason)` (đơn thanh toán; audit `order_mark_paid`/`order_mark_failed` cùng transaction, lỗi 55000 = đơn đã paid, 42501 = đơn của chính admin; `mark_paid` cộng qua `_apply_credit('purchase', order.id)` như `fulfill_order`),
-`invoke_payment_reconcile()` (cron → pg_net, URL/secret từ Vault, trả sớm khi thiếu),
+`admin_list_orders(p_status, p_provider, p_user, p_limit)` + `admin_resolve_order(p_admin, p_order, p_option, p_reason, p_provider_tx_id default null)` (đơn thanh toán; audit `order_mark_paid`/`order_mark_failed` cùng transaction, lỗi 55000 = đơn đã paid, 42501 = đơn của chính admin, 22023 = `mark_paid` đơn chưa có `provider_tx_id` mà thiếu/sai mã (trim, 1..100), 23505 = mã đã gắn cho đơn khác (unique provider+tx); mã được lưu `coalesce(cũ, mới)` và ghi vào audit payload; `mark_paid` cộng qua `_apply_credit('purchase', order.id)` như `fulfill_order`), `admin_order_owner(p_order)` (edge function tra chủ đơn để chặn đơn của admin),
+`invoke_payment_reconcile()` (cron → pg_net, URL/secret từ Vault, trả sớm khi thiếu; MỖI lần gọi ghi 1 dòng `payment_events` source/provider `'reconcile'`, payload chỉ có `request_id` pg_net), `admin_reconcile_status()` (kết quả gần nhất + status_code của request trong `net._http_response` nếu service_role đọc được, không thì null + số đơn pending > 15 phút chưa được hỏi provider trong 15 phút; UI cảnh báo). Bảng `payment_events` không tự dọn: ~288 dòng reconcile/ngày,
 `admin_user_stats(p_user_ids)` (chỉ count/max; `tx_count_30d` chỉ giao dịch PARSER ghi — không đếm giao dịch user ghi từ hộp tin),
 `admin_user_keys`, `admin_set_suspended`, `admin_revoke_user_keys`, `admin_log_view`, `admin_list_audit`: **chỉ `service_role`**, mỗi thay đổi ghi audit CÙNG transaction; gọi qua edge function `admin`.
 Mọi RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**. Ngoại lệ DUY NHẤT: trigger
@@ -118,7 +118,7 @@ Từ migration `20261029100000` function mới **không** tự có EXECUTE cho P
 
 **RLS:** mọi bảng bật RLS, policy `auth.uid() = user_id`. `anon` bị `revoke all`.
 **KHÔNG thêm policy "admin bypass"** vào bảng nào: admin chỉ đi qua edge function `admin` (service role) — 1 policy admin
-sai là lộ giao dịch của mọi user, và admin theo quyết định chỉ được thấy metadata (không số tiền/mô tả/raw_text).
+sai là lộ giao dịch của mọi user, và admin theo quyết định chỉ được thấy metadata: được xem **số tiền/credit của đơn thanh toán** (metadata thanh toán, tab "Đơn thanh toán") nhưng KHÔNG số tiền/mô tả/raw_text của giao dịch ngân hàng/thẻ.
 Policy **RESTRICTIVE** `not_suspended` (`not (select is_suspended())`) trên transactions, accounts, credit_cards,
 card_cashback_rules, card_cashback_rule_tiers, unparsed_messages, api_keys, credit_ledger, credit_balances: AND với policy cũ để khoá có hiệu lực NGAY cả với
 access token còn hạn (ban GoTrue chỉ chặn đăng nhập + refresh — đã kiểm: REST vẫn 200 sau ban). Bảng mới chứa dữ liệu user
@@ -158,7 +158,7 @@ payment_orders   id, user_id, provider 'momo'|'zalopay', provider_order_ref UNIQ
                  status pending|paid|expired|failed|mismatch, pay_url, paid_at, last_checked_at, expires_at (+15 phút)
                  unique (provider, provider_tx_id) = khoá idempotency của IPN. RLS: select chính chủ + RESTRICTIVE not_suspended;
                  authenticated KHÔNG insert/update/delete (status chỉ đổi qua RPC service_role)
-payment_events   log mọi create/ipn/query (payload đã lọc key/chữ ký). RLS bật, không policy, không grant client
+payment_events   log mọi create/ipn/query/reconcile (payload đã lọc key/chữ ký). RLS bật, không policy, không grant client
 ```
 **RPC (chỉ `service_role`, security invoker):** `create_payment_order(user, provider, package)` (≤ 5 đơn pending chưa hết hạn → 22023, user khoá → 42501,
 gói lạ → P0002), `get_payment_order`, `set_order_pay_url`, `fail_payment_order`, `mark_order_checked`, `log_payment_event`,
@@ -167,8 +167,8 @@ gói lạ → P0002), `get_payment_order`, `set_order_pay_url`, `fail_payment_or
 tx_id đã thấy → duplicate; khoá dòng đơn rồi kiểm lại (2 IPN song song); lệch tiền / quá hạn / đơn không còn pending → `mismatch`, KHÔNG cộng
 (đơn đã `paid` mà tới tx khác thì trả mismatch nhưng GIỮ `paid`); còn lại → paid + `_apply_credit(+credits,'purchase', order.id)` (ref = đơn → cộng đúng 1 lần
 ngay cả khi lớp trên hỏng) + `replay_held_messages` trong khối EXCEPTION (replay lỗi chỉ cảnh báo, không rollback credit đã trả).
-**Xử lý đơn `mismatch` (chưa có tab admin):** xác minh ở cổng thanh toán + `payment_events`, rồi cộng tay bằng action `adjust_credit` của function `admin`
-(ghi audit) hoặc đánh dấu hoàn tiền ngoài app; không có đường tự động.
+**Xử lý đơn `mismatch`:** xác minh ở cổng thanh toán + `payment_events`, rồi dùng tab admin "Đơn thanh toán" (action `resolve_order`: `mark_paid` kèm mã giao dịch của ví nếu đơn chưa có, ghi audit) hoặc đánh dấu hoàn tiền ngoài app; không có đường tự động.
+Lưu ý đã chấp nhận: đơn `failed` vẫn `mark_paid` được (tiền có thể về muộn); đơn của user đang bị khoá vẫn được cộng credit (giống `fulfill_order`).
 
 **Retention `raw_text` (migration `20261102100000`):** `purge_raw_text(p_days int default 30)` → `{transactions, unparsed_messages}`:
 `transactions.raw_text = NULL` (cũ hơn N ngày theo `created_at`); tin hộp tin **đã resolved** cũ hơn N ngày (`received_at`) →

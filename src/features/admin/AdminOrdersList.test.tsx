@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
@@ -11,7 +11,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 import { listAdminOrders, resolveAdminOrder } from '@/services/admin'
 import { toast } from 'sonner'
-import { adminOrder } from '@/test/fixtures/admin'
+import { adminOrder, ordersResult } from '@/test/fixtures/admin'
 import { AdminOrdersList } from './AdminOrdersList'
 
 function renderList() {
@@ -29,7 +29,7 @@ const orders = [
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(listAdminOrders).mockResolvedValue(orders)
+  vi.mocked(listAdminOrders).mockResolvedValue(ordersResult(orders))
   vi.mocked(resolveAdminOrder).mockResolvedValue({ status: 'paid', credits: 500, balance: 600 })
 })
 
@@ -61,7 +61,7 @@ describe('AdminOrdersList', () => {
   })
 
   it('danh sách rỗng và lỗi tải đều có thông báo; lỗi có nút Thử lại', async () => {
-    vi.mocked(listAdminOrders).mockResolvedValueOnce([])
+    vi.mocked(listAdminOrders).mockResolvedValueOnce(ordersResult([]))
     const { unmount } = renderList()
     expect(await screen.findByText('Không có đơn nào.')).toBeInTheDocument()
     unmount()
@@ -81,12 +81,60 @@ describe('AdminOrdersList', () => {
     fireEvent.change(screen.getByLabelText(/Lý do/), { target: { value: 'abcd' } })
     expect(confirm).toBeDisabled()
     fireEvent.change(screen.getByLabelText(/Lý do/), { target: { value: '  đã đối chiếu sao kê  ' } })
+    // Đơn m1 chưa có mã giao dịch của ví -> bắt buộc nhập mã (trống / toàn khoảng trắng / > 100 ký tự đều chặn).
+    expect(confirm).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Mã giao dịch của ví'), { target: { value: '   ' } })
+    expect(confirm).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('Mã giao dịch của ví'), { target: { value: '  TXNEW1 ' } })
     fireEvent.click(confirm)
-    await waitFor(() => expect(resolveAdminOrder).toHaveBeenCalledWith('m1', 'mark_paid', 'đã đối chiếu sao kê'))
+    await waitFor(() => expect(resolveAdminOrder).toHaveBeenCalledWith('m1', 'mark_paid', 'đã đối chiếu sao kê', 'TXNEW1'))
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Đã đánh dấu đã thanh toán (+500 credit)'))
     await waitFor(() => expect(screen.queryByLabelText(/Lý do/)).toBeNull())
     // Sau thao tác: tải lại danh sách đơn (2 lần gọi tổng cộng), không có thao tác nào khác.
     await waitFor(() => expect(listAdminOrders).toHaveBeenCalledTimes(2))
+  })
+
+  it('đơn đã có mã giao dịch: không hiện ô mã, không gửi providerTxId; mark_failed cũng không cần mã', async () => {
+    vi.mocked(listAdminOrders).mockResolvedValue(ordersResult([adminOrder({ id: 'x1', status: 'mismatch', providerTxId: 'TX7' })]))
+    renderList()
+    await screen.findByText('(1)')
+    fireEvent.click(screen.getByRole('button', { name: /Đã thanh toán: đơn 261030_x1/ }))
+    expect(screen.queryByLabelText('Mã giao dịch của ví')).toBeNull()
+    fireEvent.change(screen.getByLabelText(/Lý do/), { target: { value: 'đã đối chiếu sao kê' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Đánh dấu đã thanh toán' }))
+    await waitFor(() => expect(resolveAdminOrder).toHaveBeenCalledWith('x1', 'mark_paid', 'đã đối chiếu sao kê', undefined))
+  })
+
+  it('mark_failed không đòi mã giao dịch', async () => {
+    renderList()
+    await screen.findByText('(4)')
+    fireEvent.click(screen.getByRole('button', { name: /Thất bại: đơn 261030_m1/ }))
+    expect(screen.queryByLabelText('Mã giao dịch của ví')).toBeNull()
+    fireEvent.change(screen.getByLabelText(/Lý do/), { target: { value: 'khách huỷ giao dịch' } })
+    expect(screen.getByRole('button', { name: 'Đánh dấu thất bại' })).toBeEnabled()
+  })
+
+  it('banner đối soát: ẩn khi khoẻ; hiện khi bị bỏ qua / quá cũ / có đơn kẹt / không đọc được', async () => {
+    const recent = new Date().toISOString()
+    const healthy = { lastOutcome: 'sent', lastAt: recent, lastHttpStatus: 200, stalePending: 0 }
+    renderList()
+    await screen.findByText('(4)')
+    expect(screen.queryByText(/Đối soát thanh toán tự động cần kiểm tra/)).toBeNull()
+    cleanup()
+
+    const cases: [Parameters<typeof ordersResult>[1], RegExp][] = [
+      [{ ...healthy, lastOutcome: 'skipped:no_secret' }, /bị bỏ qua \(no_secret\)/],
+      [{ ...healthy, lastAt: new Date(Date.now() - 40 * 60_000).toISOString() }, /cách đây 4\d phút/],
+      [{ ...healthy, stalePending: 3 }, /3 đơn đang chờ quá 15 phút/],
+      [{ ...healthy, lastHttpStatus: 401 }, /trả mã 401/],
+      [null, /Không đọc được trạng thái đối soát/],
+    ]
+    for (const [recon, text] of cases) {
+      vi.mocked(listAdminOrders).mockResolvedValue(ordersResult(orders, recon))
+      renderList()
+      expect(await screen.findByRole('alert')).toHaveTextContent(text)
+      cleanup()
+    }
   })
 
   it('đánh dấu thất bại gửi mark_failed; lỗi order_not_resolvable hiện trong dialog và dialog KHÔNG đóng', async () => {
@@ -97,7 +145,7 @@ describe('AdminOrdersList', () => {
     fireEvent.change(screen.getByLabelText(/Lý do/), { target: { value: 'khách huỷ giao dịch' } })
     fireEvent.click(screen.getByRole('button', { name: 'Đánh dấu thất bại' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Đơn đã được xử lý.')
-    expect(resolveAdminOrder).toHaveBeenCalledWith('w1', 'mark_failed', 'khách huỷ giao dịch')
+    expect(resolveAdminOrder).toHaveBeenCalledWith('w1', 'mark_failed', 'khách huỷ giao dịch', undefined)
     expect(toast.success).not.toHaveBeenCalled()
   })
 

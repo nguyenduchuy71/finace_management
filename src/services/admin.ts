@@ -7,8 +7,8 @@ import {
   type AdminKey, type AdminMutation, type AdminUser, type AuditEntry,
 } from '@/types/admin'
 import {
-  AdminOrderSchema,
-  type AdminOrder, type AdminOrderFilters, type OrderResolution,
+  AdminOrdersResultSchema,
+  type AdminOrdersResult, type AdminOrderFilters, type OrderResolution,
 } from '@/types/admin-orders'
 
 const iso = z.string().datetime({ offset: true })
@@ -67,6 +67,9 @@ const ADMIN_ERRORS: Record<string, string> = {
   invalid_option: 'Cách xử lý không hợp lệ.',
   order_not_found: 'Không tìm thấy đơn (có thể đã bị xoá cùng tài khoản).',
   order_not_resolvable: 'Đơn đã được xử lý (đã thanh toán hoặc đã đóng). Hãy tải lại danh sách.',
+  tx_id_in_use: 'Mã giao dịch này đã gắn với một đơn khác. Kiểm tra lại mã ở ví/sao kê.',
+  invalid_tx_id: 'Mã giao dịch của ví phải từ 1 đến 100 ký tự.',
+  invalid_input: 'Thông tin không hợp lệ: đơn chưa có mã giao dịch thì phải nhập mã giao dịch của ví (1–100 ký tự).',
   // Thông điệp chung; AdminActionDialog thay bằng thông điệp theo đúng chiều khoá / mở khoá.
   ban_failed: 'Thao tác mới hoàn tất một phần (chưa cập nhật trạng thái đăng nhập). Bấm lại để hoàn tất.',
 }
@@ -139,18 +142,20 @@ export async function listAudit(): Promise<AuditEntry[]> {
   return r.entries
 }
 
-/** 100 đơn mới nhất theo bộ lọc (function giới hạn cứng; UI chưa cần phân trang — YAGNI). */
-export async function listAdminOrders(filters: AdminOrderFilters): Promise<AdminOrder[]> {
-  const r = await call(
-    { action: 'list_orders', status: filters.status, provider: filters.provider },
-    z.object({ orders: z.array(AdminOrderSchema) }),
-  )
-  return r.orders
+/** 100 đơn mới nhất theo bộ lọc (function giới hạn cứng; UI chưa cần phân trang — YAGNI) + trạng thái đối soát. */
+export async function listAdminOrders(filters: AdminOrderFilters): Promise<AdminOrdersResult> {
+  return call({ action: 'list_orders', status: filters.status, provider: filters.provider }, AdminOrdersResultSchema)
 }
 
 const ResolveResultSchema = z.object({ status: z.enum(['paid', 'failed']), credits: z.number().int(), balance: z.number().int() })
 
-/** mark_paid cộng credit của đơn đúng 1 lần (server idempotent); ghi audit cùng transaction. */
-export async function resolveAdminOrder(orderId: string, option: OrderResolution, reason: string) {
-  return call({ action: 'resolve_order', orderId, option, reason }, ResolveResultSchema)
+/**
+ * mark_paid cộng credit của đơn đúng 1 lần (server idempotent); ghi audit cùng transaction.
+ * `providerTxId` bắt buộc khi đơn chưa có mã giao dịch (server kiểm lại).
+ */
+export async function resolveAdminOrder(orderId: string, option: OrderResolution, reason: string, providerTxId?: string) {
+  return call(
+    { action: 'resolve_order', orderId, option, reason, ...(providerTxId ? { providerTxId } : {}) },
+    ResolveResultSchema,
+  )
 }

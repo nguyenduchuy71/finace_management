@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useAdminOrders } from '@/hooks/useAdmin'
+import { useNow } from '@/hooks/useNow'
 import {
-  ORDER_PROVIDER_LABEL, ORDER_STATUS_LABEL, OrderProviderSchema, OrderStatusSchema, allowedResolutions,
+  ORDER_PROVIDER_LABEL, ORDER_STATUS_LABEL, OrderProviderSchema, OrderStatusSchema, allowedResolutions, reconcileWarnings,
   type AdminOrder, type AdminOrderFilters, type OrderResolution, type OrderStatus,
 } from '@/types/admin-orders'
 import { formatVND } from '@/utils/currency'
@@ -23,17 +24,30 @@ function StatusBadge({ status }: { status: OrderStatus }) {
 
 const RESOLUTION_BUTTON: Record<OrderResolution, string> = { mark_paid: 'Đã thanh toán', mark_failed: 'Thất bại' }
 
+/** Cảnh báo đối soát tự động (cron) — chỉ hiện khi có vấn đề. */
+function ReconcileBanner({ warnings }: { warnings: string[] }) {
+  if (warnings.length === 0) return null
+  return (
+    <div role="alert" className="mt-3 rounded-md border border-warning bg-warning/15 p-3 text-sm">
+      <p className="font-medium">Đối soát thanh toán tự động cần kiểm tra</p>
+      <ul className="mt-1 list-disc pl-5">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+    </div>
+  )
+}
+
 /** Tối đa 100 đơn mới nhất theo bộ lọc (server cắt cứng, không phân trang). */
 export function AdminOrdersList() {
   const [filters, setFilters] = useState<AdminOrderFilters>({ status: null, provider: null })
-  const orders = useAdminOrders(filters)
+  const query = useAdminOrders(filters)
+  const now = useNow()
+  const list = query.data?.orders
   const [target, setTarget] = useState<{ order: AdminOrder; option: OrderResolution } | null>(null)
 
   return (
     <Card className="p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-semibold">
-          Đơn thanh toán {orders.isSuccess && <span className="text-muted-foreground">({orders.data.length})</span>}
+          Đơn thanh toán {list && <span className="text-muted-foreground">({list.length})</span>}
         </h2>
         <div className="flex w-full gap-2 sm:w-auto">
           <div className="min-w-0 flex-1 sm:w-44">
@@ -59,18 +73,20 @@ export function AdminOrdersList() {
         </div>
       </div>
 
+      {query.isSuccess && <ReconcileBanner warnings={reconcileWarnings(query.data.reconcile, new Date(now).getTime())} />}
+
       <div className="mt-4">
-        {orders.isPending && <p className="text-sm text-muted-foreground">Đang tải…</p>}
-        {orders.isError && (
+        {query.isPending && <p className="text-sm text-muted-foreground">Đang tải…</p>}
+        {query.isError && (
           <p role="alert" className="text-sm text-destructive">
-            {orders.error.message}{' '}
-            <button type="button" className="underline" onClick={() => orders.refetch()}>Thử lại</button>
+            {query.error.message}{' '}
+            <button type="button" className="underline" onClick={() => query.refetch()}>Thử lại</button>
           </p>
         )}
-        {orders.isSuccess && orders.data.length === 0 && <p className="text-sm text-muted-foreground">Không có đơn nào.</p>}
-        {orders.isSuccess && orders.data.length > 0 && (
+        {list?.length === 0 && <p className="text-sm text-muted-foreground">Không có đơn nào.</p>}
+        {list && list.length > 0 && (
           <ul className="divide-y">
-            {orders.data.map((o) => (
+            {list.map((o) => (
               <li key={o.id} className="space-y-2 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 truncate font-medium">{o.email ?? `${o.userId.slice(0, 8)}… (đã xoá)`}</span>

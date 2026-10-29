@@ -134,8 +134,8 @@ export function useResolveOrder() {
     qc.invalidateQueries({ queryKey: USERS_KEY }),
   ])
   return useMutation({
-    mutationFn: (v: { orderId: string; option: OrderResolution; reason: string }) =>
-      resolveAdminOrder(v.orderId, v.option, v.reason),
+    mutationFn: (v: { orderId: string; option: OrderResolution; reason: string; providerTxId?: string }) =>
+      resolveAdminOrder(v.orderId, v.option, v.reason, v.providerTxId),
     onSuccess: async (r) => {
       await refresh()
       toast.success(r.status === 'paid' ? `Đã đánh dấu đã thanh toán (+${r.credits} credit)` : 'Đã đánh dấu thất bại')

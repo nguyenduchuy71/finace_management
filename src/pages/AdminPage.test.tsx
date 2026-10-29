@@ -24,7 +24,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 import { listAdminUsers, listAudit, getAdminUser, listAdminOrders } from '@/services/admin'
 import { getMfaStatus } from '@/features/auth/mfa'
 import { AuthContext } from '@/features/auth/AuthProvider'
-import { adminOrder, adminUser, sessionWithRole } from '@/test/fixtures/admin'
+import { adminOrder, adminUser, ordersResult, sessionWithRole } from '@/test/fixtures/admin'
 import AdminPage from './AdminPage'
 
 /** Route giống App.tsx: /admin (trang thật) và /accounts (đích chuyển hướng). */
@@ -51,7 +51,7 @@ beforeEach(() => {
   vi.mocked(getMfaStatus).mockResolvedValue({ step: 'verified' })
   vi.mocked(listAdminUsers).mockResolvedValue([adminUser({ id: 'u1', email: 'a@local.dev' })])
   vi.mocked(listAudit).mockResolvedValue([])
-  vi.mocked(listAdminOrders).mockResolvedValue([adminOrder({ id: 'm1' })])
+  vi.mocked(listAdminOrders).mockResolvedValue(ordersResult([adminOrder({ id: 'm1' })]))
   vi.mocked(getAdminUser).mockResolvedValue({ user: adminUser({ id: 'u1' }), keys: [] })
 })
 
