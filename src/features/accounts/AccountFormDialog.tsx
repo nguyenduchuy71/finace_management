@@ -40,6 +40,8 @@ function AccountFormBody({ account, onDone, setBusy }: {
   const update = useUpdateAccount(account)
   const pending = create.isPending || update.isPending
 
+  // Tin MoMo không mang số TK: edge function gắn vào tài khoản MoMo duy nhất của user
+  const isMoMo = canonicalBankName(form.bankName) === 'MoMo'
   const fieldProps = (key: keyof AccountFormInput) => ({
     id: FIELD_ID[key],
     value: form[key],
@@ -97,7 +99,9 @@ function AccountFormBody({ account, onDone, setBusy }: {
           <Input {...fieldProps('accountName')} placeholder="TK lương" />
         </FormField>
         <FormField id="acc-number" label="Số tài khoản" error={errors.accountNumber}
-          hint="4 dấu * + 4 ký tự cuối, ví dụ ****4982">
+          hint={isMoMo
+            ? 'Tin MoMo không có số tài khoản nên ký tự nào cũng được, ví dụ 4 số cuối điện thoại: ****0123. Chỉ nên có MỘT tài khoản MoMo'
+            : '4 dấu * + 4 ký tự cuối, ví dụ ****4982'}>
           <Input {...fieldProps('accountNumber')} placeholder="****4982" />
         </FormField>
         <FormField id="acc-type" label="Loại tài khoản" error={errors.accountType}>
