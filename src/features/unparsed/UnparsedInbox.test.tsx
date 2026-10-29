@@ -52,6 +52,18 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('UnparsedInbox', () => {
+  it('tin giữ vì hết credit: hiện "Chờ nạp credit", KHÔNG có nút phân loại; tin thường vẫn có nút', async () => {
+    const held: UnparsedMessage = { ...TX_MSG, id: 'held1', rawText: 'Giao dich treo -50,000 VND', onHold: true }
+    vi.mocked(getUnparsedMessages).mockResolvedValue({ data: [held, REMINDER], total: 2 })
+    renderInbox()
+    const heldItem = (await screen.findByText(/Giao dich treo/)).closest('li')!
+    expect(within(heldItem).getByText(/Chờ nạp credit/)).toBeInTheDocument()
+    expect(within(heldItem).queryByRole('button')).toBeNull()
+    const normal = screen.getByText(/Tong du no/).closest('li')!
+    expect(within(normal).getByRole('button', { name: 'Ghi thành giao dịch' })).toBeInTheDocument()
+    expect(within(normal).queryByText(/Chờ nạp credit/)).toBeNull()
+  })
+
   it('hiện tin + gợi ý; mặc định ẩn quảng cáo, bật checkbox thì tải cả quảng cáo', async () => {
     renderInbox()
     expect(await screen.findByText(/Giao dịch: -79,000 VND/)).toBeInTheDocument()

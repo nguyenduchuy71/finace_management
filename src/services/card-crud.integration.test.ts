@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { createServiceClient } from '@/test/integration-admin'
 
 // Migration 20261018140000_card_crud_mcc_cashback.sql: quyền ghi thẻ, cột mcc,
 // bảng card_cashback_rules, RPC delete_credit_card.
@@ -10,6 +11,9 @@ import { supabase } from '@/lib/supabase'
 // Kiểm tra chéo 2 user (A không đụng được thẻ/rule/giao dịch của B) cần user thứ
 // hai mà seed không có -> nằm ở supabase/tests/card-crud-rls.sql (chạy trên
 // Postgres tạm, xem hướng dẫn ở đầu file đó).
+
+// authenticated không còn quyền INSERT transactions (chỉ RPC trừ credit): seed giao dịch bằng service_role local.
+const admin = createServiceClient()
 
 const NEW_CARD = {
   bank_name: 'TestBank',
@@ -35,7 +39,7 @@ async function createCard(overrides: Partial<typeof NEW_CARD> = {}) {
 }
 
 async function addTx(cardId: string, amount: number) {
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from('transactions')
     .insert({
       user_id: userId,

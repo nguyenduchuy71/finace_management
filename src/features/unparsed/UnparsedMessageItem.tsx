@@ -39,15 +39,23 @@ export function UnparsedMessageItem({ message, disabled, onRecord, onMark }: Pro
       </div>
       {/* whitespace-pre-line: giữ xuống dòng của thông báo gốc (mỗi field một dòng). */}
       <p className="line-clamp-4 whitespace-pre-line break-words rounded-lg bg-muted/60 p-3 text-sm">{message.rawText}</p>
-      <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={onRecord} disabled={disabled}>Ghi thành giao dịch</Button>
-        <Button size="sm" variant="outline" onClick={() => onMark('card_reminder')} disabled={disabled}>
-          Nhắc thanh toán thẻ
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => onMark('promo')} disabled={disabled}>
-          Bỏ qua (quảng cáo)
-        </Button>
-      </div>
+      {message.onHold ? (
+        // Tin giữ vì hết credit: chỉ hệ thống ghi được — tự động ngay khi số dư được cộng (nạp tiền hoặc quản trị
+        // viên điều chỉnh). Ẩn nút phân loại.
+        <p role="status" className="rounded-lg border border-warning p-3 text-sm">
+          <strong>Chờ nạp credit.</strong> Tin sẽ tự được ghi thành giao dịch ngay khi số dư credit của bạn được cộng.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={onRecord} disabled={disabled}>Ghi thành giao dịch</Button>
+          <Button size="sm" variant="outline" onClick={() => onMark('card_reminder')} disabled={disabled}>
+            Nhắc thanh toán thẻ
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onMark('promo')} disabled={disabled}>
+            Bỏ qua (quảng cáo)
+          </Button>
+        </div>
+      )}
     </li>
   )
 }

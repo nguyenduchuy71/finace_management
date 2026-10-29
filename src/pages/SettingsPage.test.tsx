@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import type { ReactNode } from 'react'
 
@@ -29,7 +30,7 @@ function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
-      <AuthContext.Provider value={{ session: SESSION, loading: false }}>{children}</AuthContext.Provider>
+      <AuthContext.Provider value={{ session: SESSION, loading: false }}><MemoryRouter>{children}</MemoryRouter></AuthContext.Provider>
     </QueryClientProvider>
   )
   render(<SettingsPage />, { wrapper })
@@ -52,6 +53,12 @@ beforeEach(() => {
 })
 
 describe('SettingsPage — mount thật với hook thật', () => {
+  it('có liên kết tới chính sách bảo mật và điều khoản', () => {
+    renderPage()
+    expect(screen.getByRole('link', { name: 'Chính sách bảo mật' })).toHaveAttribute('href', '/privacy')
+    expect(screen.getByRole('link', { name: 'Điều khoản sử dụng' })).toHaveAttribute('href', '/terms')
+  })
+
   it('render đủ 3 section, tải dữ liệu MỘT lần, không render loop', async () => {
     renderPage()
 

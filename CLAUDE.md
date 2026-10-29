@@ -2,7 +2,7 @@
 
 ## Overview
 
-Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions, kèm quản lý thẻ (thêm/sửa/xoá), gán MCC cho giao dịch thẻ và hoàn tiền ước tính theo rule của từng thẻ (`docs/credit-card-cashback.md`). Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`. Giao diện thương hiệu **"Ví Jade"** (sáng/tối, xem [Styling](#styling--ví-jade)).
+Personal finance dashboard (React + TypeScript + Vite) for managing bank accounts and credit card transactions, kèm quản lý thẻ (thêm/sửa/xoá), gán MCC cho giao dịch thẻ và hoàn tiền ước tính theo rule của từng thẻ (`docs/credit-card-cashback.md`). Backed by **Supabase** (Postgres + Auth + RLS + Edge Functions). Giao dịch được nạp tự động từ thông báo SMS/push của ngân hàng qua iOS Shortcut → Edge Function `parse-transaction`; mỗi giao dịch ghi thành công trừ 1 **credit** (RPC `ingest_transaction` nguyên tử, hết credit thì tin được giữ, nạp lại / admin cộng thì replay; phân loại thủ công ở hộp tin cũng tốn 1 credit qua edge function `resolve-unparsed` — xem `docs/claude/database-schema.md`). Giao diện thương hiệu **"Ví Jade"** (sáng/tối, xem [Styling](#styling--ví-jade)).
 
 ---
 
@@ -48,8 +48,12 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 Anon key nằm trong bundle JS của browser — **RLS ở DB là lớp bảo vệ duy nhất**.
 Production: set 2 biến này trong Vercel dashboard (không hardcode vào `vercel.json`).
 
-Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legacy** single-tenant — `SHORTCUT_SECRET`, `DEFAULT_USER_ID`,
-`OWNER_NAMES` (gỡ ở phase 4 của `plans/261027-1012-saas-signup-api-key-credits/`). User mới xác thực bằng API key riêng.
+Biến pháp lý (đặt trong Vercel **Production**; `.env.example` để trống): `VITE_LEGAL_OPERATOR_NAME`, `VITE_LEGAL_CONTACT_EMAIL`,
+`VITE_DATA_REGION` — nguồn duy nhất là `src/config/legal-config.ts`, hiện trên `/privacy` và `/terms`. Trống thì dev thấy marker
+"[chưa điền]"; `vite build` với `VERCEL_ENV=production` **FAIL** khi thiếu (`src/config/legal-env-guard.ts`; local/CI verify vẫn qua).
+
+Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER_ID`, `OWNER_NAMES` cho đường **legacy**
+`x-shortcut-secret` (tài khoản chủ app) — **giữ lâu dài, không gỡ** (quyết định chủ app 2026-10-29). User mới xác thực bằng API key riêng.
 
 ---
 
@@ -89,8 +93,10 @@ Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legac
 /dashboard     → DashboardPage
 /accounts      → BankAccountsPage ("Giao dịch ngân hàng": ?view=inbox|recorded — hộp tin chưa phân loại / giao dịch theo TK)
 /credit-cards  → CreditCardsPage (?view=all = "Nhiều thẻ"; mặc định "Từng thẻ")
-/settings      → SettingsPage (API key cho Shortcut, tên chủ TK, xoá tài khoản)
+/settings      → SettingsPage (số dư + lịch sử credit, nạp credit MoMo/ZaloPay + lịch sử đơn, API key cho Shortcut, tên chủ TK, xoá tài khoản)
+/payment/return → PaymentReturnPage (?order=<id>; ví đưa user về; CHỈ hiển thị + poll trạng thái đơn, không bao giờ cộng credit)
 /signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
+/privacy, /terms → PrivacyPage / TermsPage (public, lazy; nội dung tĩnh trong features/legal/; version = PRIVACY_POLICY_VERSION ở types/api-key.ts — đổi nội dung thì tăng số này)
 /admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```
 
@@ -124,6 +130,11 @@ All routes wrapped in `<AppShell>` (header + layout + chat button/panel).
     không đoán `1.5` / `1,000.000` (từng bị đọc thành 15đ / 1.000.000đ).
 11. **Không cắt cụt im lặng:** `exportTransactions` báo lỗi khi vượt 100 trang (50.000 dòng) thay vì trả mảng thiếu —
     dữ liệu thiếu làm CSV và hoàn tiền ước tính sai mà không ai biết.
+12. **Credit nguyên tử:** `transactions` chỉ có 2 đường ghi, cả hai service_role + trừ credit cùng transaction (khoá `FOR UPDATE` hàng số dư): RPC
+    `ingest_transaction` (parser/backfill) và `resolve_unparsed_charged` (edge function `resolve-unparsed`, phân loại thủ công = 1 credit). `authenticated`
+    **không có quyền INSERT `transactions`** — web không được `.from('transactions').insert`; test cần seed giao dịch thì dùng service_role local
+    (`src/test/integration-admin.ts`). Không `.from('transactions').insert` trong edge function. Client chỉ ĐỌC số dư/sổ cái. Chủ app đặt
+    `credit_balances.unlimited` bằng SQL. Credit chào mừng chỉ cấp sau khi email xác nhận (production cần bật confirmations + SMTP).
 
 ---
 

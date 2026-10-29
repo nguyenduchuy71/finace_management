@@ -1,10 +1,15 @@
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import type { ApiError } from '@/types/api'
+import { CreditLedgerEntrySchema, type CreditLedgerEntry } from '@/types/credit'
 import {
   AdminUserSchema, AuditActionSchema,
   type AdminKey, type AdminMutation, type AdminUser, type AuditEntry,
 } from '@/types/admin'
+import {
+  AdminOrdersResultSchema,
+  type AdminOrdersResult, type AdminOrderFilters, type OrderResolution,
+} from '@/types/admin-orders'
 
 const iso = z.string().datetime({ offset: true })
 
@@ -22,6 +27,11 @@ const AdminKeyWireSchema = z.object({
   id: k.id, name: k.name, prefix: k.prefix, last4: k.last4,
   createdAt: k.created_at, lastUsedAt: k.last_used_at, revokedAt: k.revoked_at,
 }))
+
+// Dòng sổ cái từ RPC admin_user_ledger (snake_case).
+const LedgerWireSchema = z.object({
+  id: z.number().int(), delta: z.number().int(), kind: CreditLedgerEntrySchema.shape.kind, created_at: iso,
+}).transform((l): CreditLedgerEntry => ({ id: l.id, delta: l.delta, kind: l.kind, createdAt: l.created_at }))
 
 const AuditEntryWireSchema = z.object({
   id: z.number().int(),
@@ -49,6 +59,17 @@ const ADMIN_ERRORS: Record<string, string> = {
   user_not_found: 'Không tìm thấy user (có thể đã bị xoá).',
   cannot_target_self: 'Không thể thao tác lên chính tài khoản của bạn.',
   cannot_target_admin: 'Không thể thao tác lên tài khoản quản trị khác.',
+  invalid_delta: 'Số credit phải là số nguyên khác 0 (tối đa ±1.000.000).',
+  insufficient_credit: 'Số dư không đủ để trừ.',
+  invalid_status: 'Trạng thái đơn không hợp lệ.',
+  invalid_provider: 'Cổng thanh toán không hợp lệ.',
+  invalid_order_id: 'Mã đơn không hợp lệ.',
+  invalid_option: 'Cách xử lý không hợp lệ.',
+  order_not_found: 'Không tìm thấy đơn (có thể đã bị xoá cùng tài khoản).',
+  order_not_resolvable: 'Đơn đã được xử lý (đã thanh toán hoặc đã đóng). Hãy tải lại danh sách.',
+  tx_id_in_use: 'Mã giao dịch này đã gắn với một đơn khác. Kiểm tra lại mã ở ví/sao kê.',
+  invalid_tx_id: 'Mã giao dịch của ví phải từ 1 đến 100 ký tự.',
+  invalid_input: 'Thông tin không hợp lệ: đơn chưa có mã giao dịch thì phải nhập mã giao dịch của ví (1–100 ký tự).',
   // Thông điệp chung; AdminActionDialog thay bằng thông điệp theo đúng chiều khoá / mở khoá.
   ban_failed: 'Thao tác mới hoàn tất một phần (chưa cập nhật trạng thái đăng nhập). Bấm lại để hoàn tất.',
 }
@@ -97,8 +118,18 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
 }
 
 /** Mỗi lần gọi ghi 1 dòng audit `view_user` ở server — đừng gọi lặp vô cớ. */
-export async function getAdminUser(userId: string): Promise<{ user: AdminUser; keys: AdminKey[] }> {
-  return call({ action: 'get_user', userId }, z.object({ user: AdminUserSchema, keys: z.array(AdminKeyWireSchema) }))
+export async function getAdminUser(
+  userId: string,
+): Promise<{ user: AdminUser; keys: AdminKey[]; ledger?: CreditLedgerEntry[] }> {
+  return call({ action: 'get_user', userId }, z.object({
+    user: AdminUserSchema, keys: z.array(AdminKeyWireSchema), ledger: z.array(LedgerWireSchema).default([]),
+  }))
+}
+
+/** Cộng/trừ credit (delta nguyên ≠ 0), ghi audit cùng transaction. Trả số dư mới. */
+export async function adjustAdminCredit(userId: string, delta: number, reason: string): Promise<number> {
+  const r = await call({ action: 'adjust_credit', userId, delta, reason }, z.object({ balance: z.number().int() }))
+  return r.balance
 }
 
 export async function runAdminMutation(action: AdminMutation, userId: string, reason: string): Promise<void> {
@@ -109,4 +140,22 @@ export async function runAdminMutation(action: AdminMutation, userId: string, re
 export async function listAudit(): Promise<AuditEntry[]> {
   const r = await call({ action: 'list_audit', limit: 200 }, z.object({ entries: z.array(AuditEntryWireSchema) }))
   return r.entries
+}
+
+/** 100 đơn mới nhất theo bộ lọc (function giới hạn cứng; UI chưa cần phân trang — YAGNI) + trạng thái đối soát. */
+export async function listAdminOrders(filters: AdminOrderFilters): Promise<AdminOrdersResult> {
+  return call({ action: 'list_orders', status: filters.status, provider: filters.provider }, AdminOrdersResultSchema)
+}
+
+const ResolveResultSchema = z.object({ status: z.enum(['paid', 'failed']), credits: z.number().int(), balance: z.number().int() })
+
+/**
+ * mark_paid cộng credit của đơn đúng 1 lần (server idempotent); ghi audit cùng transaction.
+ * `providerTxId` bắt buộc khi đơn chưa có mã giao dịch (server kiểm lại).
+ */
+export async function resolveAdminOrder(orderId: string, option: OrderResolution, reason: string, providerTxId?: string) {
+  return call(
+    { action: 'resolve_order', orderId, option, reason, ...(providerTxId ? { providerTxId } : {}) },
+    ResolveResultSchema,
+  )
 }

@@ -38,3 +38,15 @@ describe('LoginPage — thông điệp lỗi', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Đăng nhập thất bại. Kiểm tra lại email và mật khẩu.'))
   })
 })
+
+describe('LoginPage — liên kết pháp lý', () => {
+  it('có liên kết tới /privacy và /terms', () => {
+    render(
+      <AuthContext.Provider value={{ session: null, loading: false }}>
+        <MemoryRouter><LoginPage /></MemoryRouter>
+      </AuthContext.Provider>,
+    )
+    expect(screen.getByRole('link', { name: 'Chính sách bảo mật' })).toHaveAttribute('href', '/privacy')
+    expect(screen.getByRole('link', { name: 'Điều khoản sử dụng' })).toHaveAttribute('href', '/terms')
+  })
+})

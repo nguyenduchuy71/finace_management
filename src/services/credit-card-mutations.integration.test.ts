@@ -6,10 +6,14 @@ import {
 import { getCreditCards } from './creditCards'
 import { getUnlinkedCount } from './accounts'
 import type { CardFormValues } from '@/types/credit-card-form'
+import { createServiceClient } from '@/test/integration-admin'
 
 // Kiểm service THẬT (mapper, Zod, RLS, RPC) trên Supabase local. Dùng chung DB với các
 // file integration khác (assert tổng cố định theo seed) nên mọi thẻ/giao dịch tạo ở đây
 // đều được dọn, kể cả khi test fail giữa chừng.
+
+// authenticated không còn quyền INSERT transactions (chỉ RPC trừ credit): seed giao dịch bằng service_role local.
+const admin = createServiceClient()
 
 const BANK = 'MutBank'
 const values = (overrides: Partial<CardFormValues> = {}): CardFormValues => ({
@@ -27,7 +31,7 @@ async function create(overrides: Partial<CardFormValues> = {}) {
 }
 
 async function addTx(cardId: string, amount: number) {
-  const { error } = await supabase.from('transactions').insert({
+  const { error } = await admin.from('transactions').insert({
     user_id: userId, bank_name: BANK, amount, transaction_date: new Date().toISOString(),
     source_type: 'credit_card', card_id: cardId,
   })

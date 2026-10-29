@@ -2,10 +2,14 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { supabase } from '@/lib/supabase'
 import { getCreditCardTransactions, updateCardTransaction, updateCardTransactionMcc } from './creditCards'
 import { exportTransactions } from './exports'
+import { createServiceClient } from '@/test/integration-admin'
 
 // Service MCC chạy trên Supabase local THẬT (Zod, RLS, cột mcc, TX_COLUMNS). Dùng chung DB
 // với các file integration khác (assert tổng cố định theo seed) nên mọi dữ liệu tạo ở đây
 // đều được dọn, kể cả khi test fail giữa chừng.
+
+// authenticated không còn quyền INSERT transactions (chỉ RPC trừ credit): seed giao dịch bằng service_role local.
+const admin = createServiceClient()
 
 const BANK = 'MccBank'
 let userId = ''
@@ -33,7 +37,7 @@ beforeAll(async () => {
   if (card.error) throw card.error
   cardId = card.data.id
 
-  const tx = await supabase.from('transactions').insert({
+  const tx = await admin.from('transactions').insert({
     user_id: userId, bank_name: BANK, amount: -120000, merchant_name: 'WINMART HCM',
     description: 'WINMART HCM', transaction_date: new Date().toISOString(),
     source_type: 'credit_card', card_id: cardId,

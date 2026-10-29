@@ -69,6 +69,17 @@ describe('SignupPage — chặn trước khi gọi signUp', () => {
   })
 })
 
+describe('SignupPage — liên kết pháp lý', () => {
+  it('câu đồng ý dẫn tới /privacy và /terms (mở tab mới, không mất form)', () => {
+    renderPage()
+    const privacy = screen.getByRole('link', { name: 'Chính sách bảo mật' })
+    const terms = screen.getByRole('link', { name: 'Điều khoản sử dụng' })
+    expect(privacy).toHaveAttribute('href', '/privacy')
+    expect(terms).toHaveAttribute('href', '/terms')
+    expect(privacy).toHaveAttribute('target', '_blank')
+  })
+})
+
 describe('SignupPage — gửi signUp', () => {
   it('gửi email, mật khẩu, privacy_policy_version và emailRedirectTo', async () => {
     renderPage()
@@ -83,7 +94,7 @@ describe('SignupPage — gửi signUp', () => {
         emailRedirectTo: `${window.location.origin}/settings`,
       },
     })
-    expect(PRIVACY_POLICY_VERSION).toBe('2026-10')
+    expect(PRIVACY_POLICY_VERSION).toBe('2026-11')
   })
 
   it('không có session (bật xác nhận email) -> màn "kiểm tra email" với địa chỉ đã nhập', async () => {

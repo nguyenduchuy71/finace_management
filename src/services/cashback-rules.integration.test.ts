@@ -6,10 +6,14 @@ import {
 } from './cashbackRules'
 import { computeCashback } from '@/utils/cashback'
 import type { CashbackRuleInput } from '@/types/cashback'
+import { createServiceClient } from '@/test/integration-admin'
 
 // Service rule hoàn tiền chạy trên Supabase local THẬT (RLS, ràng buộc, Zod, phân trang chu kỳ).
 // Dùng chung DB với các file integration khác (assert tổng cố định theo seed) nên mọi dữ liệu
 // tạo ở đây đều được dọn, kể cả khi test fail giữa chừng.
+
+// authenticated không còn quyền INSERT transactions (chỉ RPC trừ credit): seed giao dịch bằng service_role local.
+const admin = createServiceClient()
 
 const BANK = 'CashBank'
 const values = (over: Partial<CashbackRuleInput> = {}): CashbackRuleInput => ({
@@ -25,7 +29,7 @@ async function cleanup() {
 }
 
 async function addTx(amount: number, at: string, mcc?: string) {
-  const { error } = await supabase.from('transactions').insert({
+  const { error } = await admin.from('transactions').insert({
     user_id: userId, bank_name: BANK, amount, transaction_date: at, source_type: 'credit_card',
     card_id: cardId, merchant_name: 'x', mcc: mcc ?? null,
   })
@@ -253,7 +257,7 @@ describe('getCycleExpenses — biên chu kỳ nửa mở [start, end)', () => {
       merchant_name: 'bulk', mcc: '5411',
       transaction_date: new Date(Date.UTC(2026, 5, 1, 0, 0, i)).toISOString(),
     }))
-    const ins = await supabase.from('transactions').insert(rows)
+    const ins = await admin.from('transactions').insert(rows)
     if (ins.error) throw ins.error
 
     const got = await getCycleExpenses(cardId, '2026-06-01T00:00:00Z', '2026-07-01T00:00:00Z')
