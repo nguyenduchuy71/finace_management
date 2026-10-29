@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import type { AdminKey, AdminUser, AuditEntry } from '@/types/admin'
-import type { AdminOrder } from '@/types/admin-orders'
+import type { AdminOrder, AdminOrdersResult, ReconcileStatus } from '@/types/admin-orders'
 
 /** User mặc định: đang hoạt động, có 1 key còn hiệu lực. Ghi đè từng trường khi cần. */
 export const adminUser = (over: Partial<AdminUser> & { id: string }): AdminUser => ({
@@ -76,3 +76,8 @@ export const adminOrder = (over: Partial<AdminOrder> & { id: string }): AdminOrd
   lastCheckedAt: null,
   ...over,
 })
+
+/** Response `list_orders`: mặc định đối soát khoẻ (vừa chạy, 200, không đơn kẹt) -> không hiện banner. */
+export const ordersResult = (orders: AdminOrder[], reconcile: ReconcileStatus | null = {
+  lastOutcome: 'sent', lastAt: new Date().toISOString(), lastHttpStatus: 200, stalePending: 0,
+}): AdminOrdersResult => ({ orders, reconcile })

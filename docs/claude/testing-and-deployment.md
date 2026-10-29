@@ -91,6 +91,7 @@ Migration `20261103100000_payment_reconcile_cron.sql`: job `payment-reconcile` (
 hàm này đọc URL + secret từ **Vault lúc chạy** rồi `net.http_post` tới edge function `payment-reconcile` (header `x-reconcile-secret`).
 Không secret nào nằm trong migration hay `cron.job.command`. Thiếu extension / vault / secret thì hàm trả `skipped:*` và không làm gì (không lỗi).
 Local: migration tự đặt lịch (pg_cron/pg_net/vault có sẵn) nhưng chưa có secret nên job im lặng; xem `select public.invoke_payment_reconcile()` → `skipped:no_secret`.
+Mỗi lần chạy (kể cả `skipped:*`) ghi 1 dòng `payment_events` (source `reconcile`); tab admin "Đơn thanh toán" hiện banner cảnh báo khi kết quả gần nhất là `skipped:*`, quá 15 phút không có dòng mới, request pg_net trả non-2xx (nếu `net._http_response` đọc được), hoặc có đơn pending kẹt > 15 phút. Trên Supabase thật nếu service_role không đọc được `net._http_response` thì status_code luôn null (chỉ mất cảnh báo non-2xx); kiểm bằng `select * from net._http_response order by id desc limit 5`.
 
 Production (một lần):
 1. Dashboard → Database → Extensions: bật `pg_cron` và `pg_net` (Vault đã bật sẵn).

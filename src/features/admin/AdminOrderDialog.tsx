@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useResolveOrder } from '@/hooks/useAdmin'
 import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 import { getErrorMessage } from '@/services/api-errors'
 import { ADMIN_REASON_LENGTH } from '@/types/admin'
-import { ORDER_PROVIDER_LABEL, type AdminOrder, type OrderResolution } from '@/types/admin-orders'
+import { ORDER_PROVIDER_LABEL, OrderTxIdSchema, type AdminOrder, type OrderResolution } from '@/types/admin-orders'
 import { formatVND } from '@/utils/currency'
 
 const COPY: Record<OrderResolution, { title: string; effect: (o: AdminOrder) => string; confirm: string; destructive: boolean }> = {
@@ -33,18 +34,24 @@ function Body({ order, option, setBusy, onDone }: {
 }) {
   const resolve = useResolveOrder()
   const [reason, setReason] = useState('')
+  const [txId, setTxId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const copy = COPY[option]
   const { min, max } = ADMIN_REASON_LENGTH
   const length = reason.trim().length
-  const valid = length >= min && length <= max
+  // Đơn chưa có mã giao dịch mà đánh dấu đã thanh toán: bắt buộc nhập mã của ví (server kiểm lại).
+  const needsTxId = option === 'mark_paid' && !order.providerTxId
+  const txIdOk = !needsTxId || OrderTxIdSchema.safeParse(txId).success
+  const valid = length >= min && length <= max && txIdOk
 
   async function onConfirm() {
     if (!valid || resolve.isPending) return
     setError(null)
     setBusy(true)
     try {
-      await resolve.mutateAsync({ orderId: order.id, option, reason: reason.trim() })
+      await resolve.mutateAsync({
+        orderId: order.id, option, reason: reason.trim(), ...(needsTxId ? { providerTxId: txId.trim() } : {}),
+      })
       onDone()
     } catch (err) {
       setError(getErrorMessage(err, 'Không xử lý được đơn. Vui lòng thử lại.'))
@@ -65,6 +72,18 @@ function Body({ order, option, setBusy, onDone }: {
         <dt className="text-muted-foreground">Mã đơn</dt><dd className="break-all">{order.providerOrderRef}</dd>
         <dt className="text-muted-foreground">Mã giao dịch</dt><dd className="break-all">{order.providerTxId ?? '—'}</dd>
       </dl>
+      {needsTxId && (
+        <div className="space-y-1 text-sm">
+          <label htmlFor="order-tx-id" className="font-medium">Mã giao dịch của ví</label>
+          <Input
+            id="order-tx-id" value={txId} maxLength={100} autoComplete="off" aria-describedby="order-tx-id-hint"
+            onChange={(e) => { setTxId(e.target.value); setError(null) }}
+          />
+          <p id="order-tx-id-hint" className="text-xs text-muted-foreground">
+            Bắt buộc: mã MoMo transId / ZaloPay zp_trans_id lấy từ ví hoặc sao kê. Mỗi mã chỉ gắn được với một đơn.
+          </p>
+        </div>
+      )}
       <div className="space-y-1 text-sm">
         <label htmlFor="order-reason" className="font-medium">Lý do (ghi vào nhật ký quản trị)</label>
         <Textarea

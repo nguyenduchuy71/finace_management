@@ -1,4 +1,5 @@
--- Kiểm tra invoke_payment_reconcile (migration 20261103100000): quyền + đường trả sớm + gọi pg_net đúng khi có secret.
+-- Kiểm tra invoke_payment_reconcile (20261103100000 + 20261103120000): quyền + đường trả sớm + gọi pg_net đúng khi có secret
+-- + mỗi kết quả được ghi vào payment_events + admin_reconcile_status.
 -- Postgres trần không có pg_net/vault -> test dựng STUB (schema net + vault) để chạy cả nhánh "có secret".
 --
 --   docker run -d --rm --name scratch-pg17 -e POSTGRES_PASSWORD=x postgres:17-alpine
@@ -26,6 +27,9 @@ begin
 end $$;
 create or replace function t.n(q text) returns text language plpgsql as $$
 declare r text; begin execute q into r; return r; end $$;
+
+-- 0. Chưa có lần đối soát nào: trạng thái rỗng, không lỗi
+select t.check('chưa có sự kiện -> last_outcome null, stale 0', (select coalesce(last_outcome, 'null') || '|' || stale_pending from public.admin_reconcile_status()), 'null|0');
 
 -- 1. Quyền
 select t.check('anon không gọi được', t.as_role('anon', 'select public.invoke_payment_reconcile()'), '42501');
@@ -65,3 +69,47 @@ select t.check('gọi đúng URL', t.n('select url from net.calls'), 'https://x.
 select t.check('header x-reconcile-secret lấy từ vault', t.n($$select headers->>'x-reconcile-secret' from net.calls$$), 'S3CRET');
 select t.check('migration không chứa secret/URL: lệnh job chỉ gọi hàm', (select (position('S3CRET' in prosrc) = 0
   and position('supabase.co' in prosrc) = 0)::text from pg_proc where proname = 'invoke_payment_reconcile'), 'true');
+
+-- 6. Mỗi lần gọi ghi 1 dòng payment_events (kể cả trả sớm); không URL/secret trong dòng
+select t.check('mỗi kết quả được ghi theo thứ tự', (select string_agg(result, ',' order by id) from payment_events where source = 'reconcile'),
+  'skipped:no_pg_net,skipped:no_pg_net,skipped:no_vault,skipped:no_secret,skipped:no_secret,skipped:no_secret,sent');
+select t.check('dòng reconcile: provider + source = reconcile', (select (count(*) = 7 and bool_and(provider = 'reconcile' and source = 'reconcile'))::text
+  from payment_events where source = 'reconcile'), 'true');
+select t.check('dòng sent mang request_id của pg_net', (select payload ->> 'request_id' from payment_events where result = 'sent'), '1');
+select t.check('không dòng nào chứa secret hoặc URL', (select (count(*) = 0)::text from payment_events
+  where (payload::text || result) like '%S3CRET%' or (payload::text || result) like '%supabase.co%'), 'true');
+select t.check('CHECK source vẫn chặn giá trị lạ', (select (count(*) = 0)::text from pg_constraint
+  where conname = 'payment_events_source_check' and pg_get_constraintdef(oid) not like '%reconcile%'), 'true');
+
+-- 7. admin_reconcile_status
+select t.check('status: kết quả gần nhất + chưa có phản hồi pg_net -> http null', (select last_outcome || '|' || coalesce(last_http_status::text, 'null')
+  from public.admin_reconcile_status()), 'sent|null');
+create table net._http_response(id bigint, status_code int);
+insert into net._http_response values (1, 200);
+select t.check('status: có net._http_response -> http 200', (select last_http_status::text from public.admin_reconcile_status()), '200');
+update net._http_response set status_code = 401;
+select t.check('status: phản hồi 401 hiện ra', (select last_http_status::text from public.admin_reconcile_status()), '401');
+-- service_role không đọc được schema net -> http null, KHÔNG làm hỏng cả hàm.
+do $$
+declare v text;
+begin
+  set local role service_role;
+  select last_outcome || '|' || coalesce(last_http_status::text, 'null') into v from public.admin_reconcile_status();
+  reset role;
+  perform t.check('service_role không đọc được net: http null, vẫn trả kết quả', v, 'sent|null');
+end $$;
+select t.check('authenticated không đọc status', t.as_role('authenticated', 'select * from public.admin_reconcile_status()'), '42501');
+select t.check('anon không đọc status', t.as_role('anon', 'select * from public.admin_reconcile_status()'), '42501');
+
+-- Đơn pending kẹt: > 15 phút VÀ (chưa hỏi provider HOẶC lần hỏi cuối > 15 phút trước)
+insert into auth.users values ('dddddddd-0000-4000-a000-0000000000c1', null);
+create table t.o as select id from create_payment_order('dddddddd-0000-4000-a000-0000000000c1', 'momo', 'p50k');
+select t.check('đơn mới (< 15 phút) không tính', (select stale_pending::text from public.admin_reconcile_status()), '0');
+update payment_orders set created_at = now() - interval '30 minutes' where id = (select id from t.o);
+select t.check('đơn pending 30 phút chưa hỏi provider -> 1', (select stale_pending::text from public.admin_reconcile_status()), '1');
+update payment_orders set last_checked_at = now() - interval '2 minutes' where id = (select id from t.o);
+select t.check('vừa được đối soát -> 0', (select stale_pending::text from public.admin_reconcile_status()), '0');
+update payment_orders set last_checked_at = now() - interval '20 minutes' where id = (select id from t.o);
+select t.check('lần hỏi cuối 20 phút trước -> 1', (select stale_pending::text from public.admin_reconcile_status()), '1');
+update payment_orders set status = 'paid' where id = (select id from t.o);
+select t.check('đơn không còn pending không tính', (select stale_pending::text from public.admin_reconcile_status()), '0');

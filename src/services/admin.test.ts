@@ -200,10 +200,11 @@ describe('credit', () => {
 
 describe('đơn thanh toán', () => {
   it('listAdminOrders gửi list_orders kèm bộ lọc và trả mảng đã validate', async () => {
-    invoke.mockResolvedValue(ok({ orders: [adminOrder({ id: 'o1' })] }))
+    invoke.mockResolvedValue(ok({ orders: [adminOrder({ id: 'o1' })], reconcile: null }))
     const r = await listAdminOrders({ status: 'mismatch', provider: null })
     expect(invoke).toHaveBeenCalledWith('admin', { body: { action: 'list_orders', status: 'mismatch', provider: null } })
-    expect(r[0].providerOrderRef).toBe('261030_o1')
+    expect(r.orders[0].providerOrderRef).toBe('261030_o1')
+    expect(r.reconcile).toBeNull()
   })
 
   it('listAdminOrders: trạng thái lạ trong response -> invalid_response (không đưa dữ liệu sai lên UI)', async () => {
@@ -216,6 +217,22 @@ describe('đơn thanh toán', () => {
     expect(await resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).toEqual({ status: 'paid', credits: 500, balance: 600 })
     expect(invoke).toHaveBeenCalledWith('admin', {
       body: { action: 'resolve_order', orderId: 'o1', option: 'mark_paid', reason: 'đã đối chiếu' },
+    })
+  })
+
+  it('resolveAdminOrder gửi providerTxId khi có; 409 tx_id_in_use và 400 invalid_input có thông điệp riêng', async () => {
+    invoke.mockResolvedValue(ok({ status: 'paid', credits: 500, balance: 600 }))
+    await resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu', 'TX42')
+    expect(invoke).toHaveBeenLastCalledWith('admin', {
+      body: { action: 'resolve_order', orderId: 'o1', option: 'mark_paid', reason: 'đã đối chiếu', providerTxId: 'TX42' },
+    })
+    invoke.mockResolvedValue(httpError(409, { error: 'tx_id_in_use' }))
+    await expect(resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu', 'TX42')).rejects.toMatchObject({
+      code: 'tx_id_in_use', message: expect.stringContaining('đã gắn với một đơn khác'),
+    })
+    invoke.mockResolvedValue(httpError(400, { error: 'invalid_input' }))
+    await expect(resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).rejects.toMatchObject({
+      code: 'invalid_input', message: expect.stringContaining('mã giao dịch'),
     })
   })
 
