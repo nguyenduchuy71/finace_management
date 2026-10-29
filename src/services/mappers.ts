@@ -57,8 +57,7 @@ function baseTransactionFields(row: TransactionRow) {
     id: row.id,
     amount,
     description: row.description ?? '',
-    // '' (không có category) -> undefined để UI tự phân loại theo merchant
-    category: row.category || undefined,
+    category: row.category ?? undefined,
     kind: row.kind,
     status: row.status,
     transactionDate: toISO(row.transaction_date),

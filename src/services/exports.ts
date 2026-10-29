@@ -9,7 +9,7 @@ import type { TransactionFilters } from './transactionQuery'
  * Lấy TOÀN BỘ giao dịch (đã áp filter) của 1 tài khoản để xuất CSV. Tự lật trang
  * (xem fetchAllTransactions) và báo lỗi thay vì cắt cụt khi vượt trần.
  */
-export function exportAccountTransactions(
+function exportAccountTransactions(
   accountId: string,
   filters?: TransactionFilters
 ): Promise<PaginatedResponse<Transaction>> {

@@ -1,12 +1,10 @@
 import { z } from 'zod'
 import { moneyAmountField } from './form-fields'
 import { TransactionKindSchema } from './account'
-import { CATEGORIES, CategorySchema, type Category } from './categories'
+import { CategorySchema, type Category } from './categories'
 import { MccSchema, type CreditCardTransaction } from './creditCard'
 import type { CardTransactionPatch } from './card-transaction-patch'
 import { toVnLocalInput, vnLocalToISO } from '@/utils/dates'
-
-export const CATEGORY_OPTIONS = CATEGORIES
 
 /** Form "Sửa giao dịch thẻ": mọi ô là chuỗi như trong input; '' = trống. */
 export const CardTxFormSchema = z.object({
