@@ -6,6 +6,10 @@ import {
   AdminUserSchema, AuditActionSchema,
   type AdminKey, type AdminMutation, type AdminUser, type AuditEntry,
 } from '@/types/admin'
+import {
+  AdminOrderSchema,
+  type AdminOrder, type AdminOrderFilters, type OrderResolution,
+} from '@/types/admin-orders'
 
 const iso = z.string().datetime({ offset: true })
 
@@ -57,6 +61,12 @@ const ADMIN_ERRORS: Record<string, string> = {
   cannot_target_admin: 'Không thể thao tác lên tài khoản quản trị khác.',
   invalid_delta: 'Số credit phải là số nguyên khác 0 (tối đa ±1.000.000).',
   insufficient_credit: 'Số dư không đủ để trừ.',
+  invalid_status: 'Trạng thái đơn không hợp lệ.',
+  invalid_provider: 'Cổng thanh toán không hợp lệ.',
+  invalid_order_id: 'Mã đơn không hợp lệ.',
+  invalid_option: 'Cách xử lý không hợp lệ.',
+  order_not_found: 'Không tìm thấy đơn (có thể đã bị xoá cùng tài khoản).',
+  order_not_resolvable: 'Đơn đã được xử lý (đã thanh toán hoặc đã đóng). Hãy tải lại danh sách.',
   // Thông điệp chung; AdminActionDialog thay bằng thông điệp theo đúng chiều khoá / mở khoá.
   ban_failed: 'Thao tác mới hoàn tất một phần (chưa cập nhật trạng thái đăng nhập). Bấm lại để hoàn tất.',
 }
@@ -127,4 +137,20 @@ export async function runAdminMutation(action: AdminMutation, userId: string, re
 export async function listAudit(): Promise<AuditEntry[]> {
   const r = await call({ action: 'list_audit', limit: 200 }, z.object({ entries: z.array(AuditEntryWireSchema) }))
   return r.entries
+}
+
+/** 100 đơn mới nhất theo bộ lọc (function giới hạn cứng; UI chưa cần phân trang — YAGNI). */
+export async function listAdminOrders(filters: AdminOrderFilters): Promise<AdminOrder[]> {
+  const r = await call(
+    { action: 'list_orders', status: filters.status, provider: filters.provider },
+    z.object({ orders: z.array(AdminOrderSchema) }),
+  )
+  return r.orders
+}
+
+const ResolveResultSchema = z.object({ status: z.enum(['paid', 'failed']), credits: z.number().int(), balance: z.number().int() })
+
+/** mark_paid cộng credit của đơn đúng 1 lần (server idempotent); ghi audit cùng transaction. */
+export async function resolveAdminOrder(orderId: string, option: OrderResolution, reason: string) {
+  return call({ action: 'resolve_order', orderId, option, reason }, ResolveResultSchema)
 }

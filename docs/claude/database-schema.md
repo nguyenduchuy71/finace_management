@@ -37,7 +37,7 @@ api_keys       id, user_id, name, prefix ('vj_'+6), last4, key_hash bytea UNIQUE
                trigger api_keys_guard: tối đa 10 key còn hiệu lực/user, thu hồi là vĩnh viễn
 user_settings.suspended_at  admin khoá user (user đọc được, không sửa được). Lý do khoá CHỈ ở admin_audit_log — user đọc
                được user_settings nên không đặt ghi chú nội bộ của admin ở đây
-admin_audit_log  id, admin_id, action 'suspend'|'unsuspend'|'revoke_keys'|'view_user'|'adjust_credit', target_user_id (KHÔNG FK — sống sau khi xoá
+admin_audit_log  id, admin_id, action 'suspend'|'unsuspend'|'revoke_keys'|'view_user'|'adjust_credit'|'order_mark_paid'|'order_mark_failed'|'adjust_credit', target_user_id (KHÔNG FK — sống sau khi xoá
                user), reason (5..500, bắt buộc), payload jsonb (không email/nội dung giao dịch), created_at.
                Append-only (trigger chặn update/delete/truncate cả service_role); RLS bật, không policy, chỉ service_role
 
@@ -107,6 +107,8 @@ bank_name/source_type lấy từ TK/thẻ; card_reminder/promo không có p_tx).
 (user_id, owner_names, rate_limited, suspended): **chỉ `service_role`** (revoke khỏi public/anon/authenticated), một UPDATE…RETURNING tăng bộ
 đếm rate limit 60/phút/key + `last_used_at`; 0 dòng = key sai/đã thu hồi.
 `authenticate_api_key` trả thêm `suspended` → parse-transaction `403 suspended` (tin KHÔNG lưu, kiểm trước rate limit).
+`admin_list_orders(p_status, p_provider, p_user, p_limit)` + `admin_resolve_order(p_admin, p_order, p_option, p_reason)` (đơn thanh toán; audit `order_mark_paid`/`order_mark_failed` cùng transaction, lỗi 55000 = đơn đã paid, 42501 = đơn của chính admin; `mark_paid` cộng qua `_apply_credit('purchase', order.id)` như `fulfill_order`),
+`invoke_payment_reconcile()` (cron → pg_net, URL/secret từ Vault, trả sớm khi thiếu),
 `admin_user_stats(p_user_ids)` (chỉ count/max; `tx_count_30d` chỉ giao dịch PARSER ghi — không đếm giao dịch user ghi từ hộp tin),
 `admin_user_keys`, `admin_set_suspended`, `admin_revoke_user_keys`, `admin_log_view`, `admin_list_audit`: **chỉ `service_role`**, mỗi thay đổi ghi audit CÙNG transaction; gọi qua edge function `admin`.
 Mọi RPC dùng `security invoker` để tôn trọng RLS — **không được đổi sang `security definer`**. Ngoại lệ DUY NHẤT: trigger

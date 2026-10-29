@@ -35,8 +35,9 @@ Integration hộp tin seed `unparsed_messages` bằng service_role **local**: th
 `payment-fulfill.sql` (3 giai đoạn seq/setup/assert, có tranh chấp nhiều session — hướng dẫn ở đầu file). Deno: `_shared/*.test.ts`.
 
 **RLS chéo 2 user** (integration chỉ có 1 test user): `supabase/tests/card-crud-rls.sql`, `card-cashback-tiers-rls.sql`, `unparsed-accounts-rls.sql`,
-`api-keys-rls.sql`, `admin-rls.sql`, `credit-ledger-rls.sql`, `credit-security-fixes.sql` chạy trên Postgres 17 tạm
+`api-keys-rls.sql`, `admin-rls.sql`, `credit-ledger-rls.sql`, `credit-security-fixes.sql`, `payment-reconcile-cron.sql` (dựng stub `net`/`vault`) chạy trên Postgres 17 tạm
 (`docker run postgres:17-alpine` + `scratch-stub.sql` giả `auth.uid()`), hướng dẫn ở đầu file. Không chạy trên stack Supabase đang dùng.
+`payment-fulfill.sql` và `admin-orders.sql` (admin xử lý đơn: `mark_paid` cộng đúng 1 lần kể cả 4 session song song) cũng có giai đoạn song song (lệnh ở đầu file).
 `credit-concurrency.sql` cần nhiều session `psql` thật chạy song song (3 giai đoạn, lệnh ở đầu file): `FOR UPDATE` của `ingest_transaction` —
 bỏ nó (hoặc bỏ kiểm số dư) là test đỏ. Trong file SQL, subquery cùng câu SELECT với lời gọi hàm ghi chỉ thấy dữ liệu TRƯỚC khi ghi:
 đọc trạng thái sau hành động bằng câu lệnh riêng hoặc hàm plpgsql (`t.cnt`, `t.bal`).
@@ -81,5 +82,23 @@ Production giữ `enable_signup = false` cho tới khi đủ TẤT CẢ:
    production, `PAYMENT_ENV=production`, thử nạp thật gói nhỏ nhất.
 3. Biến pháp lý đã đặt ở Vercel Production: `VITE_LEGAL_OPERATOR_NAME`, `VITE_LEGAL_CONTACT_EMAIL`, `VITE_DATA_REGION`
    (thiếu thì build production FAIL); đọc lại `/privacy`, `/terms` trên bản deploy, nên nhờ luật sư rà.
-4. `pg_cron` bật ở production và job `purge-raw-text` có trong `cron.job` (xem `database-schema.md`); `parse_rate_by_source` beta ≥ 90%.
+4. `pg_cron` + `pg_net` bật ở production; job `purge-raw-text` và `payment-reconcile` có trong `cron.job` (xem `database-schema.md` và mục dưới); `parse_rate_by_source` beta ≥ 90%.
 5. Rồi mới bật signup (config Auth qua Management API, xem memory production-supabase-ops).
+
+### Lịch đối soát thanh toán (Supabase Cron)
+
+Migration `20261103100000_payment_reconcile_cron.sql`: job `payment-reconcile` (`*/5 * * * *`) chạy `select public.invoke_payment_reconcile()`,
+hàm này đọc URL + secret từ **Vault lúc chạy** rồi `net.http_post` tới edge function `payment-reconcile` (header `x-reconcile-secret`).
+Không secret nào nằm trong migration hay `cron.job.command`. Thiếu extension / vault / secret thì hàm trả `skipped:*` và không làm gì (không lỗi).
+Local: migration tự đặt lịch (pg_cron/pg_net/vault có sẵn) nhưng chưa có secret nên job im lặng; xem `select public.invoke_payment_reconcile()` → `skipped:no_secret`.
+
+Production (một lần):
+1. Dashboard → Database → Extensions: bật `pg_cron` và `pg_net` (Vault đã bật sẵn).
+2. `supabase secrets set RECONCILE_SECRET=<chuỗi ngẫu nhiên dài>` và `supabase functions deploy payment-reconcile --no-verify-jwt`.
+3. SQL (Management API / SQL editor), hai secret **phải khớp**: `payment_reconcile_secret` = `RECONCILE_SECRET`:
+   `select vault.create_secret('https://<ref>.supabase.co/functions/v1/payment-reconcile', 'payment_reconcile_url');`
+   `select vault.create_secret('<giá trị RECONCILE_SECRET>', 'payment_reconcile_secret');`
+4. Nếu migration chạy khi chưa bật extension: chạy lại khối `do $cron$ … $cron$` ở cuối file (hoặc đúng dòng
+   `select cron.schedule('payment-reconcile', '*/5 * * * *', 'select public.invoke_payment_reconcile()')`).
+5. Kiểm: `select jobname, schedule from cron.job;` · `select * from cron.job_run_details order by start_time desc limit 5;` ·
+   `select status_code, content from net._http_response order by id desc limit 5;` (mong 200). Đổi secret = `vault.update_secret`.

@@ -5,7 +5,10 @@ vi.mock('@/lib/supabase', () => ({ supabase: { functions: { invoke: vi.fn() } } 
 
 import { supabase } from '@/lib/supabase'
 import { adminKey, adminKeyWire, adminUser, auditEntry, auditEntryWire } from '@/test/fixtures/admin'
-import { adjustAdminCredit, getAdminUser, listAdminUsers, listAudit, runAdminMutation } from './admin'
+import {
+  adjustAdminCredit, getAdminUser, listAdminOrders, listAdminUsers, listAudit, resolveAdminOrder, runAdminMutation,
+} from './admin'
+import { adminOrder } from '@/test/fixtures/admin'
 
 const invoke = vi.mocked(supabase.functions.invoke)
 type InvokeResult = Awaited<ReturnType<typeof supabase.functions.invoke>>
@@ -192,5 +195,34 @@ describe('credit', () => {
     })
     invoke.mockResolvedValue(httpError(400, { error: 'invalid_delta' }))
     await expect(adjustAdminCredit('u1', 0, 'khong doi gi')).rejects.toMatchObject({ code: 'invalid_delta' })
+  })
+})
+
+describe('đơn thanh toán', () => {
+  it('listAdminOrders gửi list_orders kèm bộ lọc và trả mảng đã validate', async () => {
+    invoke.mockResolvedValue(ok({ orders: [adminOrder({ id: 'o1' })] }))
+    const r = await listAdminOrders({ status: 'mismatch', provider: null })
+    expect(invoke).toHaveBeenCalledWith('admin', { body: { action: 'list_orders', status: 'mismatch', provider: null } })
+    expect(r[0].providerOrderRef).toBe('261030_o1')
+  })
+
+  it('listAdminOrders: trạng thái lạ trong response -> invalid_response (không đưa dữ liệu sai lên UI)', async () => {
+    invoke.mockResolvedValue(ok({ orders: [{ ...adminOrder({ id: 'o1' }), status: 'refunded' }] }))
+    await expect(listAdminOrders({ status: null, provider: null })).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
+  it('resolveAdminOrder gửi resolve_order và trả kết quả', async () => {
+    invoke.mockResolvedValue(ok({ status: 'paid', credits: 500, balance: 600 }))
+    expect(await resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).toEqual({ status: 'paid', credits: 500, balance: 600 })
+    expect(invoke).toHaveBeenCalledWith('admin', {
+      body: { action: 'resolve_order', orderId: 'o1', option: 'mark_paid', reason: 'đã đối chiếu' },
+    })
+  })
+
+  it('resolveAdminOrder: 409 order_not_resolvable -> thông điệp tiếng Việt, giữ mã', async () => {
+    invoke.mockResolvedValue(httpError(409, { error: 'order_not_resolvable' }))
+    await expect(resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).rejects.toMatchObject({
+      code: 'order_not_resolvable', message: expect.stringContaining('đã được xử lý'),
+    })
   })
 })

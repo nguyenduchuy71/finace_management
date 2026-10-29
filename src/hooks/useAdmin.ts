@@ -1,15 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { adjustAdminCredit, getAdminUser, listAdminUsers, listAudit, runAdminMutation } from '@/services/admin'
+import {
+  adjustAdminCredit, getAdminUser, listAdminOrders, listAdminUsers, listAudit, resolveAdminOrder, runAdminMutation,
+} from '@/services/admin'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdminSession } from '@/features/auth/mfa'
 import type { AdminKey, AdminMutation, AdminUser } from '@/types/admin'
+import type { AdminOrderFilters, OrderResolution } from '@/types/admin-orders'
 import type { CreditLedgerEntry } from '@/types/credit'
 import { QK } from './query-keys'
 
 const ADMIN_KEY = QK.admin
 const USERS_KEY = [...ADMIN_KEY, 'users'] as const
 const AUDIT_KEY = [...ADMIN_KEY, 'audit'] as const
+const ORDERS_KEY = [...ADMIN_KEY, 'orders'] as const
 const userKey = (id: string | null) => [...ADMIN_KEY, 'user', id] as const
 
 /** Chỉ để ẩn/hiện UI — quyền thật kiểm ở function `admin`. */
@@ -106,5 +110,36 @@ export function useAdjustCredit() {
       })
       toast.success('Đã điều chỉnh credit')
     },
+  })
+}
+
+/** Đơn thanh toán theo bộ lọc (filters nằm trong queryKey -> đổi lọc tự tải lại). Không refetch khi focus. */
+export function useAdminOrders(filters: AdminOrderFilters) {
+  return useQuery({
+    queryKey: [...ORDERS_KEY, filters.status, filters.provider],
+    queryFn: () => listAdminOrders(filters),
+    ...ADMIN_QUERY_OPTIONS,
+  })
+}
+
+/**
+ * Xử lý tay đơn. Sau khi xong tải lại đơn + nhật ký + danh sách user (số dư đổi); KHÔNG gọi `get_user`
+ * (ghi audit `view_user`). Lỗi `order_not_resolvable` (đơn vừa đổi trạng thái ở nơi khác) cũng tải lại đơn.
+ */
+export function useResolveOrder() {
+  const qc = useQueryClient()
+  const refresh = () => Promise.all([
+    qc.invalidateQueries({ queryKey: ORDERS_KEY }),
+    qc.invalidateQueries({ queryKey: AUDIT_KEY }),
+    qc.invalidateQueries({ queryKey: USERS_KEY }),
+  ])
+  return useMutation({
+    mutationFn: (v: { orderId: string; option: OrderResolution; reason: string }) =>
+      resolveAdminOrder(v.orderId, v.option, v.reason),
+    onSuccess: async (r) => {
+      await refresh()
+      toast.success(r.status === 'paid' ? `Đã đánh dấu đã thanh toán (+${r.credits} credit)` : 'Đã đánh dấu thất bại')
+    },
+    onError: () => refresh(),
   })
 }
