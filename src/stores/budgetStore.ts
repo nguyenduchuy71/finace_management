@@ -1,27 +1,20 @@
 import { create } from 'zustand'
 import type { BudgetState } from '@/types/budget'
+import { readJSON, writeJSON } from '@/lib/persisted-json'
 
-// Load from localStorage on module init
-function getInitialBudgets(): Record<string, number> {
-  const saved = localStorage.getItem('finance-budgets')
-  if (saved) {
-    try {
-      return JSON.parse(saved) as Record<string, number>
-    } catch {
-      return {}
-    }
-  }
-  return {}
-}
+const BUDGETS_KEY = 'finance-budgets'
 
-const initialBudgets = getInitialBudgets()
+const isBudgetRecord = (v: unknown): v is Record<string, number> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v)
+
+const initialBudgets = readJSON<Record<string, number>>(BUDGETS_KEY, {}, isBudgetRecord)
 
 export const useBudgetStore = create<BudgetState>()((set) => ({
   budgets: initialBudgets,
   setBudget: (category, amount) => {
     set((state: BudgetState) => {
       const newBudgets = { ...state.budgets, [category]: amount }
-      localStorage.setItem('finance-budgets', JSON.stringify(newBudgets))
+      writeJSON(BUDGETS_KEY, newBudgets)
       return { budgets: newBudgets }
     })
   },

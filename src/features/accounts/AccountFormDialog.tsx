@@ -1,10 +1,9 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { useFormBinding } from '@/components/form/useFormBinding'
 import { FormField } from '@/components/form/FormField'
-import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useCreateAccount, useUpdateAccount } from '@/hooks/useAccountMutations'
@@ -16,6 +15,7 @@ import {
 import type { BankAccount } from '@/types/account'
 import { KNOWN_BANK_NAMES, canonicalBankName } from '@/features/creditCards/bank-branding'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 const FIELD_ID: Record<keyof AccountFormInput, string> = {
   bankName: 'acc-bank',
@@ -31,26 +31,17 @@ function AccountFormBody({ account, onDone, setBusy }: {
   onDone: () => void
   setBusy: (busy: boolean) => void
 }) {
-  const [form, setForm] = useState<AccountFormInput>(account ? accountToFormInput(account) : EMPTY_ACCOUNT_FORM)
-  const [errors, setErrors] = useState<AccountFormErrors>({})
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const { form, errors, setErrors, submitError, setSubmitError, field } =
+    useFormBinding<AccountFormInput, AccountFormErrors>(account ? accountToFormInput(account) : EMPTY_ACCOUNT_FORM)
   const setAccountId = useFilterStore((s) => s.setAccountId)
 
   const create = useCreateAccount()
   const update = useUpdateAccount(account)
   const pending = create.isPending || update.isPending
 
-  const fieldProps = (key: keyof AccountFormInput) => ({
-    id: FIELD_ID[key],
-    value: form[key],
-    'aria-invalid': errors[key] ? true : undefined,
-    'aria-describedby': describedBy(FIELD_ID[key], Boolean(errors[key])),
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((f) => ({ ...f, [key]: e.target.value }))
-      setErrors((prev) => ({ ...prev, [key]: undefined }))
-      setSubmitError(null)
-    },
-  })
+  // Tin MoMo không mang số TK: edge function gắn vào tài khoản MoMo duy nhất của user
+  const isMoMo = canonicalBankName(form.bankName) === 'MoMo'
+  const fieldProps = (key: keyof AccountFormInput) => field(key, FIELD_ID[key])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -97,7 +88,9 @@ function AccountFormBody({ account, onDone, setBusy }: {
           <Input {...fieldProps('accountName')} placeholder="TK lương" />
         </FormField>
         <FormField id="acc-number" label="Số tài khoản" error={errors.accountNumber}
-          hint="4 dấu * + 4 ký tự cuối, ví dụ ****4982">
+          hint={isMoMo
+            ? 'Tin MoMo không có số tài khoản nên ký tự nào cũng được, ví dụ 4 số cuối điện thoại: ****0123. Chỉ nên có MỘT tài khoản MoMo'
+            : '4 dấu * + 4 ký tự cuối, ví dụ ****4982'}>
           <Input {...fieldProps('accountNumber')} placeholder="****4982" />
         </FormField>
         <FormField id="acc-type" label="Loại tài khoản" error={errors.accountType}>
@@ -130,9 +123,9 @@ export function AccountFormDialog({ open, onOpenChange, account = null }: {
   /** Có tài khoản = sửa, không có = thêm mới. */
   account?: BankAccount | null
 }) {
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <AccountFormBody
           key={account?.id ?? 'new'} account={account} setBusy={setBusy}

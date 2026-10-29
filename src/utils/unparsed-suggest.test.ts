@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { suggestFromText, vnLocalToISO } from './unparsed-suggest'
+import { suggestFromText } from './unparsed-suggest'
+import { vnLocalToISO } from './dates'
 
 // 21/10/2026 09:30 giờ VN
 const RECEIVED = '2026-10-21T02:30:00.000Z'

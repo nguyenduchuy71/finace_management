@@ -3,9 +3,10 @@ import { toast } from 'sonner'
 import { updateCardTransactionMcc } from '@/services/creditCards'
 import type { ApiError, PaginatedResponse } from '@/types/api'
 import type { CreditCardTransaction } from '@/types/creditCard'
+import { QK } from './query-keys'
 
 type TxPages = InfiniteData<PaginatedResponse<CreditCardTransaction>>
-const KEY = ['creditCardTransactions']
+const KEY = QK.creditCardTransactions
 
 /** MCC hiện có của giao dịch trong cache (cùng một giao dịch có cùng giá trị ở mọi bộ lọc). */
 function readCachedMcc(qc: QueryClient, txId: string): string | undefined {
@@ -58,7 +59,7 @@ export function useUpdateTransactionMcc() {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: KEY })
       // MCC quyết định giao dịch thuộc rule nào -> hoàn tiền ước tính của chu kỳ phải tính lại.
-      void qc.invalidateQueries({ queryKey: ['cardCycleExpenses'] })
+      void qc.invalidateQueries({ queryKey: QK.cardCycleExpenses })
     },
   })
 }

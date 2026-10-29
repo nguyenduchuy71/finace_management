@@ -6,6 +6,7 @@ import {
 import { getUnlinkedCount } from '@/services/accounts'
 import type { CardFormValues } from '@/types/credit-card-form'
 import type { CreditCard } from '@/types/creditCard'
+import { QK } from './query-keys'
 
 /**
  * Sau khi đổi thẻ, mọi thứ dẫn xuất từ thẻ/giao dịch của thẻ phải tải lại: danh
@@ -15,11 +16,11 @@ function useInvalidateCardData() {
   const qc = useQueryClient()
   return () =>
     Promise.all([
-      qc.invalidateQueries({ queryKey: ['creditCards'] }),
-      qc.invalidateQueries({ queryKey: ['creditCardTransactions'] }),
-      qc.invalidateQueries({ queryKey: ['dashboardStats'] }),
-      qc.invalidateQueries({ queryKey: ['cashbackRules'] }),
-      qc.invalidateQueries({ queryKey: ['cardCycleExpenses'] }),
+      qc.invalidateQueries({ queryKey: QK.creditCards }),
+      qc.invalidateQueries({ queryKey: QK.creditCardTransactions }),
+      qc.invalidateQueries({ queryKey: QK.dashboardStats }),
+      qc.invalidateQueries({ queryKey: QK.cashbackRules }),
+      qc.invalidateQueries({ queryKey: QK.cardCycleExpenses }),
     ])
 }
 
@@ -86,7 +87,7 @@ export function useDeleteCreditCard() {
 /** Đếm giao dịch của thẻ để dialog xoá nói rõ sẽ mất bao nhiêu. */
 export function useCardTransactionCount(cardId: string) {
   return useQuery({
-    queryKey: ['creditCardTxCount', cardId],
+    queryKey: [...QK.creditCardTxCount, cardId],
     queryFn: () => countCardTransactions(cardId),
     // Số liệu quyết định hành động không thể hoàn tác: luôn lấy mới khi mở dialog.
     staleTime: 0,

@@ -78,7 +78,7 @@ describe('AdminUserDialog — quyền thao tác', () => {
 
 describe('AdminUserDialog — nút thu hồi key', () => {
   it('không có key còn hiệu lực -> nút Thu hồi mọi key disabled', async () => {
-    renderDialog(adminUser({ id: 'u1', keysActive: 0 }), [adminKey({ id: 'k1', revoked_at: '2026-10-21T00:00:00Z' })])
+    renderDialog(adminUser({ id: 'u1', keysActive: 0 }), [adminKey({ id: 'k1', revokedAt: '2026-10-21T00:00:00Z' })])
     expect(await screen.findByRole('button', { name: 'Thu hồi mọi key' })).toBeDisabled()
     expect(screen.getByText('Đã thu hồi')).toBeInTheDocument()
   })
@@ -91,7 +91,7 @@ describe('AdminUserDialog — nút thu hồi key', () => {
 
   it('có ít nhất 1 key còn hiệu lực (kèm key đã thu hồi) -> enabled', async () => {
     renderDialog(adminUser({ id: 'u1' }), [
-      adminKey({ id: 'k1', revoked_at: '2026-10-21T00:00:00Z' }),
+      adminKey({ id: 'k1', revokedAt: '2026-10-21T00:00:00Z' }),
       adminKey({ id: 'k2' }),
     ])
     expect(await screen.findByRole('button', { name: 'Thu hồi mọi key' })).toBeEnabled()

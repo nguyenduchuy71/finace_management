@@ -6,6 +6,7 @@ iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>
 `Authorization: Bearer vj_…` (API key của user, `api-key-auth.ts` → RPC `authenticate_api_key`; Bearer có mặt thì KHÔNG rơi về
 legacy). Legacy: `x-shortcut-secret` → `DEFAULT_USER_ID` (chỉ khi đặt cả 2 secret). Body > 16.000 ký tự → 413 trước `JSON.parse`.
 `user_settings.owner_names` từ DB **phải** qua `normalizeOwnerNames` (bỏ dấu/in hoa/bỏ null) như env — mô tả giao dịch đã chuẩn hoá. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
+Cấu trúc: `index.ts` (nối dây) → `handler.ts` (pipeline, tiêm auth/DB) · `request.ts` (MAX_BODY_LENGTH 16000 / MAX_TEXT_LENGTH 2000, thuần) · `persist.ts` (chống trùng, ghi). HTTP dùng chung 3 function ở `supabase/functions/_shared/http.ts` (CORS, `jsonResponse`, `bearerToken`, `readJsonBody`).
 Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP → chống trùng (cùng `raw_text` trong 10 phút)
 → 19 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, tên chủ TK của user) → resolve TK/thẻ
 (phải khớp DUY NHẤT) → insert; **không khớp TK/thẻ thì KHÔNG ghi giao dịch mồ côi** mà vào hộp tin (`reason = no_account`);
@@ -15,7 +16,8 @@ giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolv
 (chạy tay, dry-run mặc định). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
 Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
 (`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
-(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check (legacy + webhook): `shortcut-auth.ts`.
+(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng).
+**MoMo** (tin không có số TK, `account_ref: null`): `resolveRefs` gắn vào tài khoản `bank_name = 'MoMo'` của user nếu có ĐÚNG 1; 0 hoặc ≥ 2 thì vào hộp tin (`no_account`) — không đoán. Form TK chấp nhận mask bất kỳ 4 ký tự cho MoMo (vd 4 số cuối điện thoại). Secret check (legacy + webhook): `shortcut-auth.ts`.
 **`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định; user nay tự nhập ở trang Cài đặt): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
 đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
 Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.

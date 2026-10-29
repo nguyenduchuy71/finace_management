@@ -46,6 +46,18 @@
     --color-internal: var(--internal);
     --color-internal-soft: var(--internal-soft);
     --color-warning: var(--warning);
+    --color-cat-1: var(--cat-1);
+    --color-cat-1-soft: var(--cat-1-soft);
+    --color-cat-2: var(--cat-2);
+    --color-cat-2-soft: var(--cat-2-soft);
+    --color-cat-3: var(--cat-3);
+    --color-cat-3-soft: var(--cat-3-soft);
+    --color-cat-4: var(--cat-4);
+    --color-cat-4-soft: var(--cat-4-soft);
+    --color-cat-5: var(--cat-5);
+    --color-cat-5-soft: var(--cat-5-soft);
+    --color-cat-6: var(--cat-6);
+    --color-cat-6-soft: var(--cat-6-soft);
     /* Tự host (CSP font-src 'self'): import trong main.tsx — KHÔNG dùng Google Fonts */
     --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
     --color-sidebar: var(--sidebar);
@@ -104,6 +116,20 @@
     --chart-4: oklch(0.58 0.2 300);
     --chart-5: oklch(0.79 0.15 80);
     --chart-6: oklch(0.68 0.025 250);
+
+    /* Chữ + nền nhạt của CategoryBadge (cặp đo WCAG AA >= 4.5:1), thứ tự như --chart-n */
+    --cat-1: oklch(0.47 0.1 50);
+    --cat-1-soft: oklch(0.95 0.025 50);
+    --cat-2: oklch(0.45 0.16 355);
+    --cat-2-soft: oklch(0.95 0.025 355);
+    --cat-3: oklch(0.45 0.14 255);
+    --cat-3-soft: oklch(0.95 0.02 255);
+    --cat-4: oklch(0.45 0.16 300);
+    --cat-4-soft: oklch(0.95 0.025 300);
+    --cat-5: oklch(0.47 0.09 80);
+    --cat-5-soft: oklch(0.95 0.04 80);
+    --cat-6: oklch(0.45 0.02 250);
+    --cat-6-soft: oklch(0.95 0.01 250);
     --sidebar: oklch(0.98 0.008 175);
     --sidebar-foreground: oklch(0.22 0.03 250);
     --sidebar-primary: oklch(0.51 0.09 180);
@@ -151,6 +177,20 @@
     --chart-4: oklch(0.7 0.17 300);
     --chart-5: oklch(0.83 0.14 80);
     --chart-6: oklch(0.6 0.025 250);
+
+    /* Chữ + nền nhạt của CategoryBadge (cặp đo WCAG AA >= 4.5:1), thứ tự như --chart-n */
+    --cat-1: oklch(0.85 0.09 50);
+    --cat-1-soft: oklch(0.3 0.05 50);
+    --cat-2: oklch(0.85 0.09 355);
+    --cat-2-soft: oklch(0.3 0.06 355);
+    --cat-3: oklch(0.85 0.075 255);
+    --cat-3-soft: oklch(0.3 0.06 255);
+    --cat-4: oklch(0.85 0.085 300);
+    --cat-4-soft: oklch(0.3 0.06 300);
+    --cat-5: oklch(0.85 0.09 80);
+    --cat-5-soft: oklch(0.3 0.05 80);
+    --cat-6: oklch(0.85 0.016 250);
+    --cat-6-soft: oklch(0.3 0.02 250);
     --sidebar: oklch(0.215 0.03 255);
     --sidebar-foreground: oklch(0.96 0.01 220);
     --sidebar-primary: oklch(0.76 0.12 178);

@@ -71,3 +71,11 @@ describe('getBankBrand — gradient thẻ', () => {
     expect(getBankBrand('Ngân Hàng Mới').gradient).toMatch(/^from-\w+-700 to-\w+-950$/)
   })
 })
+
+describe('MoMo', () => {
+  it('có trong danh sách đã biết và chuẩn hoá hoa/thường đúng tên parser đặt', () => {
+    expect(KNOWN_BANK_NAMES).toContain('MoMo')
+    expect(canonicalBankName('momo')).toBe('MoMo')
+    expect(canonicalBankName(' MOMO ')).toBe('MoMo')
+  })
+})

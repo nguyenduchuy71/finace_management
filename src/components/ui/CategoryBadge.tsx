@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import type { Category } from '@/types/categories'
 
 interface CategoryBadgeProps {
@@ -6,18 +7,20 @@ interface CategoryBadgeProps {
   className?: string
 }
 
+// Token ngữ nghĩa `--cat-n` / `--cat-n-soft` (index.css, đo WCAG AA ở cả hai theme), n khớp `--chart-n`
+// trong utils/category-colors.ts. Class viết nguyên chuỗi để Tailwind quét được.
 const categoryColorMap: Record<Category, string> = {
-  'Ăn uống': 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400',
-  'Mua sắm': 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-400',
-  'Di chuyển': 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
-  'Giải trí': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400',
-  'Hóa đơn': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
-  'Khác': 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400',
+  'Ăn uống': 'bg-cat-1-soft text-cat-1',
+  'Mua sắm': 'bg-cat-2-soft text-cat-2',
+  'Di chuyển': 'bg-cat-3-soft text-cat-3',
+  'Giải trí': 'bg-cat-4-soft text-cat-4',
+  'Hóa đơn': 'bg-cat-5-soft text-cat-5',
+  'Khác': 'bg-cat-6-soft text-cat-6',
 }
 
-export function CategoryBadge({ category, className = '' }: CategoryBadgeProps) {
+export function CategoryBadge({ category, className }: CategoryBadgeProps) {
   return (
-    <Badge variant="secondary" className={`${categoryColorMap[category]} ${className}`}>
+    <Badge variant="secondary" className={cn(categoryColorMap[category], className)}>
       {category}
     </Badge>
   )

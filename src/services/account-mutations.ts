@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { mapAccount, type AccountRow } from './mappers'
-import { toApiError } from './api-errors'
+import { toApiError, countRows } from './api-errors'
 import type { AccountFormValues } from '@/types/account-form'
 
 /** Giá trị form (camelCase, đã chuẩn hoá) -> cột của bảng `accounts`. */
@@ -44,12 +44,9 @@ export async function updateAccount(id: string, values: AccountFormValues) {
 
 /** Số giao dịch gắn với tài khoản — để dialog xoá nói rõ sẽ mất bao nhiêu. */
 export async function countAccountTransactions(accountId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .eq('account_id', accountId)
-  if (error) throw toApiError(error)
-  return count ?? 0
+  return countRows(
+    supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('account_id', accountId),
+  )
 }
 
 /**

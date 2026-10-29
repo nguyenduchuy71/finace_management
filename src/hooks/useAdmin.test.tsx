@@ -148,11 +148,11 @@ describe('useAdminMutation — KHÔNG refetch get_user sau thao tác', () => {
     expect(getAdminUser).toHaveBeenCalledTimes(1)
   })
 
-  it('thu hồi key: key còn hiệu lực được đánh dấu revoked_at, key đã thu hồi giữ nguyên thời điểm cũ', async () => {
+  it('thu hồi key: key còn hiệu lực được đánh dấu revokedAt, key đã thu hồi giữ nguyên thời điểm cũ', async () => {
     const user = adminUser({ id: 'u1', keysActive: 1 })
     const keys = [
       adminKey({ id: 'k-active' }),
-      adminKey({ id: 'k-old', revoked_at: '2026-10-01T00:00:00Z' }),
+      adminKey({ id: 'k-old', revokedAt: '2026-10-01T00:00:00Z' }),
     ]
     vi.mocked(listAdminUsers).mockResolvedValue([{ ...user, keysActive: 0 }])
     vi.mocked(getAdminUser).mockResolvedValue({ user, keys })
@@ -162,10 +162,10 @@ describe('useAdminMutation — KHÔNG refetch get_user sau thao tác', () => {
     await act(async () => {
       result.current.mutation.mutate({ action: 'revoke_keys', userId: 'u1', reason: 'lý do đủ dài' })
     })
-    await waitFor(() => expect(result.current.detail.data?.keys[0].revoked_at).not.toBeNull())
+    await waitFor(() => expect(result.current.detail.data?.keys[0].revokedAt).not.toBeNull())
 
-    expect(result.current.detail.data?.keys[0].revoked_at).toEqual(expect.any(String))
-    expect(result.current.detail.data?.keys[1].revoked_at).toBe('2026-10-01T00:00:00Z')
+    expect(result.current.detail.data?.keys[0].revokedAt).toEqual(expect.any(String))
+    expect(result.current.detail.data?.keys[1].revokedAt).toBe('2026-10-01T00:00:00Z')
     expect(getAdminUser).toHaveBeenCalledTimes(1)
   })
 
@@ -181,7 +181,7 @@ describe('useAdminMutation — KHÔNG refetch get_user sau thao tác', () => {
       result.current.mutation.mutate({ action: 'unsuspend', userId: 'u1', reason: 'đã xác minh' })
     })
     await waitFor(() => expect(result.current.detail.data?.user.suspendedAt).toBeNull())
-    expect(result.current.detail.data?.keys[0].revoked_at).toBeNull()
+    expect(result.current.detail.data?.keys[0].revokedAt).toBeNull()
     expect(getAdminUser).toHaveBeenCalledTimes(1)
     expect(toast.success).toHaveBeenCalledWith('Đã mở khoá user')
   })

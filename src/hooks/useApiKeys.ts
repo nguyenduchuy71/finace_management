@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createApiKey, listApiKeys, revokeApiKey } from '@/services/api-keys'
+import { QK } from './query-keys'
 
-const API_KEYS_KEY = ['apiKeys'] as const
+const API_KEYS_KEY = QK.apiKeys
 
 export function useApiKeys() {
   return useQuery({ queryKey: API_KEYS_KEY, queryFn: listApiKeys })

@@ -1,34 +1,18 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { TX_PAGE_SIZE } from '@/services/transactionQuery'
+import { TX_PAGE_SIZE, emptyTxPage, toTxQueryOptions } from '@/services/transactionQuery'
 import { getCreditCardTransactions } from '@/services/creditCards'
-import { useFilterStore } from '@/stores/filterStore'
-import { useShallow } from 'zustand/react/shallow'
-
-function useCreditCardFilterParams() {
-  return useFilterStore(
-    useShallow((state) => ({
-      cardId: state.cardId,
-      dateFrom: state.dateFrom,
-      dateTo: state.dateTo,
-      searchQuery: state.searchQuery,
-      txType: state.txType,
-    }))
-  )
-}
+import { useCreditCardFilterParams } from '@/stores/filterStore'
+import { QK } from './query-keys'
 
 export function useCreditCardTransactions() {
-  const { cardId, dateFrom, dateTo, searchQuery, txType } = useCreditCardFilterParams()
+  const filters = useCreditCardFilterParams()
+  const { cardId, dateFrom, dateTo, searchQuery, txType } = filters
 
   return useInfiniteQuery({
-    queryKey: ['creditCardTransactions', cardId, { dateFrom, dateTo, searchQuery, txType }],
+    queryKey: [...QK.creditCardTransactions, cardId, { dateFrom, dateTo, searchQuery, txType }],
     queryFn: ({ pageParam }) => {
-      if (!cardId) return Promise.resolve({ data: [], nextCursor: null, total: 0 })
-      return getCreditCardTransactions(cardId, pageParam as string | undefined, TX_PAGE_SIZE, {
-        search: searchQuery || undefined,
-        dateFrom,
-        dateTo,
-        txType,
-      })
+      if (!cardId) return Promise.resolve(emptyTxPage())
+      return getCreditCardTransactions(cardId, pageParam as string | undefined, TX_PAGE_SIZE, toTxQueryOptions(filters))
     },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

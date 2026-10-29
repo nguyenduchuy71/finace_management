@@ -3,7 +3,7 @@
 // mảng `parsers` — parser khớp trước thắng, đừng sắp xếp lại.
 
 import type { Parser } from './types.ts'
-import { inferYear, last4, parseVND, vnDate } from './helpers.ts'
+import { inferYear, last4, outflow, parseVND, vnDate } from './helpers.ts'
 import { build } from './parser-build.ts'
 
 // SHB — "THE MASTERCARD CASHBACK 3826 SU DUNG -2,007,000 VND TAI HKD DAI DUONG
@@ -41,7 +41,7 @@ const tryHDBank: Parser = (text) => {
   const [, card, amountStr, merchant, dd, mm, yyyy, hh, min, ss] = m
   return build(text, {
     bank_name: 'HDBank',
-    amount: -parseVND(amountStr), // định dạng này luôn là chi tiêu
+    amount: outflow(amountStr), // định dạng này luôn là chi tiêu
     transaction_date: vnDate(yyyy, mm, dd, hh, min, ss),
     description: merchant.trim(),
     source_type: 'credit_card',
@@ -59,7 +59,7 @@ const tryMSB: Parser = (text) => {
   const [, card, amountStr, hh, min, dd, mm, yyyy, merchant] = m
   return build(text, {
     bank_name: 'MSB',
-    amount: -parseVND(amountStr),
+    amount: outflow(amountStr),
     transaction_date: vnDate(yyyy, mm, dd, hh, min),
     description: merchant.trim(),
     source_type: 'credit_card',
@@ -98,7 +98,7 @@ const tryWOORIVN: Parser = (text) => {
   const [, cardStr, dd, mm, yy, hh, min, amountStr, merchant] = m
   return build(text, {
     bank_name: 'WOORIVN',
-    amount: -parseVND(amountStr),
+    amount: outflow(amountStr),
     transaction_date: vnDate(yy, mm, dd, hh, min),
     description: merchant.trim(),
     source_type: 'credit_card',

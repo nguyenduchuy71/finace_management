@@ -41,6 +41,7 @@ const BANKS: Record<string, BankBrand> = {
   HSBC:        { short: 'HSBC', className: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300', gradient: 'from-red-700 to-red-950' },
   KBank:       { short: 'KB',   className: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300', gradient: 'from-green-700 to-green-950' },
   LPBank:      { short: 'LP',   className: 'bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300', gradient: 'from-fuchsia-700 to-fuchsia-950' },
+  MoMo:        { short: 'MoMo', className: 'bg-pink-100 text-pink-700 dark:bg-pink-950 dark:text-pink-300', gradient: 'from-pink-700 to-pink-950' },
   MSB:         { short: 'MSB',  className: 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300', gradient: 'from-orange-700 to-orange-950' },
   OCB:         { short: 'OCB',  className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300', gradient: 'from-emerald-700 to-emerald-950' },
   SHB:         { short: 'SHB',  className: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300', gradient: 'from-amber-700 to-amber-950' },

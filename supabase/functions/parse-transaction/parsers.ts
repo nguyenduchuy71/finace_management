@@ -3,7 +3,7 @@
 // THÊM PARSER MỚI: xem hướng dẫn ở cuối file.
 
 import type { Parser } from './types.ts'
-import { last4, nowVN, parseVND, vnDate } from './helpers.ts'
+import { last4, nowVN, outflow, parseVND, vnDate } from './helpers.ts'
 import { build } from './parser-build.ts'
 import { balanceNotificationParsers } from './parsers-balance-notifications.ts'
 import { cardSmsParsers } from './parsers-card-sms.ts'
@@ -82,7 +82,7 @@ const trySacombank: Parser = (text) => {
   const [, dd, mm, yyyy, hh, min, card, amountStr, merchant] = m
   return build(text, {
     bank_name: 'Sacombank',
-    amount: -parseVND(amountStr),
+    amount: outflow(amountStr),
     transaction_date: vnDate(yyyy, mm, dd, hh, min),
     description: merchant.trim(),
     source_type: 'credit_card',
@@ -99,7 +99,7 @@ const tryMoMo: Parser = (text, now) => {
   const [, merchant, amountStr] = m
   return build(text, {
     bank_name: 'MoMo',
-    amount: -parseVND(amountStr),
+    amount: outflow(amountStr),
     transaction_date: nowVN(now),
     description: merchant.trim(),
     source_type: 'bank', // ví điện tử, coi như tài khoản

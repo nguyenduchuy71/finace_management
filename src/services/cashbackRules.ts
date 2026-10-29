@@ -4,9 +4,9 @@ import { z } from 'zod'
 import { CashbackRuleSchema } from '@/types/cashback'
 import type { CashbackRuleInput } from '@/types/cashback'
 import type { ApiError } from '@/types/api'
-import type { CreditCardTransaction } from '@/types/creditCard'
-import { exportTransactions } from './exports'
-import { toApiError } from './api-errors'
+import { exportCardTransactions } from './exports'
+import { toInt } from './row-values'
+import { toApiError, requireAffected, CARD_NOT_FOUND } from './api-errors'
 
 interface CashbackTierRow {
   min_spend: number | string
@@ -34,25 +34,26 @@ function mapRule(row: CashbackRuleRow) {
     cardId: row.card_id,
     mcc: row.mcc,
     ratePercent: Number(row.rate_percent),
-    minCycleSpend: Math.round(Number(row.min_cycle_spend)),
-    capPerCycle: row.cap_per_cycle === null ? null : Math.round(Number(row.cap_per_cycle)),
+    minCycleSpend: toInt(row.min_cycle_spend),
+    capPerCycle: row.cap_per_cycle === null ? null : toInt(row.cap_per_cycle),
     tiers: (row.card_cashback_rule_tiers ?? [])
-      .map((t) => ({ minSpend: Math.round(Number(t.min_spend)), ratePercent: Number(t.rate_percent) }))
+      .map((t) => ({ minSpend: toInt(t.min_spend), ratePercent: Number(t.rate_percent) }))
       .sort((a, b) => a.minSpend - b.minSpend),
   })
 }
 
-/** Trùng (thẻ, MCC) — kể cả hai rule mặc định — đáng được một thông điệp riêng, không phải "Dữ liệu đã tồn tại". */
+const RULE_NOT_FOUND = 'Không tìm thấy rule (đã bị xoá hoặc không thuộc về bạn).'
+
+const RULE_ERRORS: Record<string, string> = {
+  // Trùng (thẻ, MCC) — kể cả hai rule mặc định — đáng được một thông điệp riêng, không phải "Dữ liệu đã tồn tại".
+  '23505': 'Thẻ này đã có rule cho nhóm đó. Sửa rule hiện có thay vì thêm mới.',
+  P0002: RULE_NOT_FOUND,
+}
+
 function fail(error: PostgrestError): ApiError {
-  if (error.code === '23505') {
-    return { code: '23505', message: 'Thẻ này đã có rule cho nhóm đó. Sửa rule hiện có thay vì thêm mới.' }
-  }
   // 22023: RPC save_cashback_rule từ chối bậc thang sai; thông điệp do chính hàm đó viết (tiếng Việt, không lộ nội bộ).
   if (error.code === '22023') return { code: '22023', message: error.message }
-  if (error.code === 'P0002') {
-    return { code: 'P0002', message: 'Không tìm thấy rule (đã bị xoá hoặc không thuộc về bạn).' }
-  }
-  return toApiError(error)
+  return toApiError(error, RULE_ERRORS)
 }
 
 /** Rule của một thẻ: rule theo MCC trước, rule mặc định (mcc NULL) cuối cùng. */
@@ -108,9 +109,7 @@ export async function setCardCashbackCap(cardId: string, cap: number | null): Pr
     .eq('id', cardId)
     .select('id')
   if (error) throw toApiError(error)
-  if (!data || data.length === 0) {
-    throw { code: 'NOT_FOUND', message: 'Không tìm thấy thẻ (đã bị xoá hoặc không thuộc về bạn).' } satisfies ApiError
-  }
+  requireAffected(data, CARD_NOT_FOUND)
 }
 
 /** RLS lọc 0 dòng thì PostgREST vẫn báo thành công: tự kiểm để không "xoá thành công" mà không xoá gì. */
@@ -121,22 +120,19 @@ export async function deleteCashbackRule(ruleId: string): Promise<void> {
     .eq('id', ruleId)
     .select('id')
   if (error) throw toApiError(error)
-  if (!data || data.length === 0) {
-    throw { code: 'NOT_FOUND', message: 'Không tìm thấy rule (đã bị xoá hoặc không thuộc về bạn).' } satisfies ApiError
-  }
+  requireAffected(data, RULE_NOT_FOUND)
 }
 
 /**
  * Toàn bộ giao dịch CHI của thẻ trong một chu kỳ sao kê, nửa mở [start, end): giao dịch đúng
  * 00:00 VN của ngày bắt đầu thuộc chu kỳ này, đúng 00:00 VN của ngày sau ngày sao kê thì thuộc
- * chu kỳ kế. Tự lật trang (PostgREST cắt cứng ở 1000 dòng) qua exportTransactions.
+ * chu kỳ kế. Tự lật trang (PostgREST cắt cứng ở 1000 dòng) qua exportCardTransactions.
  */
 export async function getCycleExpenses(cardId: string, startISO: string, endISO: string) {
-  const res = await exportTransactions(null, {
-    cardId,
+  const res = await exportCardTransactions(cardId, {
     dateFrom: startISO,
     dateBefore: endISO,
     txType: 'expense',
   })
-  return res.data as CreditCardTransaction[]
+  return res.data
 }

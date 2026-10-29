@@ -4,8 +4,9 @@ import { getAdminUser, listAdminUsers, listAudit, runAdminMutation } from '@/ser
 import { useAuth } from '@/hooks/useAuth'
 import { isAdminSession } from '@/features/auth/mfa'
 import type { AdminKey, AdminMutation, AdminUser } from '@/types/admin'
+import { QK } from './query-keys'
 
-const ADMIN_KEY = ['admin'] as const
+const ADMIN_KEY = QK.admin
 const USERS_KEY = [...ADMIN_KEY, 'users'] as const
 const AUDIT_KEY = [...ADMIN_KEY, 'audit'] as const
 const userKey = (id: string | null) => [...ADMIN_KEY, 'user', id] as const
@@ -60,7 +61,7 @@ async function refreshAfterMutation(qc: ReturnType<typeof useQueryClient>, actio
   const now = new Date().toISOString()
   qc.setQueryData<Detail>(userKey(userId), (old) => old && {
     user: fresh ?? old.user,
-    keys: action === 'revoke_keys' ? old.keys.map((k) => (k.revoked_at ? k : { ...k, revoked_at: now })) : old.keys,
+    keys: action === 'revoke_keys' ? old.keys.map((k) => (k.revokedAt ? k : { ...k, revokedAt: now })) : old.keys,
   })
 }
 

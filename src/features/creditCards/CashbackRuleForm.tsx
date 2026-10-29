@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
+import { useFormBinding } from '@/components/form/useFormBinding'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSaveCashbackRule } from '@/hooks/useCashbackRules'
@@ -32,7 +32,8 @@ interface CashbackRuleFormProps {
 }
 
 export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: CashbackRuleFormProps) {
-  const [form, setForm] = useState<CashbackFormInput>(() => {
+  const { form, setForm, errors, setErrors, submitError, setSubmitError, set, field } =
+    useFormBinding<CashbackFormInput, CashbackFormErrors>(() => {
     if (rule) return ruleToFormInput(rule)
     // Rule mới: chọn sẵn nhóm đầu tiên CHƯA có rule. Mặc định '' (rule mặc định) mà đã bị chiếm
     // thì <select> hiện một mục bị khoá, user bấm Thêm và nhận lỗi trùng không nói rõ phải đổi gì.
@@ -40,24 +41,12 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
     const firstFree = ['', ...COMMON_MCC_OPTIONS.map((o) => o.code)].find((m) => !taken.has(m)) ?? ''
     return { ...EMPTY_CASHBACK_FORM, mcc: firstFree }
   })
-  const [errors, setErrors] = useState<CashbackFormErrors>({})
-  const [submitError, setSubmitError] = useState<string | null>(null)
   const save = useSaveCashbackRule(cardId)
 
   // Nhóm đã có rule ở rule KHÁC thì không cho chọn lại (DB cũng chặn bằng unique).
   const taken = new Set(existing.filter((r) => r.id !== rule?.id).map((r) => r.mcc ?? ''))
 
-  const fieldProps = (key: CashbackScalarField) => ({
-    id: FIELD_ID[key],
-    value: form[key],
-    'aria-invalid': errors[key] ? true : undefined,
-    'aria-describedby': describedBy(FIELD_ID[key], Boolean(errors[key])),
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((f) => ({ ...f, [key]: e.target.value }))
-      setErrors((prev) => ({ ...prev, [key]: undefined }))
-      setSubmitError(null)
-    },
-  })
+  const fieldProps = (key: CashbackScalarField) => field(key, FIELD_ID[key])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -87,11 +76,7 @@ export function CashbackRuleForm({ cardId, rule, existing, onDone, setBusy }: Ca
           disabledCodes={taken}
           aria-invalid={errors.mcc ? true : undefined}
           aria-describedby={describedBy(FIELD_ID.mcc, Boolean(errors.mcc))}
-          onChange={(mcc) => {
-            setForm((f) => ({ ...f, mcc }))
-            setErrors((prev) => ({ ...prev, mcc: undefined }))
-            setSubmitError(null)
-          }}
+          onChange={(mcc) => set('mcc', mcc)}
           className="h-9 w-full text-sm"
         />
       </FormField>

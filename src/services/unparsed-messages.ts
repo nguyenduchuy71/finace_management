@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
-import { toApiError } from './api-errors'
+import { toApiError, countRows } from './api-errors'
+import { toISO } from './row-values'
 import {
   UnparsedMessageSchema, type ResolveKind, type ResolveTxInput, type UnparsedMessage,
 } from '@/types/unparsed'
@@ -32,7 +33,7 @@ function mapUnparsed(row: UnparsedRow): UnparsedMessage {
     // Thông báo iOS thường là NFD (dấu tách rời) — chuẩn hoá để hiển thị và đoán số tiền.
     rawText: row.raw_text.normalize('NFC'),
     source: row.source,
-    receivedAt: new Date(row.received_at).toISOString(),
+    receivedAt: toISO(row.received_at),
     suggestedKind: row.suggested_kind,
   })
 }
@@ -59,13 +60,13 @@ export async function getUnparsedMessages(includePromo = false) {
 
 /** Số tin cần xử lý (không tính quảng cáo) — badge trên tab. */
 export async function getUnparsedCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('unparsed_messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('resolved', false)
-    .or(NOT_PROMO)
-  if (error) throw toApiError(error)
-  return count ?? 0
+  return countRows(
+    supabase
+      .from('unparsed_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('resolved', false)
+      .or(NOT_PROMO),
+  )
 }
 
 const RESOLVE_ERRORS: Record<string, string> = {

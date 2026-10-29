@@ -7,7 +7,7 @@ import { BudgetProgressBar } from '@/components/budget/BudgetProgressBar'
 import { BudgetSettings } from '@/components/budget/BudgetSettings'
 import { useBudgetStore } from '@/stores/budgetStore'
 import { useBudgetAlerts } from '@/hooks/useBudgetAlerts'
-import type { CategoryBreakdownItem } from '@/services/dashboard'
+import type { CategoryBreakdownItem } from '@/types/dashboard'
 import type { Category } from '@/types/categories'
 
 interface BudgetProgressSectionProps {

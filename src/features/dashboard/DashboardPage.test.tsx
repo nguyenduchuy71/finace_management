@@ -5,7 +5,7 @@ import { createElement } from 'react'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { DashboardPage } from '@/pages/DashboardPage'
 import * as dashboardService from '@/services/dashboard'
-import type { DashboardStats } from '@/services/dashboard'
+import type { DashboardStats } from '@/types/dashboard'
 
 // Mock ở tầng service — query thật đã phủ ở services.integration.test.ts
 vi.mock('@/services/dashboard', async (orig) => ({

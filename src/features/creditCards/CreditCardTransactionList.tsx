@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useCreditCardTransactions } from '@/hooks/useCreditCardTransactions'
 import { useCreditCards } from '@/hooks/useCreditCards'
 import { useNow } from '@/hooks/useNow'
-import { useFilterStore } from '@/stores/filterStore'
+import { useFilterStore, selectHasActiveFilters } from '@/stores/filterStore'
 import { groupTransactionsByCycle, computeCurrentCycle } from '@/utils/billingCycle'
 import { BillingCycleGroup } from './BillingCycleGroup'
 import { CreditCardTransactionListSkeleton } from './CreditCardTransactionListSkeleton'
@@ -14,10 +14,7 @@ import { TransactionListError } from '@/features/transactions/TransactionListErr
 export function CreditCardTransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useCreditCardTransactions()
-  const searchQuery = useFilterStore((s) => s.searchQuery)
-  const dateFrom = useFilterStore((s) => s.dateFrom)
-  const dateTo = useFilterStore((s) => s.dateTo)
-  const txType = useFilterStore((s) => s.txType)
+  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s, { withCategory: false }))
   const cardId = useFilterStore((s) => s.cardId)
 
   const { data: cardsData } = useCreditCards()
@@ -43,8 +40,6 @@ export function CreditCardTransactionList() {
       : [],
     [allTransactions, currentCycle, statementDate]
   )
-
-  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all')
 
   if (isLoading) return <CreditCardTransactionListSkeleton count={7} />
 

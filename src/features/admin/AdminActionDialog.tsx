@@ -8,6 +8,7 @@ import { ADMIN_REASON_LENGTH, type AdminMutation, type AdminUser } from '@/types
 import type { ApiError } from '@/types/api'
 import { getErrorMessage } from '@/services/api-errors'
 import { Textarea } from '@/components/ui/textarea'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 const COPY: Record<AdminMutation, {
   title: string; effect: string; confirm: string; destructive: boolean
@@ -101,9 +102,9 @@ export function AdminActionDialog({ action, user, onClose }: {
   user: AdminUser
   onClose: () => void
 }) {
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard((open) => { if (!open) onClose() })
   return (
-    <Dialog open={action !== null} onOpenChange={(open) => { if (!open && !busy) onClose() }}>
+    <Dialog open={action !== null} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         {action && <ActionBody key={action} action={action} user={user} setBusy={setBusy} onDone={onClose} />}
       </DialogContent>
