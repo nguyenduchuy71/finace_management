@@ -30,8 +30,8 @@ beforeEach(() => {
 describe('AdminAuditList', () => {
   it('nhãn hành động tiếng Việt; email lấy từ danh sách user đã tải', async () => {
     vi.mocked(listAudit).mockResolvedValue([
-      auditEntry({ id: 2, action: 'unsuspend', target_user_id: 'u1', reason: 'đã xác minh' }),
-      auditEntry({ id: 1, action: 'suspend', target_user_id: 'u1', reason: 'spam' }),
+      auditEntry({ id: 2, action: 'unsuspend', targetUserId: 'u1', reason: 'đã xác minh' }),
+      auditEntry({ id: 1, action: 'suspend', targetUserId: 'u1', reason: 'spam' }),
     ])
     renderAudit()
     const rows = await screen.findAllByRole('listitem')
@@ -43,13 +43,13 @@ describe('AdminAuditList', () => {
   })
 
   it('user đã xoá (không còn trong danh sách) -> hiện 8 ký tự đầu của id + (đã xoá)', async () => {
-    vi.mocked(listAudit).mockResolvedValue([auditEntry({ id: 1, target_user_id: 'deadbeef-1234-5678' })])
+    vi.mocked(listAudit).mockResolvedValue([auditEntry({ id: 1, targetUserId: 'deadbeef-1234-5678' })])
     renderAudit()
     expect(await screen.findByText(/deadbeef… \(đã xoá\)/)).toBeInTheDocument()
   })
 
   it('target null -> gạch ngang', async () => {
-    vi.mocked(listAudit).mockResolvedValue([auditEntry({ id: 1, action: 'suspend', target_user_id: null })])
+    vi.mocked(listAudit).mockResolvedValue([auditEntry({ id: 1, action: 'suspend', targetUserId: null })])
     renderAudit()
     const row = (await screen.findAllByRole('listitem'))[0]
     expect(within(row).getByText(/—/)).toBeInTheDocument()

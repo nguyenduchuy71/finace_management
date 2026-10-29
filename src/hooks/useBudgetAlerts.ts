@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import type { Category } from '@/types/categories'
-import type { CategoryBreakdownItem } from '@/services/dashboard'
+import type { CategoryBreakdownItem } from '@/types/dashboard'
 import { budgetLevel } from '@/utils/budget-level'
 
 export interface BudgetAlert {

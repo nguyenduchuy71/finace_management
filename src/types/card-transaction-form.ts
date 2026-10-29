@@ -1,14 +1,12 @@
 import { z } from 'zod'
 import { moneyAmountField } from './form-fields'
 import { TransactionKindSchema } from './account'
-import type { Category } from './categories'
-import type { CreditCardTransaction } from './creditCard'
-import type { CardTransactionPatch } from '@/services/creditCards'
-import { CATEGORY_TAXONOMY } from '@/utils/categories'
-import { toVnLocalInput } from '@/utils/dates'
-import { vnLocalToISO } from '@/utils/unparsed-suggest'
+import { CATEGORIES, CategorySchema, type Category } from './categories'
+import { MccSchema, type CreditCardTransaction } from './creditCard'
+import type { CardTransactionPatch } from './card-transaction-patch'
+import { toVnLocalInput, vnLocalToISO } from '@/utils/dates'
 
-export const CATEGORY_OPTIONS = Object.keys(CATEGORY_TAXONOMY) as Category[]
+export const CATEGORY_OPTIONS = CATEGORIES
 
 /** Form "Sửa giao dịch thẻ": mọi ô là chuỗi như trong input; '' = trống. */
 export const CardTxFormSchema = z.object({
@@ -18,8 +16,8 @@ export const CardTxFormSchema = z.object({
   direction: z.enum(['income', 'expense']),
   amount: moneyAmountField('Số tiền').refine((n) => n > 0, 'Nhập số tiền lớn hơn 0'),
   localDateTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, 'Chọn ngày giờ giao dịch'),
-  category: z.union([z.literal(''), z.enum(CATEGORY_OPTIONS as [Category, ...Category[]])]),
-  mcc: z.string().regex(/^(\d{4})?$/, 'MCC phải gồm 4 chữ số'),
+  category: z.union([z.literal(''), CategorySchema]),
+  mcc: z.string().refine((v) => v === '' || MccSchema.safeParse(v).success, 'MCC phải gồm 4 chữ số'),
 }).refine((v) => v.kind !== 'cashback' || v.direction === 'income', {
   // Cashback âm sẽ trừ vào thu trên tổng quan — gần như chắc chắn là chọn nhầm chiều.
   path: ['direction'], message: 'Cashback là tiền vào — chọn "Tiền vào thẻ"',

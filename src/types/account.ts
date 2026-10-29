@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { StoredCategorySchema } from './categories'
 
 export const BankAccountSchema = z.object({
   id: z.string(),
@@ -34,7 +35,7 @@ export const TransactionSchema = z.object({
   amount: z.number().int(),       // positive = income, negative = expense
   description: z.string(),
   merchantName: z.string().optional(),
-  category: z.string().optional(),
+  category: StoredCategorySchema.optional(),
   kind: TransactionKindSchema.optional(),
   type: z.enum(['income', 'expense']),
   status: z.enum(['pending', 'posted']),

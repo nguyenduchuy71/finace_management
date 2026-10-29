@@ -3,7 +3,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatVND } from '@/utils/currency'
 import { getCategoryChartColor } from '@/utils/category-colors'
-import type { CategoryBreakdownItem } from '@/services/dashboard'
+import type { CategoryBreakdownItem } from '@/types/dashboard'
 
 interface TooltipPayloadItem {
   name: string

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { toApiError } from './api-errors'
+import { toISO, toISOOrNull } from './row-values'
 import { ApiKeySchema, type ApiKey } from '@/types/api-key'
 
 /** Cột được cấp quyền đọc (key_hash / rl_* bị revoke với authenticated — select '*' sẽ 42501). */
@@ -15,17 +16,15 @@ interface ApiKeyRow {
   revoked_at: string | null
 }
 
-const toISO = (v: string | null) => (v === null ? null : new Date(v).toISOString())
-
 function mapApiKey(row: ApiKeyRow): ApiKey {
   return ApiKeySchema.parse({
     id: row.id,
     name: row.name,
     prefix: row.prefix,
     last4: row.last4,
-    createdAt: new Date(row.created_at).toISOString(),
-    lastUsedAt: toISO(row.last_used_at),
-    revokedAt: toISO(row.revoked_at),
+    createdAt: toISO(row.created_at),
+    lastUsedAt: toISOOrNull(row.last_used_at),
+    revokedAt: toISOOrNull(row.revoked_at),
   })
 }
 

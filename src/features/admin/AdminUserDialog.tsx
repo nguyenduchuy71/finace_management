@@ -33,7 +33,7 @@ function Detail({ userId }: { userId: string }) {
   const suspended = user.suspendedAt !== null
   // Cùng logic với SuspensionBadge: 'mismatch' (ban lỗi giữa chừng) hiện cả hai nút để hoàn tất.
   const state = suspensionState(user, new Date().toISOString())
-  const activeKeys = keys.filter((k) => k.revoked_at === null)
+  const activeKeys = keys.filter((k) => k.revokedAt === null)
 
   return (
     <div className="space-y-4 text-sm">
@@ -58,7 +58,7 @@ function Detail({ userId }: { userId: string }) {
               <li key={k.id} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
                 <span>{k.name} <span className="font-mono text-xs text-muted-foreground">{k.prefix}…{k.last4}</span></span>
                 <span className="text-xs text-muted-foreground">
-                  {k.revoked_at ? 'Đã thu hồi' : k.last_used_at ? `Dùng ${when(k.last_used_at)}` : 'Chưa dùng'}
+                  {k.revokedAt ? 'Đã thu hồi' : k.lastUsedAt ? `Dùng ${when(k.lastUsedAt)}` : 'Chưa dùng'}
                 </span>
               </li>
             ))}

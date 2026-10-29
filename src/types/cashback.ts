@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { MccSchema } from './creditCard'
+import type { CashbackFormValues } from './cashback-form'
 
 /** Bậc thang thêm của một rule: chi từ `minSpend` thì áp `ratePercent` cho CẢ khoản chi của rule. */
 export const CashbackTierSchema = z.object({
@@ -16,7 +18,7 @@ export type CashbackTier = z.infer<typeof CashbackTierSchema>
 export const CashbackRuleSchema = z.object({
   id: z.string(),
   cardId: z.string(),
-  mcc: z.string().regex(/^\d{4}$/).nullable(),
+  mcc: MccSchema.nullable(),
   ratePercent: z.number().min(0).max(100),
   minCycleSpend: z.number().int().min(0),
   capPerCycle: z.number().int().positive().nullable(),
@@ -26,13 +28,7 @@ export const CashbackRuleSchema = z.object({
 export type CashbackRule = z.infer<typeof CashbackRuleSchema>
 
 /** Giá trị gửi lên RPC save_cashback_rule: rule + TOÀN BỘ bậc thêm (RPC thay thế bậc cũ bằng danh sách này). */
-export interface CashbackRuleInput {
-  mcc: string | null
-  ratePercent: number
-  minCycleSpend: number
-  capPerCycle: number | null
-  tiers: CashbackTier[]
-}
+export type CashbackRuleInput = CashbackFormValues
 
 /** Kết quả tính hoàn tiền cho MỘT rule trong một chu kỳ. */
 export interface RuleCashback {
