@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { TX_PAGE_SIZE, EMPTY_TX_PAGE, toTxQueryOptions } from '@/services/transactionQuery'
+import { TX_PAGE_SIZE, emptyTxPage, toTxQueryOptions } from '@/services/transactionQuery'
 import { getTransactions } from '@/services/accounts'
 import { useFilterParams } from '@/stores/filterStore'
 import { QK } from './query-keys'
@@ -11,7 +11,7 @@ export function useTransactions() {
   return useInfiniteQuery({
     queryKey: [...QK.transactions, accountId, { dateFrom, dateTo, searchQuery, txType, category }],
     queryFn: ({ pageParam }) => {
-      if (!accountId) return Promise.resolve(EMPTY_TX_PAGE)
+      if (!accountId) return Promise.resolve(emptyTxPage())
       return getTransactions(accountId, pageParam as string | undefined, TX_PAGE_SIZE, toTxQueryOptions(filters))
     },
     initialPageParam: undefined as string | undefined,

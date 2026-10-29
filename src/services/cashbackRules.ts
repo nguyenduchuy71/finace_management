@@ -51,9 +51,9 @@ const RULE_ERRORS: Record<string, string> = {
 }
 
 function fail(error: PostgrestError): ApiError {
-  const apiError = toApiError(error, RULE_ERRORS)
   // 22023: RPC save_cashback_rule từ chối bậc thang sai; thông điệp do chính hàm đó viết (tiếng Việt, không lộ nội bộ).
-  return error.code === '22023' ? { code: '22023', message: error.message } : apiError
+  if (error.code === '22023') return { code: '22023', message: error.message }
+  return toApiError(error, RULE_ERRORS)
 }
 
 /** Rule của một thẻ: rule theo MCC trước, rule mặc định (mcc NULL) cuối cùng. */

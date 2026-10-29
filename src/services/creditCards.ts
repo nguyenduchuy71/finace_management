@@ -5,10 +5,10 @@ import { MccSchema, type CreditCard, type CreditCardTransaction } from '@/types/
 import { mapCreditCard, mapCreditCardTransaction, type CreditCardRow } from './mappers'
 import { toApiError, requireAffected } from './api-errors'
 import { fetchTransactionPage, type TxScope } from './transaction-fetch'
-import { TX_PAGE_SIZE, EMPTY_TX_PAGE, type TransactionFilters } from './transactionQuery'
+import { TX_PAGE_SIZE, emptyTxPage, type TransactionFilters } from './transactionQuery'
 
 /** Phạm vi query theo một thẻ, nhiều thẻ, hoặc mọi thẻ (`cardIds` rỗng). */
-export function cardScope(card: string | MultiCardSelection): TxScope {
+function cardScope(card: string | MultiCardSelection): TxScope {
   return (q) => typeof card === 'string'
     ? q.eq('card_id', card)
     : card.cardIds.length > 0
@@ -43,7 +43,7 @@ export async function getCreditCardTransactions(
 ): Promise<PaginatedResponse<CreditCardTransaction>> {
   // Thẻ tín dụng chỉ có chi tiêu -> txType='income' luôn rỗng (giữ hành vi cũ của mock)
   if (filters?.txType === 'income') {
-    return EMPTY_TX_PAGE
+    return emptyTxPage()
   }
 
   // Keyset (transaction_date, id) của applyTransactionFilters vẫn đúng khi gộp nhiều thẻ: thứ tự toàn cục.

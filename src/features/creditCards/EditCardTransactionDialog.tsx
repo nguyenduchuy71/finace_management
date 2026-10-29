@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CATEGORIES } from '@/types/categories'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useUpdateCardTransaction } from '@/hooks/useUpdateCardTransaction'
 import {
-  CATEGORY_OPTIONS, initialCardTxForm, toCardTxPatch,
+  initialCardTxForm, toCardTxPatch,
   type CardTxFormErrors, type CardTxFormInput,
 } from '@/types/card-transaction-form'
 import { RESOLVE_KIND_LABEL, TX_RESOLVE_KINDS } from '@/types/unparsed'
@@ -87,7 +88,7 @@ function EditBody({ tx, onDone, setBusy }: {
         <FormField id="edit-tx-category" label="Danh mục" error={errors.category}>
           <NativeSelect {...field('category', 'edit-tx-category')}>
             <option value="">Chưa phân loại</option>
-            {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </NativeSelect>
         </FormField>
         <FormField id="edit-tx-mcc" label="MCC" error={errors.mcc} hint="Dùng để tính hoàn tiền theo rule của thẻ">

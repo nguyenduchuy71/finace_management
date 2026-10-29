@@ -38,13 +38,9 @@ describe('category đọc từ DB', () => {
     expect(mapCreditCardTransaction({ ...row, category: 'Hóa đơn' }).category).toBe('Hóa đơn')
   })
 
-  it('chuỗi cũ ngoài danh sách -> Khác, không làm hỏng việc tải danh sách', () => {
-    expect(mapTransaction({ ...row, category: 'food' }).category).toBe('Khác')
-    expect(mapCreditCardTransaction({ ...row, category: 'Ăn Uống (cũ)' }).category).toBe('Khác')
-  })
-
-  it('null hoặc rỗng -> undefined (để UI tự phân loại theo merchant)', () => {
+  it('chuỗi ngoài danh sách giữ nguyên (không ép về Khác), null -> undefined', () => {
+    expect(mapTransaction({ ...row, category: 'food' }).category).toBe('food')
+    expect(mapCreditCardTransaction({ ...row, category: '' }).category).toBe('')
     expect(mapTransaction(row).category).toBeUndefined()
-    expect(mapTransaction({ ...row, category: '' }).category).toBeUndefined()
   })
 })

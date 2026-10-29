@@ -16,7 +16,9 @@ export interface TransactionFilters {
 }
 
 /** Trang rỗng — trả khi chưa chọn TK/thẻ hoặc thẻ không thể có giao dịch thu. */
-export const EMPTY_TX_PAGE = { data: [] as never[], nextCursor: null as string | null, total: 0 }
+export function emptyTxPage() {
+  return { data: [] as never[], nextCursor: null as string | null, total: 0 }
+}
 
 /** Bộ lọc từ store -> tham số service (`search` rỗng thành undefined). Thẻ không có `category`. */
 export function toTxQueryOptions(f: {
