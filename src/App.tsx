@@ -13,6 +13,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { PaymentReturnPage } from '@/pages/PaymentReturnPage'
 
 // Chunk riêng: chỉ admin tải.
 const AdminPage = lazy(() => import('@/pages/AdminPage'))
@@ -32,6 +33,7 @@ export function App() {
                 <Route path="/accounts" element={<BankAccountsPage />} />
                 <Route path="/credit-cards" element={<CreditCardsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/payment/return" element={<PaymentReturnPage />} />
                 <Route
                   path="/admin"
                   element={<Suspense fallback={<p className="text-sm text-muted-foreground">Đang tải…</p>}><AdminPage /></Suspense>}

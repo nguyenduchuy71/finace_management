@@ -50,6 +50,8 @@ Production: set 2 biến này trong Vercel dashboard (không hardcode vào `verc
 
 Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legacy** single-tenant — `SHORTCUT_SECRET`, `DEFAULT_USER_ID`,
 `OWNER_NAMES` (gỡ ở phase 4 của `plans/261027-1012-saas-signup-api-key-credits/`). User mới xác thực bằng API key riêng.
+Thanh toán (phase 3, xem `docs/claude/edge-functions.md`): `MOMO_PARTNER_CODE/ACCESS_KEY/SECRET_KEY`, `ZALOPAY_APP_ID/KEY1/KEY2`, `PAYMENT_ENV=sandbox|production`,
+`PAYMENT_RETURN_URL` (https://<domain>/payment/return), `RECONCILE_SECRET`. Ví thiếu secret → ẩn + 503; production + key sandbox công khai → ví tắt.
 
 ---
 
@@ -89,7 +91,8 @@ Edge function secrets (`supabase secrets set`): chỉ còn cho đường **legac
 /dashboard     → DashboardPage
 /accounts      → BankAccountsPage ("Giao dịch ngân hàng": ?view=inbox|recorded — hộp tin chưa phân loại / giao dịch theo TK)
 /credit-cards  → CreditCardsPage (?view=all = "Nhiều thẻ"; mặc định "Từng thẻ")
-/settings      → SettingsPage (số dư + lịch sử credit, API key cho Shortcut, tên chủ TK, xoá tài khoản)
+/settings      → SettingsPage (số dư + lịch sử credit, nạp credit MoMo/ZaloPay + lịch sử đơn, API key cho Shortcut, tên chủ TK, xoá tài khoản)
+/payment/return → PaymentReturnPage (?order=<id>; ví đưa user về; CHỈ hiển thị + poll trạng thái đơn, không bao giờ cộng credit)
 /signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
 /admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```

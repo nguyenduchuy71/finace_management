@@ -236,8 +236,8 @@ select t.check('trigger chặn DELETE dù service_role có quyền', t.msg('serv
 revoke update, delete on public.admin_audit_log from service_role;
 
 select t.check('trigger chặn TRUNCATE', t.msg('postgres', null, $$truncate admin_audit_log$$), 'admin_audit_log là append-only');
-select t.check('9 bảng dữ liệu có policy restrictive not_suspended (gồm credit_ledger, credit_balances), user_settings không', (select
-  (count(*) = 9 and bool_and(polpermissive = false))::text from pg_policy where polname = 'not_suspended'), 'true');
+select t.check('10 bảng dữ liệu có policy restrictive not_suspended (gồm credit_ledger, credit_balances, payment_orders), user_settings không', (select
+  (count(*) = 10 and bool_and(polpermissive = false))::text from pg_policy where polname = 'not_suspended'), 'true');
 
 -- 20261029100000: anon không EXECUTE được function nào của public (PUBLIC mặc định có EXECUTE)
 select t.check('anon không gọi được function nào trong public', (select coalesce(string_agg(p.proname, ',' order by p.proname), '')

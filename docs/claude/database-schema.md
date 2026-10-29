@@ -127,3 +127,27 @@ Dùng `getUnlinkedCount()` (`src/services/accounts.ts`) để phát hiện.
 Form thẻ (`credit-card-form.ts`) vì thế **ép `card_number` dạng `****xxxx`** (unique ở DB chỉ chặn trùng chính xác, còn
 `5678` và `****5678` cùng khớp một `LIKE`) và **chuẩn hoá hoa/thường `bank_name`** theo `KNOWN_BANK_NAMES`
 (`bank-branding.ts`): edge function so khớp `bank_name` bằng `.eq()` chính xác, phân biệt hoa thường.
+
+---
+
+## Thanh toán credit (migration `20261031100000`)
+
+```
+credit_packages  id text PK, credits, price_vnd (1.000..50.000.000), active, sort — sửa bằng SQL (seed p50k=500, p100k=1.200, p200k=3.000).
+                 authenticated chỉ SELECT gói active; không grant ghi
+payment_orders   id, user_id, provider 'momo'|'zalopay', provider_order_ref UNIQUE ('yymmdd_' GMT+7 + 12 [a-z0-9]; = MoMo orderId/requestId,
+                 ZaloPay app_trans_id), provider_tx_id (transId / zp_trans_id), package_id, amount_vnd + credits (CHỤP từ gói lúc tạo),
+                 status pending|paid|expired|failed|mismatch, pay_url, paid_at, last_checked_at, expires_at (+15 phút)
+                 unique (provider, provider_tx_id) = khoá idempotency của IPN. RLS: select chính chủ + RESTRICTIVE not_suspended;
+                 authenticated KHÔNG insert/update/delete (status chỉ đổi qua RPC service_role)
+payment_events   log mọi create/ipn/query (payload đã lọc key/chữ ký). RLS bật, không policy, không grant client
+```
+**RPC (chỉ `service_role`, security invoker):** `create_payment_order(user, provider, package)` (≤ 5 đơn pending chưa hết hạn → 22023, user khoá → 42501,
+gói lạ → P0002), `get_payment_order`, `set_order_pay_url`, `fail_payment_order`, `mark_order_checked`, `log_payment_event`,
+`list_orders_to_reconcile`, `expire_stale_orders` (chỉ đơn quá hạn VÀ đã được hỏi provider SAU hạn), và
+`fulfill_order(provider, order_ref, tx_id, amount)` → `paid|duplicate|mismatch|unknown_order`:
+tx_id đã thấy → duplicate; khoá dòng đơn rồi kiểm lại (2 IPN song song); lệch tiền / quá hạn / đơn không còn pending → `mismatch`, KHÔNG cộng
+(đơn đã `paid` mà tới tx khác thì trả mismatch nhưng GIỮ `paid`); còn lại → paid + `_apply_credit(+credits,'purchase', order.id)` (ref = đơn → cộng đúng 1 lần
+ngay cả khi lớp trên hỏng) + `replay_held_messages` trong khối EXCEPTION (replay lỗi chỉ cảnh báo, không rollback credit đã trả).
+**Xử lý đơn `mismatch` (chưa có tab admin):** xác minh ở cổng thanh toán + `payment_events`, rồi cộng tay bằng action `adjust_credit` của function `admin`
+(ghi audit) hoặc đánh dấu hoàn tiền ngoài app; không có đường tự động.

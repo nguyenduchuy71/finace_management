@@ -73,3 +73,24 @@ verify_jwt = true
 enabled = true
 # Gateway kiểm JWT; function kiểm thêm app_metadata.role = 'admin' + aal2.
 verify_jwt = true
+
+# --- Thanh toán MoMo / ZaloPay (phase 3) ---
+[functions.create-payment]
+enabled = true
+# Gateway kiểm JWT; function còn getUser(token) để lấy user id.
+verify_jwt = true
+
+[functions.payment-ipn-momo]
+enabled = true
+# MoMo gọi server-to-server, không có JWT Supabase: xác thực bằng chữ ký HMAC trong body.
+verify_jwt = false
+
+[functions.payment-ipn-zalopay]
+enabled = true
+# ZaloPay callback không có JWT Supabase: xác thực bằng MAC (key2) trên chuỗi data.
+verify_jwt = false
+
+[functions.payment-reconcile]
+enabled = true
+# Scheduler ngoài gọi, xác thực bằng header x-reconcile-secret.
+verify_jwt = false
