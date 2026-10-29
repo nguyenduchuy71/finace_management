@@ -47,6 +47,32 @@ export const useFilterStore = create<FilterState>()((set) => ({
 }))
 
 /**
+ * Có bộ lọc nào đang bật không. Trả boolean nguyên thuỷ nên không cần useShallow.
+ * `withCategory=false` cho thẻ tín dụng: thẻ không có bộ lọc danh mục.
+ */
+export function selectHasActiveFilters(
+  s: Pick<FilterState, 'searchQuery' | 'dateFrom' | 'dateTo' | 'txType' | 'category'>,
+  { withCategory }: { withCategory: boolean },
+): boolean {
+  return Boolean(
+    s.searchQuery || s.dateFrom || s.dateTo || s.txType !== 'all' || (withCategory && s.category !== 'all')
+  )
+}
+
+/** Như `useFilterParams` nhưng cho một thẻ (không có danh mục) — cũng PHẢI dùng useShallow. */
+export function useCreditCardFilterParams() {
+  return useFilterStore(
+    useShallow((state) => ({
+      cardId: state.cardId,
+      dateFrom: state.dateFrom,
+      dateTo: state.dateTo,
+      searchQuery: state.searchQuery,
+      txType: state.txType,
+    }))
+  )
+}
+
+/**
  * Selector for multiple filter params — MUST use useShallow to prevent
  * infinite re-renders from object reference inequality on every render.
  */

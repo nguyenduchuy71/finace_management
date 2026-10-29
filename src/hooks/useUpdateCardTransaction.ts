@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { updateCardTransaction, type CardTransactionPatch } from '@/services/creditCards'
 import type { ApiError } from '@/types/api'
+import { QK } from './query-keys'
 
 /**
  * Sửa một giao dịch thẻ. Số tiền / ngày / loại / MCC đều ảnh hưởng danh sách, tổng quan và hoàn tiền
@@ -13,7 +14,7 @@ export function useUpdateCardTransaction() {
   return useMutation<void, ApiError, { txId: string; patch: CardTransactionPatch }>({
     mutationFn: ({ txId, patch }) => updateCardTransaction(txId, patch),
     onSuccess: () => {
-      for (const queryKey of [['creditCardTransactions'], ['cardCycleExpenses'], ['dashboardStats']]) {
+      for (const queryKey of [QK.creditCardTransactions, QK.cardCycleExpenses, QK.dashboardStats]) {
         void qc.invalidateQueries({ queryKey })
       }
       toast.success('Đã lưu giao dịch')

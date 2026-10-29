@@ -8,6 +8,7 @@ import { useCardTransactionCount, useDeleteCreditCard } from '@/hooks/useCreditC
 import { useFilterStore } from '@/stores/filterStore'
 import type { CreditCard } from '@/types/creditCard'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 interface DeleteCardDialogProps {
   open: boolean
@@ -96,11 +97,11 @@ function DeleteBody({ card, onDone, setBusy }: {
 
 export function DeleteCardDialog({ open, onOpenChange, card }: DeleteCardDialogProps) {
   // Đang xoá thì không cho đóng: user sẽ không thấy lỗi nếu lần xoá thất bại.
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
     <Dialog
       open={open && card !== null}
-      onOpenChange={(next) => { if (!busy) onOpenChange(next) }}
+      onOpenChange={handleOpenChange}
     >
       <DialogContent className="sm:max-w-md">
         {card && (

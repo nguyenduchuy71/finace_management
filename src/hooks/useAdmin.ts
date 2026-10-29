@@ -4,8 +4,9 @@ import { getAdminUser, listAdminUsers, listAudit, runAdminMutation } from '@/ser
 import { useAuth } from '@/hooks/useAuth'
 import { isAdminSession } from '@/features/auth/mfa'
 import type { AdminKey, AdminMutation, AdminUser } from '@/types/admin'
+import { QK } from './query-keys'
 
-const ADMIN_KEY = ['admin'] as const
+const ADMIN_KEY = QK.admin
 const USERS_KEY = [...ADMIN_KEY, 'users'] as const
 const AUDIT_KEY = [...ADMIN_KEY, 'audit'] as const
 const userKey = (id: string | null) => [...ADMIN_KEY, 'user', id] as const

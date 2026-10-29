@@ -2,6 +2,7 @@ import { useQueries } from '@tanstack/react-query'
 import { getDashboardStats } from '@/services/dashboard'
 import { useDashboardDateRange } from '@/stores/dashboardStore'
 import { getPreviousMonthDateRange, calculateMonthDelta } from '@/utils/dates'
+import { QK } from './query-keys'
 
 export function useDashboardStats() {
   const { dateFrom, dateTo } = useDashboardDateRange()
@@ -13,12 +14,12 @@ export function useDashboardStats() {
   const [currentQuery, previousQuery] = useQueries({
     queries: [
       {
-        queryKey: ['dashboardStats', { dateFrom, dateTo }],
+        queryKey: [...QK.dashboardStats, { dateFrom, dateTo }],
         queryFn: () => getDashboardStats({ dateFrom, dateTo }),
         staleTime: 1000 * 60 * 5,
       },
       {
-        queryKey: ['dashboardStats', { dateFrom: prevFrom, dateTo: prevTo }],
+        queryKey: [...QK.dashboardStats, { dateFrom: prevFrom, dateTo: prevTo }],
         queryFn: () => getDashboardStats({ dateFrom: prevFrom, dateTo: prevTo }),
         staleTime: 1000 * 60 * 5,
       },

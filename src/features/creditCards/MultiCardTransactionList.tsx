@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/empty-state/EmptyState'
 import { useMultiCardTransactions } from '@/hooks/useMultiCardTransactions'
 import { useCreditCards } from '@/hooks/useCreditCards'
 import { useNow } from '@/hooks/useNow'
-import { useFilterStore } from '@/stores/filterStore'
+import { useFilterStore, selectHasActiveFilters } from '@/stores/filterStore'
 import { formatDayLabel, groupByDay } from '@/utils/group-by-day'
 import { LoadMoreFooter } from '@/features/transactions/LoadMoreFooter'
 import { DayGroupHeader } from '@/features/transactions/DayGroupHeader'
@@ -19,7 +19,7 @@ import { TransactionListError } from '@/features/transactions/TransactionListErr
 export function MultiCardTransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useMultiCardTransactions()
-  const hasActiveFilters = useFilterStore((s) => Boolean(s.searchQuery || s.dateFrom || s.dateTo || s.txType !== 'all'))
+  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s, { withCategory: false }))
   const { data: cardsData } = useCreditCards()
   const now = useNow()
 

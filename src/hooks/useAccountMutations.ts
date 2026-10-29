@@ -5,15 +5,16 @@ import {
 } from '@/services/account-mutations'
 import type { AccountFormValues } from '@/types/account-form'
 import type { BankAccount } from '@/types/account'
+import { QK } from './query-keys'
 
 /** Đổi TK làm thay đổi danh sách TK, giao dịch của TK, dashboard và hộp tin (nguồn tiền). */
 function useInvalidateAccountData() {
   const qc = useQueryClient()
   return () =>
     Promise.all([
-      qc.invalidateQueries({ queryKey: ['accounts'] }),
-      qc.invalidateQueries({ queryKey: ['transactions'] }),
-      qc.invalidateQueries({ queryKey: ['dashboardStats'] }),
+      qc.invalidateQueries({ queryKey: QK.accounts }),
+      qc.invalidateQueries({ queryKey: QK.transactions }),
+      qc.invalidateQueries({ queryKey: QK.dashboardStats }),
     ])
 }
 
@@ -56,7 +57,7 @@ export function useDeleteAccount() {
 /** Đếm giao dịch của TK để dialog xoá nói rõ sẽ mất bao nhiêu — luôn lấy mới. */
 export function useAccountTransactionCount(accountId: string) {
   return useQuery({
-    queryKey: ['accountTxCount', accountId],
+    queryKey: [...QK.accountTxCount, accountId],
     queryFn: () => countAccountTransactions(accountId),
     staleTime: 0,
     gcTime: 0,
