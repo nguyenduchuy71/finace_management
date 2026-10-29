@@ -53,11 +53,15 @@ Test: `docker run --rm -v "$PWD/supabase/functions/parse-transaction:/app" -w /a
 
 Cổng duy nhất cho quản trị. `admin-auth.ts`: `getUser(token)` → `app_metadata.role === 'admin'` (user không tự ghi được
 app_metadata) → claim `aal === 'aal2'` (MFA TOTP) — sai thì 401/403 `forbidden`/`mfa_required`. `admin-actions.ts`: danh sách
-hành động ĐÓNG `list_users`, `get_user` (kèm 20 dòng sổ cái credit), `suspend`, `unsuspend`, `revoke_keys`, `adjust_credit` (`delta` nguyên ≠ 0, |delta| ≤ 1.000.000; RPC `admin_adjust_credit` ghi audit + sổ cái cùng transaction; trừ quá số dư → 400 `insufficient_credit`), `list_audit`; lý do 5..500 ký tự; không nhắm
+hành động ĐÓNG `list_users`, `get_user` (kèm 20 dòng sổ cái credit), `suspend`, `unsuspend`, `revoke_keys`, `adjust_credit` (`delta` nguyên ≠ 0, |delta| ≤ 1.000.000; RPC `admin_adjust_credit` ghi audit + sổ cái cùng transaction; trừ quá số dư → 400 `insufficient_credit`), `list_orders`, `resolve_order`, `list_audit`; lý do 5..500 ký tự; không nhắm
 chính mình / admin khác. Email + đăng nhập cuối + ban lấy từ GoTrue (`auth.admin.listUsers`), ghép theo id với
 `admin_user_stats` — RPC không đọc `auth.users`. Khoá = RPC (cờ DB + audit) TRƯỚC, rồi ban GoTrue (`ban_duration`);
 ban lỗi → `502 ban_failed`, bấm lại an toàn. `get_user` ghi audit `view_user` TRƯỚC khi trả dữ liệu (ghi lỗi → không trả).
 Đường legacy `x-shortcut-secret` cũng kiểm khoá của `DEFAULT_USER_ID` (không kiểm được → 500, không cho qua).
+`list_orders` (lọc status/provider/userId, mới nhất, 100 đơn; chỉ metadata — KHÔNG `pay_url`/payload IPN; email ghép từ GoTrue) và
+`resolve_order` (`mark_paid` | `mark_failed` cho đơn pending/mismatch/expired/failed; lý do 5..500; đơn `paid` → 409 `order_not_resolvable`; đơn của
+chính admin → 400 `cannot_target_self`). `mark_paid` dùng cùng khoá sổ cái với `fulfill_order` (`purchase`, ref = order.id) nên cộng đúng 1 lần dù bấm lại
+hay IPN tới muộn. Code tách ở `admin-orders.ts`, helper chung `admin-result.ts`.
 Gán admin (SQL, 1 lần): `update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}' where email = '…'`.
 Break-glass gỡ ban: `update auth.users set banned_until = null where id = '…'` + `update user_settings set suspended_at = null …`.
 Break-glass mất điện thoại TOTP: `delete from auth.mfa_factors where user_id = '<admin id>'` rồi đăng nhập lại và enroll lại.

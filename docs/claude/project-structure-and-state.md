@@ -20,7 +20,7 @@ src/
 │   ├── settings/        # ApiKeysSection, CreateApiKeyDialog (key hiện 1 lần, chặn Esc/X), OwnerNamesSection,
 │   │                    #   DeleteAccountSection, SuspendedBanner (AppShell — user bị khoá thấy app TRỐNG vì RLS)
 │   ├── credits/         # CreditBalanceBadge (header; cảnh báo < 10 credit hoặc có tin treo), CreditSection + CreditLedgerList (/settings; list dùng chung drawer admin)
-│   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata + sổ cái credit), AdminCreditDialog (điều chỉnh ±credit), AdminActionDialog (lý do 5..500), AdminAuditList,
+│   ├── admin/           # AdminUsersList, AdminUserDialog (chỉ metadata + sổ cái credit), AdminCreditDialog (điều chỉnh ±credit), AdminActionDialog (lý do 5..500), AdminOrdersList + AdminOrderDialog (tab "Đơn thanh toán": lọc, mark_paid/mark_failed), AdminAuditList,
 │   │                    #   SuspensionBadge (Hoạt động / Bị khoá / Lệch trạng thái)
 │   ├── legal/           # PrivacyPage, TermsPage (default export, lazy), LegalLayout (+ LegalValue: marker "[chưa điền]" khi env trống)
 │   ├── landing/         # LandingPage + Header/Hero/Features/HowItWorks/Security (trang chủ công khai, số liệu minh hoạ tĩnh)
@@ -98,7 +98,7 @@ src/
 | `useCreateAccount()` / `useUpdateAccount(a)` / `useDeleteAccount()` / `useAccountTransactionCount(id)` | CRUD tài khoản ngân hàng |
 | `useApiKeys()` / `useCreateApiKey()` / `useRevokeApiKey()` | API key cho Shortcut; `mutateAsync` của tạo trả key đầy đủ (không toast key) |
 | `useUserSettings()` / `useUpdateOwnerNames()` / `useDeleteMyAccount()` | Cài đặt user (gồm `suspendedAt`); xoá tài khoản qua edge function `delete-account` rồi `queryClient.clear()` |
-| `useIsAdmin()` / `useAdminUsers()` / `useAdminUser(id)` / `useAdminAudit()` / `useAdminMutation()` | Trang quản trị. **Không refetch khi focus**: mỗi `get_user` ghi audit `view_user`. Sau thao tác chỉ tải lại danh sách + nhật ký và chép dòng mới vào cache chi tiết — KHÔNG gọi lại `get_user` |
+| `useIsAdmin()` / `useAdminUsers()` / `useAdminUser(id)` / `useAdminAudit()` / `useAdminMutation()` / `useAdminOrders(filters)` / `useResolveOrder()` | Trang quản trị. **Không refetch khi focus**: mỗi `get_user` ghi audit `view_user`. Sau thao tác chỉ tải lại danh sách + nhật ký và chép dòng mới vào cache chi tiết — KHÔNG gọi lại `get_user` |
 
 ---
 

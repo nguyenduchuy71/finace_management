@@ -39,7 +39,9 @@ export const AdminKeySchema = z.object({
 })
 export type AdminKey = z.infer<typeof AdminKeySchema>
 
-export const AuditActionSchema = z.enum(['suspend', 'unsuspend', 'revoke_keys', 'view_user', 'adjust_credit'])
+export const AuditActionSchema = z.enum([
+  'suspend', 'unsuspend', 'revoke_keys', 'view_user', 'adjust_credit', 'order_mark_paid', 'order_mark_failed',
+])
 export type AuditAction = z.infer<typeof AuditActionSchema>
 
 export const AuditEntrySchema = z.object({
@@ -59,6 +61,8 @@ export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   revoke_keys: 'Thu hồi key',
   view_user: 'Xem chi tiết',
   adjust_credit: 'Điều chỉnh credit',
+  order_mark_paid: 'Đơn: đánh dấu đã thanh toán',
+  order_mark_failed: 'Đơn: đánh dấu thất bại',
 }
 
 /** Hành động admin thay đổi user — mỗi cái bắt lý do. */

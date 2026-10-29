@@ -76,7 +76,12 @@ Key chỉ nằm ở shortcut này; đổi key (thu hồi + tạo mới) thì ch�
 
 Response để debug: `201 {inserted}` (đã ghi), `200 {skipped: duplicate | no_match | otp_or_security}`,
 `422 invalid_parse` (regex khớp nhưng ra số/ngày vô nghĩa), `401` key sai/đã thu hồi, `429` quá 60 request/phút,
-`413` nội dung quá dài.
+`413` nội dung quá dài, `402 no_credit` hết credit (xem dưới), `403 suspended` tài khoản bị khoá.
+
+**Hết credit (`no_credit`)** — mỗi giao dịch ghi được trừ 1 credit:
+- `202 {skipped: no_credit}`: hết credit nhưng tin **đã được giữ** trong hộp tin (tối đa 300 tin/tài khoản). Shortcut không báo lỗi; nạp credit xong tin được ghi tự động.
+- `402 {error: no_credit, held: false}`: hết credit **và** đã đủ 300 tin treo — tin **KHÔNG được lưu**, Shortcut sẽ hiện lỗi HTTP 402. Giao dịch đó phải nhập tay.
+- Cách xử lý: vào **Cài đặt → Nạp credit** (MoMo / ZaloPay). Sau khi thanh toán thành công, các tin treo được phát lại và ghi thành giao dịch.
 
 ## 4. Mỗi bank một Automation
 
@@ -159,6 +164,7 @@ Sau khi deploy parser mới, chạy `backfill-unparsed.ts` (dry-run trước) đ
 |---|---|
 | Automation không chạy | Chưa bật thông báo của app trong Settings → Notifications; hoặc đã thêm bộ lọc tiêu đề/nội dung |
 | `401` | Header `Authorization: Bearer <key>` thiếu, sai, hoặc key đã thu hồi (trang Cài đặt hiện trạng thái key) |
+| `402 no_credit` | Hết credit và đã đủ 300 tin treo: tin này không được lưu (xem mục "Hết credit" ở trên). Nạp credit ở **Cài đặt**; giao dịch bị bỏ nhập tay hoặc chờ ngân hàng gửi lại thông báo |
 | `429` | Quá 60 request/phút với cùng một key — automation đang chạy lặp |
 | `no_match` với bank đã có parser | Thông báo ẩn nội dung ("Bạn có 1 thông báo mới") — bật hiển thị nội dung trong app ngân hàng; hoặc bank đổi định dạng — so `raw_text` với mẫu trong `parsers.test.ts` |
 | Có trong dashboard, không có trong danh sách | `bank_name` trong DB khác tên parser, hoặc số thẻ/TK không kết thúc bằng 4 ký tự trong thông báo |
