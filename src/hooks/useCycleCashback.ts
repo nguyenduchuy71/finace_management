@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getCycleExpenses } from '@/services/cashbackRules'
 import { computeCashback } from '@/utils/cashback'
 import { useCashbackRules } from './useCashbackRules'
+import { QK } from './query-keys'
 
 /**
  * Hoàn tiền ước tính của một thẻ trong một chu kỳ: rule + giao dịch chi của chu kỳ.
@@ -16,7 +17,7 @@ export function useCycleCashback(
 ) {
   const rules = useCashbackRules(cardId)
   const expenses = useQuery({
-    queryKey: ['cardCycleExpenses', cardId, cycle.startISO, cycle.endISO],
+    queryKey: [...QK.cardCycleExpenses, cardId, cycle.startISO, cycle.endISO],
     queryFn: () => getCycleExpenses(cardId, cycle.startISO, cycle.endISO),
   })
 

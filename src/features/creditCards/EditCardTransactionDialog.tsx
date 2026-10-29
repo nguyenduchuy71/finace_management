@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/dialog'
 import { FormField } from '@/components/form/FormField'
 import { describedBy } from '@/components/form/form-aria'
+import { useFormBinding } from '@/components/form/useFormBinding'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useUpdateCardTransaction } from '@/hooks/useUpdateCardTransaction'
@@ -16,14 +17,13 @@ import { RESOLVE_KIND_LABEL, TX_RESOLVE_KINDS } from '@/types/unparsed'
 import type { CreditCardTransaction } from '@/types/creditCard'
 import { MccPicker } from './MccPicker'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 const KIND_HINT: Record<(typeof TX_RESOLVE_KINDS)[number], string> = {
   normal: 'Tính vào thu/chi trên tổng quan.',
   internal_transfer: 'Trả nợ thẻ / chuyển giữa TK của bạn — KHÔNG tính vào thu/chi.',
   cashback: 'Tiền hoàn từ ngân hàng — tính là thu.',
 }
-
-type TextField = Exclude<keyof CardTxFormInput, 'mcc'>
 
 /** Thân form trong DialogContent: Radix gỡ khi đóng nên state tự reset mỗi lần mở. */
 function EditBody({ tx, onDone, setBusy }: {
@@ -33,22 +33,8 @@ function EditBody({ tx, onDone, setBusy }: {
 }) {
   const update = useUpdateCardTransaction()
   const [initial] = useState(() => initialCardTxForm(tx))
-  const [form, setForm] = useState<CardTxFormInput>(initial)
-  const [errors, setErrors] = useState<CardTxFormErrors>({})
-  const [submitError, setSubmitError] = useState<string | null>(null)
-
-  const set = (key: keyof CardTxFormInput, value: string) => {
-    setForm((f) => ({ ...f, [key]: value }))
-    setErrors((prev) => ({ ...prev, [key]: undefined }))
-    setSubmitError(null)
-  }
-  const field = (key: TextField, id: string) => ({
-    id,
-    value: form[key],
-    'aria-invalid': errors[key] ? true : undefined,
-    'aria-describedby': describedBy(id, Boolean(errors[key])),
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => set(key, e.target.value),
-  })
+  const { form, errors, setErrors, submitError, setSubmitError, set, field } =
+    useFormBinding<CardTxFormInput, CardTxFormErrors>(initial)
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -135,9 +121,9 @@ export function EditCardTransactionDialog({ transaction, onOpenChange }: {
   onOpenChange: (open: boolean) => void
 }) {
   // Đang lưu thì không cho đóng: lỗi của lần lưu sẽ không còn chỗ hiển thị.
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
-    <Dialog open={transaction !== null} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
+    <Dialog open={transaction !== null} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         {transaction && (
           <EditBody key={transaction.id} tx={transaction} setBusy={setBusy} onDone={() => onOpenChange(false)} />

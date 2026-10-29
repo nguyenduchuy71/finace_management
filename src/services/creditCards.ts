@@ -8,7 +8,7 @@ import { mapCreditCard, mapCreditCardTransaction, type CreditCardRow, type Trans
 import { toApiError } from './api-errors'
 import { encodeCursor } from './query-cursor'
 import {
-  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS, TX_PAGE_SIZE,
+  applyTransactionFilters, paginate, totalForPage, countOption, TX_COLUMNS, TX_PAGE_SIZE, EMPTY_TX_PAGE,
   type TransactionFilters,
 } from './transactionQuery'
 
@@ -39,7 +39,7 @@ export async function getCreditCardTransactions(
 ) {
   // Thẻ tín dụng chỉ có chi tiêu -> txType='income' luôn rỗng (giữ hành vi cũ của mock)
   if (filters?.txType === 'income') {
-    return { data: [], nextCursor: null, total: 0 }
+    return EMPTY_TX_PAGE
   }
 
   const query = supabase.from('transactions').select(TX_COLUMNS, countOption(cursor))

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useDeleteMyAccount } from '@/hooks/useUserSettings'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 /** Gõ lại email mới cho xoá — cùng kiểu xác nhận với DeleteAccountDialog (TK ngân hàng). */
 function DeleteBody({ email, onDone, setBusy }: {
@@ -68,7 +69,7 @@ export function DeleteAccountSection() {
   const { session } = useAuth()
   const email = session?.user.email ?? ''
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(setOpen)
 
   return (
     <Card className="border-destructive/40 p-5">
@@ -84,7 +85,7 @@ export function DeleteAccountSection() {
           Xoá tài khoản
         </Button>
       </div>
-      <Dialog open={open} onOpenChange={(next) => { if (!busy) setOpen(next) }}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           {open && <DeleteBody email={email} setBusy={setBusy} onDone={() => setOpen(false)} />}
         </DialogContent>

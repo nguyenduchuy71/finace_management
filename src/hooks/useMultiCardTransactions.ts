@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { TX_PAGE_SIZE } from '@/services/transactionQuery'
+import { TX_PAGE_SIZE, toTxQueryOptions } from '@/services/transactionQuery'
 import { useShallow } from 'zustand/react/shallow'
 import { getCreditCardTransactions } from '@/services/creditCards'
 import { useFilterStore } from '@/stores/filterStore'
+import { QK } from './query-keys'
 
 /**
  * Giao dịch của nhiều thẻ một lúc (mục "Nhiều thẻ"), đọc `cardIds` + bộ lọc từ filterStore.
@@ -13,7 +14,7 @@ import { useFilterStore } from '@/stores/filterStore'
  * Id được sắp xếp: chọn cùng tập thẻ theo thứ tự khác không tạo cache mới.
  */
 export function useMultiCardTransactions() {
-  const { cardIds, dateFrom, dateTo, searchQuery, txType } = useFilterStore(
+  const { cardIds, ...filters } = useFilterStore(
     useShallow((s) => ({
       cardIds: s.cardIds,
       dateFrom: s.dateFrom,
@@ -22,17 +23,13 @@ export function useMultiCardTransactions() {
       txType: s.txType,
     }))
   )
+  const { dateFrom, dateTo, searchQuery, txType } = filters
   const sortedIds = useMemo(() => [...cardIds].sort(), [cardIds])
 
   return useInfiniteQuery({
-    queryKey: ['creditCardTransactions', 'multi', sortedIds, { dateFrom, dateTo, searchQuery, txType }],
+    queryKey: [...QK.creditCardTransactions, 'multi', sortedIds, { dateFrom, dateTo, searchQuery, txType }],
     queryFn: ({ pageParam }) =>
-      getCreditCardTransactions({ cardIds: sortedIds }, pageParam as string | undefined, TX_PAGE_SIZE, {
-        search: searchQuery || undefined,
-        dateFrom,
-        dateTo,
-        txType,
-      }),
+      getCreditCardTransactions({ cardIds: sortedIds }, pageParam as string | undefined, TX_PAGE_SIZE, toTxQueryOptions(filters)),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   })

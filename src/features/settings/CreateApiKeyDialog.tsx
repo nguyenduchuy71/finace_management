@@ -9,6 +9,7 @@ import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
 import { useCreateApiKey } from '@/hooks/useApiKeys'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 /** Endpoint Shortcut gọi tới — hiện kèm key để user dán thẳng vào Shortcut. */
 export const INGEST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-transaction`
@@ -124,13 +125,13 @@ function CreateKeyBody({ onDone, setBusy, onKeyShown }: {
 }
 
 export function CreateApiKeyDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
-  const [busy, setBusy] = useState(false)
   // Key đang hiện: chỉ nút "Tôi đã lưu key" đóng được. Esc, nút X, click ngoài mà lỡ
   // tay là mất key vĩnh viễn (DB chỉ giữ hash).
   const [keyShown, setKeyShown] = useState(false)
   const close = () => { setKeyShown(false); onOpenChange(false) }
+  const { setBusy, handleOpenChange } = useDialogBusyGuard((next) => { if (!keyShown) onOpenChange(next) })
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!busy && !keyShown) onOpenChange(next) }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="sm:max-w-lg"
         onInteractOutside={(e) => e.preventDefault()}

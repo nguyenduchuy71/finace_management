@@ -1,10 +1,9 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { useFormBinding } from '@/components/form/useFormBinding'
 import { FormField } from '@/components/form/FormField'
-import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useCreateCreditCard, useUpdateCreditCard } from '@/hooks/useCreditCardMutations'
@@ -16,6 +15,7 @@ import {
 import type { CreditCard } from '@/types/creditCard'
 import { CARD_TYPE_LABEL, KNOWN_BANK_NAMES, canonicalBankName } from './bank-branding'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 interface CardFormDialogProps {
   open: boolean
@@ -43,9 +43,8 @@ function CardFormBody({ card, onDone, setBusy }: {
   onDone: () => void
   setBusy: (busy: boolean) => void
 }) {
-  const [form, setForm] = useState<CardFormInput>(card ? cardToFormInput(card) : EMPTY_CARD_FORM)
-  const [errors, setErrors] = useState<CardFormErrors>({})
-  const [submitError, setSubmitError] = useState<string | null>(null)
+  const { form, errors, setErrors, submitError, setSubmitError, field } =
+    useFormBinding<CardFormInput, CardFormErrors>(card ? cardToFormInput(card) : EMPTY_CARD_FORM)
   const setCardId = useFilterStore((s) => s.setCardId)
 
   const create = useCreateCreditCard()
@@ -53,17 +52,7 @@ function CardFormBody({ card, onDone, setBusy }: {
   const pending = create.isPending || update.isPending
 
   /** Props chung của mỗi ô: giá trị, sửa là xoá lỗi của ô đó, và nối lỗi vào ô cho trình đọc màn hình. */
-  const fieldProps = (key: keyof CardFormInput) => ({
-    id: FIELD_ID[key],
-    value: form[key],
-    'aria-invalid': errors[key] ? true : undefined,
-    'aria-describedby': describedBy(FIELD_ID[key], Boolean(errors[key])),
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((f) => ({ ...f, [key]: e.target.value }))
-      setErrors((prev) => ({ ...prev, [key]: undefined }))
-      setSubmitError(null)
-    },
-  })
+  const fieldProps = (key: keyof CardFormInput) => field(key, FIELD_ID[key])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -153,9 +142,9 @@ function CardFormBody({ card, onDone, setBusy }: {
 export function CardFormDialog({ open, onOpenChange, card = null }: CardFormDialogProps) {
   // Đang lưu thì không cho đóng (Esc / click ra ngoài / nút X): đóng giữa chừng làm
   // lỗi của lần lưu không còn chỗ hiển thị, user tưởng đã lưu.
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <CardFormBody
           key={card?.id ?? 'new'} card={card} setBusy={setBusy}

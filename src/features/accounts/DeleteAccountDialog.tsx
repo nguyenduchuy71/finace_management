@@ -8,6 +8,7 @@ import { useAccountTransactionCount, useDeleteAccount } from '@/hooks/useAccount
 import { useFilterStore } from '@/stores/filterStore'
 import type { BankAccount } from '@/types/account'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 /**
  * Xoá TK KÈM toàn bộ giao dịch, không hoàn tác được: nói rõ số giao dịch sẽ mất (đếm
@@ -82,9 +83,9 @@ export function DeleteAccountDialog({ open, onOpenChange, account }: {
   onOpenChange: (open: boolean) => void
   account: BankAccount | null
 }) {
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
-    <Dialog open={open && account !== null} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
+    <Dialog open={open && account !== null} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         {account && (
           <DeleteBody key={account.id} account={account} setBusy={setBusy} onDone={() => onOpenChange(false)} />

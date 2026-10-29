@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { getUnparsedCount, getUnparsedMessages, resolveUnparsed } from '@/services/unparsed-messages'
 import { RESOLVE_KIND_LABEL, type ResolveKind, type ResolveTxInput } from '@/types/unparsed'
+import { QK } from './query-keys'
 
-const KEY = ['unparsedMessages'] as const
+const KEY = QK.unparsedMessages
 
 export function useUnparsedMessages(includePromo: boolean) {
   return useQuery({
@@ -36,7 +37,7 @@ export function useResolveUnparsed() {
     mutationFn: ({ messageId, kind, tx }: ResolveVars) => resolveUnparsed(messageId, kind, tx),
     onSuccess: async (txId, { kind }) => {
       const keys = [KEY, ...(txId
-        ? [['transactions'], ['creditCardTransactions'], ['dashboardStats'], ['cardCycleExpenses']]
+        ? [QK.transactions, QK.creditCardTransactions, QK.dashboardStats, QK.cardCycleExpenses]
         : [])]
       await Promise.all(keys.map((queryKey) => qc.invalidateQueries({ queryKey })))
       toast.success(txId ? `Đã ghi giao dịch (${RESOLVE_KIND_LABEL[kind]})` : `Đã đánh dấu: ${RESOLVE_KIND_LABEL[kind]}`)
