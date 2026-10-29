@@ -85,10 +85,10 @@ describe('chatStore: dữ liệu cũ', () => {
 
   it('đọc lịch sử + cấu hình ở khoá cũ', async () => {
     localStorage.setItem('finance-chat-history', JSON.stringify([msg]))
-    localStorage.setItem('finance-chat-api-config', JSON.stringify({ apiKey: 'k', model: 'm' }))
+    localStorage.setItem('finance-chat-api-config', JSON.stringify({ apiKey: 'k', model: 'claude-sonnet-5-5' }))
     const { useChatStore } = await import('./chatStore')
     expect(useChatStore.getState().messages).toEqual([msg])
-    expect(useChatStore.getState().apiConfig).toEqual({ apiKey: 'k', model: 'm' })
+    expect(useChatStore.getState().apiConfig).toEqual({ apiKey: 'k', model: 'claude-sonnet-5-5' })
   })
 
   it('sai hình dạng -> mặc định; resetForSignOut xoá khoá', async () => {
@@ -97,7 +97,7 @@ describe('chatStore: dữ liệu cũ', () => {
     const { useChatStore } = await import('./chatStore')
     expect(useChatStore.getState().messages).toEqual([])
     expect(useChatStore.getState().apiConfig).toBeNull()
-    useChatStore.getState().setApiConfig({ apiKey: 'k', model: 'm' })
+    useChatStore.getState().setApiConfig({ apiKey: 'k', model: 'claude-sonnet-5-5' })
     expect(localStorage.getItem('finance-chat-api-config')).not.toBeNull()
     useChatStore.getState().resetForSignOut()
     expect(localStorage.getItem('finance-chat-api-config')).toBeNull()

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useChatStore } from '@/stores/chatStore'
 import { useFilterStore } from '@/stores/filterStore'
 import { useTransactions } from '@/hooks/useTransactions'
+import { registerRegenerate } from './regenerate-registry'
 import { buildSystemPrompt, regenerateTurns, toChatTurns, type ChatTurn } from './chat-context'
 
 /** Giới hạn độ dài câu trả lời của model. */
@@ -17,15 +18,13 @@ async function loadAnthropicSDK() {
 
 export function useChatApi() {
   // useShallow + danh sách field cụ thể: gọi useChatStore() trần sẽ subscribe
-  // TOÀN BỘ store, nên mỗi lần setRegenerateCallback ghi vào store là hook này
-  // re-render -> góp phần tạo vòng lặp vô hạn (xem comment ở visibleTransactions).
+  // TOÀN BỘ store, nên mọi thay đổi store đều re-render hook này (xem comment ở visibleTransactions).
   const {
     apiConfig,
     messages,
     addMessage,
     setLoading,
     isLoading,
-    setRegenerateCallback,
   } = useChatStore(
     useShallow((s) => ({
       apiConfig: s.apiConfig,
@@ -33,7 +32,6 @@ export function useChatApi() {
       addMessage: s.addMessage,
       setLoading: s.setLoading,
       isLoading: s.isLoading,
-      setRegenerateCallback: s.setRegenerateCallback,
     }))
   )
 
@@ -51,9 +49,10 @@ export function useChatApi() {
   const { data: transactionPages } = useTransactions()
   // useMemo BẮT BUỘC: flatMap trong thân render trả array mới mỗi lần render ->
   // sendMessage (useCallback nhận nó làm dep) đổi identity mỗi render ->
-  // useEffect đăng ký regenerate chạy lại -> setRegenerateCallback ghi store ->
+  // useEffect đăng ký regenerate chạy lại -> (thời còn lưu trong store) ghi store ->
   // re-render -> lặp vô hạn ("Maximum update depth exceeded"), vỡ ngay khi mở
-  // chat panel. Đã tái hiện bằng renderHook trước khi sửa.
+  // chat panel. Đã tái hiện bằng renderHook trước khi sửa; giờ registry ngoài store
+  // nhưng vẫn giữ useMemo để effect không đăng ký lại vô ích.
   const visibleTransactions = useMemo(
     () => transactionPages?.pages.flatMap((p) => p.data) ?? [],
     [transactionPages]
@@ -122,14 +121,15 @@ export function useChatApi() {
 
   // "Tạo lại": ChatMessage xoá câu trả lời rồi gọi hàm này. Đọc store LÚC GỌI (đã xoá xong) thay vì
   // `messages` của lần render trước — bản cũ gửi lại cả câu trả lời vừa xoá và thêm trùng câu hỏi.
-  // Truyền THẲNG hàm: setter của zustand không phải setState của React, `() => () => …` từng lưu hàm
-  // bọc ngoài nên bấm "Tạo lại" chỉ xoá câu trả lời mà không gửi gì.
-  useEffect(() => {
-    setRegenerateCallback(() => {
-      const history = regenerateTurns(useChatStore.getState().messages)
-      if (history && !useChatStore.getState().isLoading) void requestReply(history)
-    })
-  }, [requestReply, setRegenerateCallback])
+  // Huỷ đăng ký khi unmount để ChatMessage không gọi requestReply của hook đã gỡ.
+  useEffect(
+    () =>
+      registerRegenerate(() => {
+        const history = regenerateTurns(useChatStore.getState().messages)
+        if (history && !useChatStore.getState().isLoading) void requestReply(history)
+      }),
+    [requestReply]
+  )
 
   return { sendMessage, isLoading }
 }

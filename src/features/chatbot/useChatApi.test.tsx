@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { useChatStore } from '@/stores/chatStore'
+import { triggerRegenerate } from './regenerate-registry'
 
 // Mock ở tầng hook dữ liệu — không chạm DB.
 const mockTransactions = vi.hoisted(() => ({ current: undefined as unknown }))
@@ -24,6 +26,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }))
 
 import { useChatApi } from './useChatApi'
+import { ChatMessage } from './ChatMessage'
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -35,8 +38,8 @@ function wrapper({ children }: { children: React.ReactNode }) {
  * ngay khi mount, tức là VỠ NGAY khi user mở chat panel (ChatInput mount hook này).
  *
  * Chuỗi lỗi: flatMap trong thân render -> array mới mỗi render -> sendMessage đổi
- * identity -> useEffect đăng ký regenerate chạy lại -> setRegenerateCallback ghi
- * store -> useChatStore() trần (subscribe toàn store) re-render -> lặp lại.
+ * identity -> useEffect đăng ký regenerate chạy lại -> đăng ký lại (khi còn nằm trong store: ghi
+ * store) -> useChatStore() trần (subscribe toàn store) re-render -> lặp lại.
  *
  * Toàn bộ đường chạy chatbot trước đây KHÔNG có test nào, nên 269 test vẫn xanh
  * trong khi tính năng hỏng hoàn toàn. Test này giữ cho điều đó không tái diễn.
@@ -85,7 +88,7 @@ describe('useChatApi', () => {
     // Đúng thứ tự ChatMessage.handleRegenerate: xoá câu trả lời rồi gọi callback.
     await act(async () => {
       useChatStore.getState().deleteMessage(answer.id)
-      useChatStore.getState().regenerateCallback?.()
+      triggerRegenerate()
     })
 
     await waitFor(() => expect(useChatStore.getState().isLoading).toBe(false))
@@ -95,5 +98,34 @@ describe('useChatApi', () => {
       'user:Tháng này chi bao nhiêu?',
       'assistant:Trả lời 2',
     ])
+  })
+  it('nút "Tạo lại" của ChatMessage (mount thật cùng hook) gửi lại câu hỏi và thay câu trả lời', async () => {
+    sdk.calls = []
+    mockTransactions.current = { pages: [{ data: [] }] }
+    useChatStore.setState({ apiConfig: { apiKey: 'k', model: 'claude-sonnet-5-5' } })
+    const { result } = renderHook(() => useChatApi(), { wrapper })
+    await act(() => result.current.sendMessage('Chi bao nhiêu?'))
+    const answer = useChatStore.getState().messages.find((m) => m.role === 'assistant')!
+
+    render(<ChatMessage message={answer} />)
+    await userEvent.click(screen.getByRole('button', { name: /Tạo lại/ }))
+
+    await waitFor(() => expect(sdk.calls).toHaveLength(2))
+    await waitFor(() => expect(useChatStore.getState().isLoading).toBe(false))
+    expect(useChatStore.getState().messages.map((m) => `${m.role}:${m.content}`)).toEqual([
+      'user:Chi bao nhiêu?',
+      'assistant:Trả lời 2',
+    ])
+  })
+
+  it('unmount hook thì "Tạo lại" không còn gửi gì', async () => {
+    sdk.calls = []
+    mockTransactions.current = { pages: [{ data: [] }] }
+    useChatStore.setState({ apiConfig: { apiKey: 'k', model: 'claude-sonnet-5-5' } })
+    const { result, unmount } = renderHook(() => useChatApi(), { wrapper })
+    await act(() => result.current.sendMessage('Hỏi'))
+    unmount()
+    await act(async () => { triggerRegenerate() })
+    expect(sdk.calls).toHaveLength(1)
   })
 })
