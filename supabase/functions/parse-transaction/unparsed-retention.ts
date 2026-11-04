@@ -17,13 +17,18 @@ export const PROMO_RETENTION_DAYS = 7
  */
 export async function purgeStalePromos(db: SupabaseClient, userId: string, now = Date.now()): Promise<void> {
   const before = new Date(now - PROMO_RETENTION_DAYS * 86_400_000).toISOString()
-  const { error } = await db
-    .from('unparsed_messages')
-    .delete()
-    .eq('user_id', userId)
-    .eq('suggested_kind', 'promo')
-    .eq('resolved', false)
-    .is('kind', null)
-    .lt('received_at', before)
-  if (error) console.error('purgeStalePromos failed', error.code, error.message)
+  try {
+    const { error } = await db
+      .from('unparsed_messages')
+      .delete()
+      .eq('user_id', userId)
+      .eq('suggested_kind', 'promo')
+      .eq('resolved', false)
+      .is('kind', null)
+      .lt('received_at', before)
+    if (error) console.error('purgeStalePromos failed', error.code, error.message)
+  } catch (e) {
+    // Lỗi mạng / client ném exception: tin vừa nhận đã lưu xong, không để việc dọn dẹp biến nó thành 500.
+    console.error('purgeStalePromos failed', String(e))
+  }
 }
