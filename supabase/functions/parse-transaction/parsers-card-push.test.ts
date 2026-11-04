@@ -194,3 +194,8 @@ Deno.test('purgeStalePromos: chỉ xoá promo của user, chưa đụng tới, c
     ['lt', 'received_at', new Date(now - PROMO_RETENTION_DAYS * 86_400_000).toISOString()],
   ])
 })
+
+Deno.test('purgeStalePromos: client ném exception -> chỉ log, không ném tiếp', async () => {
+  const broken = { from: () => { throw new Error('network down') } } as unknown as SupabaseClient
+  await purgeStalePromos(broken, 'u1')
+})
