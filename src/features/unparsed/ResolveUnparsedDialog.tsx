@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { useFormBinding } from '@/components/form/useFormBinding'
 import { FormField } from '@/components/form/FormField'
-import { describedBy } from '@/components/form/form-aria'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -19,6 +19,7 @@ import type { BankAccount } from '@/types/account'
 import type { CreditCard } from '@/types/creditCard'
 import { suggestFromText } from '@/utils/unparsed-suggest'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 const KIND_HINT: Record<(typeof TX_RESOLVE_KINDS)[number], string> = {
   normal: 'Tính vào thu/chi trên tổng quan.',
@@ -35,22 +36,9 @@ function ResolveBody({ message, accounts, cards, onDone, setBusy }: {
 }) {
   const resolve = useResolveUnparsed()
   const [suggestion] = useState(() => suggestFromText(message.rawText, message.receivedAt))
-  const [form, setForm] = useState<ResolveFormInput>(() =>
-    initialResolveForm(suggestion, 'normal', matchSourceByRef(suggestion.ref, accounts, cards)))
-  const [errors, setErrors] = useState<ResolveFormErrors>({})
-  const [submitError, setSubmitError] = useState<string | null>(null)
-
-  const field = (key: keyof ResolveFormInput, id: string) => ({
-    id,
-    value: form[key],
-    'aria-invalid': errors[key] ? true : undefined,
-    'aria-describedby': describedBy(id, Boolean(errors[key])),
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((f) => ({ ...f, [key]: e.target.value }))
-      setErrors((prev) => ({ ...prev, [key]: undefined }))
-      setSubmitError(null)
-    },
-  })
+  const { form, errors, setErrors, submitError, setSubmitError, field } =
+    useFormBinding<ResolveFormInput, ResolveFormErrors>(() =>
+      initialResolveForm(suggestion, 'normal', matchSourceByRef(suggestion.ref, accounts, cards)))
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -150,9 +138,9 @@ export function ResolveUnparsedDialog({ message, onOpenChange }: {
   onOpenChange: (open: boolean) => void
 }) {
   // Đang lưu thì không cho đóng: lỗi của lần lưu sẽ không còn chỗ hiển thị.
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
-    <Dialog open={message !== null} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
+    <Dialog open={message !== null} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         {message && (
           <ResolveLoader key={message.id} message={message} setBusy={setBusy} onDone={() => onOpenChange(false)} />

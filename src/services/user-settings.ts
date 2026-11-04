@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { toApiError } from './api-errors'
+import { toISOOrNull } from './row-values'
 import { UserSettingsSchema, type UserSettings } from '@/types/api-key'
 
 interface UserSettingsRow {
@@ -19,9 +20,9 @@ export async function getUserSettings(): Promise<UserSettings> {
   const row = data as UserSettingsRow
   return UserSettingsSchema.parse({
     ownerNames: row.owner_names ?? [],
-    privacyConsentAt: row.privacy_consent_at ? new Date(row.privacy_consent_at).toISOString() : null,
+    privacyConsentAt: toISOOrNull(row.privacy_consent_at),
     privacyPolicyVersion: row.privacy_policy_version,
-    suspendedAt: row.suspended_at ? new Date(row.suspended_at).toISOString() : null,
+    suspendedAt: toISOOrNull(row.suspended_at),
   })
 }
 

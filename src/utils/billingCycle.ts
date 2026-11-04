@@ -1,8 +1,7 @@
 import { TZDate } from '@date-fns/tz'
 import { format, subDays } from 'date-fns'
 import type { CreditCardTransaction } from '@/types/creditCard'
-
-const VN_TZ = 'Asia/Ho_Chi_Minh'
+import { VN_TZ } from './dates'
 
 /**
  * Represents a single billing cycle period for a credit card.

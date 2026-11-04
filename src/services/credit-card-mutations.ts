@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { mapCreditCard, type CreditCardRow } from './mappers'
-import { toApiError } from './api-errors'
+import { toApiError, countRows, CARD_NOT_FOUND } from './api-errors'
 import type { CardFormValues } from '@/types/credit-card-form'
 
 /** Giá trị form (camelCase, đã chuẩn hoá) -> cột của bảng `credit_cards`. */
@@ -18,6 +18,8 @@ function toRow(v: CardFormValues) {
 
 const CARD_ERRORS: Record<string, string> = {
   '23505': 'Thẻ này đã tồn tại (cùng ngân hàng và số thẻ).',
+  // delete_credit_card: thẻ không tồn tại / của người khác
+  P0002: CARD_NOT_FOUND,
 }
 
 // Không gửi `user_id`: cột có default auth.uid() và RLS kiểm lại. `currency` mặc
@@ -45,12 +47,9 @@ export async function updateCreditCard(id: string, values: CardFormValues) {
 
 /** Số giao dịch gắn với thẻ — để dialog xoá nói rõ sẽ mất bao nhiêu. */
 export async function countCardTransactions(cardId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .eq('card_id', cardId)
-  if (error) throw toApiError(error)
-  return count ?? 0
+  return countRows(
+    supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('card_id', cardId),
+  )
 }
 
 /**
@@ -61,6 +60,6 @@ export async function countCardTransactions(cardId: string): Promise<number> {
  */
 export async function deleteCreditCard(cardId: string): Promise<number> {
   const { data, error } = await supabase.rpc('delete_credit_card', { p_card_id: cardId })
-  if (error) throw toApiError(error)
+  if (error) throw toApiError(error, CARD_ERRORS)
   return data as number
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { classifyTransaction, CATEGORY_TAXONOMY, getCategoryLabel } from './categories'
+import { CATEGORIES } from '@/types/categories'
 
 describe('Category Classification', () => {
   it("classifyTransaction('Grab') returns 'Di chuyển'", () => {
@@ -45,5 +46,9 @@ describe('Category Classification', () => {
 
   it('CATEGORY_TAXONOMY should have all 6 categories', () => {
     expect(Object.keys(CATEGORY_TAXONOMY).length).toBe(6)
+  })
+
+  it('khoá CATEGORY_TAXONOMY trùng đúng thứ tự CATEGORIES (dropdown dùng CATEGORIES)', () => {
+    expect(Object.keys(CATEGORY_TAXONOMY)).toEqual([...CATEGORIES])
   })
 })

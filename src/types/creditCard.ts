@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import { TransactionKindSchema } from './account'
 
+/** MCC: đúng 4 chữ số (khớp check `^[0-9]{4}$` ở DB). Nguồn duy nhất — dùng `.nullable()` / `.optional()` tại chỗ. */
+export const MccSchema = z.string().regex(/^\d{4}$/, 'MCC phải gồm 4 chữ số')
+
 export const CreditCardSchema = z.object({
   id: z.string(),
   bankName: z.string(),
@@ -27,7 +30,7 @@ export const CreditCardTransactionSchema = z.object({
   merchantName: z.string(),
   category: z.string().optional(),
   // MCC 4 chữ số do user gán tay (SMS ngân hàng không có); thiếu = chưa phân loại
-  mcc: z.string().regex(/^\d{4}$/).optional(),
+  mcc: MccSchema.optional(),
   kind: TransactionKindSchema.optional(),
   type: z.enum(['purchase', 'payment', 'refund', 'fee']),
   status: z.enum(['pending', 'posted']),

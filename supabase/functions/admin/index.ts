@@ -11,20 +11,14 @@
 
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { bearerToken, requireAdmin } from './admin-auth.ts'
+import { bearerToken, CORS_HEADERS as CORS, jsonResponse, readJsonBody } from '../_shared/http.ts'
+import { requireAdmin } from './admin-auth.ts'
 import { handleAction, type AdminDeps, type AuthUser } from './admin-actions.ts'
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
-
-// '*' như delete-account: xác thực bằng Bearer JWT, không cookie.
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
 
 /** ~100 năm: "khoá vô thời hạn" theo cách GoTrue biểu diễn. */
 const BAN_FOREVER = '876000h'
@@ -34,9 +28,7 @@ const MAX_PAGES = 20
 /** Body hợp lệ chỉ vài chục byte (action + id + lý do ≤ 500 ký tự). */
 const MAX_BODY_LENGTH = 4_000
 
-function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
-}
+const json = (body: unknown, status: number) => jsonResponse(body, status, CORS)
 
 const deps: AdminDeps = {
   async listAuthUsers() {
@@ -75,14 +67,9 @@ serve(async (req) => {
     const auth = await requireAdmin(bearerToken(req.headers), (t) => supabase.auth.getUser(t))
     if (!auth.ok) return json({ error: auth.error }, auth.status)
 
-    const raw = await req.text()
-    if (raw.length > MAX_BODY_LENGTH) return json({ error: 'body too large' }, 413)
-    let body: unknown
-    try {
-      body = JSON.parse(raw)
-    } catch {
-      return json({ error: 'invalid json' }, 400)
-    }
+    const read = await readJsonBody(req, MAX_BODY_LENGTH)
+    if (!read.ok) return json({ error: read.error }, read.status)
+    const body = read.value
     if (typeof body !== 'object' || body === null || Array.isArray(body)) {
       return json({ error: 'invalid body' }, 400)
     }

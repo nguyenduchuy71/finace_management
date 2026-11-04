@@ -23,20 +23,32 @@ export const adminKey = (over: Partial<AdminKey> & { id: string }): AdminKey => 
   name: 'iPhone',
   prefix: 'vj_abc123',
   last4: 'Wxyz',
-  created_at: '2026-10-01T10:00:00Z',
-  last_used_at: null,
-  revoked_at: null,
+  createdAt: '2026-10-01T10:00:00Z',
+  lastUsedAt: null,
+  revokedAt: null,
   ...over,
 })
 
 export const auditEntry = (over: Partial<AuditEntry> & { id: number }): AuditEntry => ({
-  admin_id: 'admin-1',
+  adminId: 'admin-1',
   action: 'suspend',
-  target_user_id: 'u1',
+  targetUserId: 'u1',
   reason: 'lý do kiểm thử',
   payload: {},
-  created_at: '2026-10-20T08:00:00Z',
+  createdAt: '2026-10-20T08:00:00Z',
   ...over,
+})
+
+/** Dạng response thật của function `admin` (snake_case) cho `keys` — dùng khi mock `functions.invoke`. */
+export const adminKeyWire = (k: AdminKey) => ({
+  id: k.id, name: k.name, prefix: k.prefix, last4: k.last4,
+  created_at: k.createdAt, last_used_at: k.lastUsedAt, revoked_at: k.revokedAt,
+})
+
+/** Như adminKeyWire, cho `entries` của list_audit. */
+export const auditEntryWire = (e: AuditEntry) => ({
+  id: e.id, admin_id: e.adminId, action: e.action, target_user_id: e.targetUserId,
+  reason: e.reason, payload: e.payload, created_at: e.createdAt,
 })
 
 /** Session tối giản: chỉ app_metadata và user.id được code đọc. */

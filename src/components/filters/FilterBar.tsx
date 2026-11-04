@@ -5,18 +5,12 @@ import { TransactionTypeFilter } from './TransactionTypeFilter'
 import { CategoryFilter } from './CategoryFilter'
 import { ExportButton } from './ExportButton'
 import { Button } from '@/components/ui/button'
-import { useFilterStore } from '@/stores/filterStore'
+import { useFilterStore, selectHasActiveFilters } from '@/stores/filterStore'
 
 /** `showExport=false`: mục "Nhiều thẻ" — xuất CSV hiện chỉ theo một TK/thẻ. */
 export function FilterBar({ showExport = true }: { showExport?: boolean }) {
   const resetFilters = useFilterStore((s) => s.resetFilters)
-  const searchQuery = useFilterStore((s) => s.searchQuery)
-  const dateFrom = useFilterStore((s) => s.dateFrom)
-  const dateTo = useFilterStore((s) => s.dateTo)
-  const txType = useFilterStore((s) => s.txType)
-  const category = useFilterStore((s) => s.category)
-
-  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all' || category !== 'all')
+  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s, { withCategory: true }))
 
   return (
     <div className="flex flex-wrap gap-3 py-3 border-b border-border">

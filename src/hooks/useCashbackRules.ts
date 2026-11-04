@@ -4,10 +4,11 @@ import {
   listCashbackRules, createCashbackRule, updateCashbackRule, deleteCashbackRule, setCardCashbackCap,
 } from '@/services/cashbackRules'
 import type { CashbackRuleInput } from '@/types/cashback'
+import { QK } from './query-keys'
 
 export function useCashbackRules(cardId: string) {
   return useQuery({
-    queryKey: ['cashbackRules', cardId],
+    queryKey: [...QK.cashbackRules, cardId],
     queryFn: () => listCashbackRules(cardId),
   })
 }
@@ -15,7 +16,7 @@ export function useCashbackRules(cardId: string) {
 /** Đổi rule làm đổi số hoàn tiền ước tính: useCycleCashback tính lại từ danh sách rule mới. */
 function useInvalidateCashback(cardId: string) {
   const qc = useQueryClient()
-  return () => qc.invalidateQueries({ queryKey: ['cashbackRules', cardId] })
+  return () => qc.invalidateQueries({ queryKey: [...QK.cashbackRules, cardId] })
 }
 
 /** Thêm (ruleId = null) hoặc sửa một rule. */
@@ -48,7 +49,7 @@ export function useSetCardCashbackCap(cardId: string) {
   return useMutation({
     mutationFn: (cap: number | null) => setCardCashbackCap(cardId, cap),
     onSuccess: async (_void, cap) => {
-      await qc.invalidateQueries({ queryKey: ['creditCards'] })
+      await qc.invalidateQueries({ queryKey: QK.creditCards })
       toast.success(cap === null ? 'Đã bỏ trần hoàn tiền của thẻ' : 'Đã lưu trần hoàn tiền của thẻ')
     },
   })

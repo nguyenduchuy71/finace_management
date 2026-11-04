@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { moneyAmountField } from './form-fields'
 import { TX_RESOLVE_KINDS, type ResolveTxInput, type TxResolveKind } from './unparsed'
 import type { UnparsedSuggestion } from '@/utils/unparsed-suggest'
-import { vnLocalToISO } from '@/utils/unparsed-suggest'
+import { vnLocalToISO } from '@/utils/dates'
 
 /**
  * Form "Ghi thành giao dịch" từ một tin chưa phân loại.

@@ -1,7 +1,10 @@
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { TZDate } from '@date-fns/tz'
 
-const VN_TZ = 'Asia/Ho_Chi_Minh'
+export const VN_TZ = 'Asia/Ho_Chi_Minh'
+/** Việt Nam cố định UTC+7 (không có giờ mùa hè). */
+export const VN_UTC_OFFSET_HOURS = 7
+const VN_OFFSET_SUFFIX = '+07:00'
 
 /**
  * Parse a UTC ISO string and return a TZDate in Vietnam timezone (UTC+7).
@@ -32,6 +35,11 @@ export function formatDisplayDateTime(isoUtcString: string): string {
  */
 export function toVnLocalInput(isoUtcString: string): string {
   return format(toVietnamDate(isoUtcString), "yyyy-MM-dd'T'HH:mm")
+}
+
+/** "YYYY-MM-DDTHH:mm" (giờ VN, từ ô datetime-local) -> ISO có offset cho RPC. Nghịch đảo của `toVnLocalInput`. */
+export function vnLocalToISO(local: string): string {
+  return `${local}:00${VN_OFFSET_SUFFIX}`
 }
 
 /**

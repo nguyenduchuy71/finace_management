@@ -27,8 +27,8 @@ export function AdminAuditList() {
             {audit.data.map((e) => (
               <li key={e.id} className="py-2">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span><span className="font-medium">{AUDIT_ACTION_LABEL[e.action]}</span> · {emailOf(e.target_user_id)}</span>
-                  <span className="text-xs text-muted-foreground">{formatDisplayDateTime(e.created_at)}</span>
+                  <span><span className="font-medium">{AUDIT_ACTION_LABEL[e.action]}</span> · {emailOf(e.targetUserId)}</span>
+                  <span className="text-xs text-muted-foreground">{formatDisplayDateTime(e.createdAt)}</span>
                 </div>
                 <p className="text-muted-foreground">
                   {e.reason}

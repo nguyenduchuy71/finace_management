@@ -3,7 +3,7 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useNow } from '@/hooks/useNow'
 import { formatDayLabel, groupByDay } from '@/utils/group-by-day'
 import { DayGroupHeader } from './DayGroupHeader'
-import { useFilterParams } from '@/stores/filterStore'
+import { useFilterStore, selectHasActiveFilters } from '@/stores/filterStore'
 import { TransactionRow } from './TransactionRow'
 import { TransactionListSkeleton } from './TransactionListSkeleton'
 import { TransactionEmptyState } from './TransactionEmptyState'
@@ -13,9 +13,7 @@ import { TransactionListError } from './TransactionListError'
 export function TransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useTransactions()
-  const { searchQuery, dateFrom, dateTo, txType, category } = useFilterParams()
-
-  const hasActiveFilters = Boolean(searchQuery || dateFrom || dateTo || txType !== 'all' || category !== 'all')
+  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s, { withCategory: true }))
 
   // useMemo: flatMap trong thân render chạy lại mỗi lần re-render (đổi filter,
   // debounce search...) trên toàn bộ tập đã tải. CreditCardTransactionList đã làm

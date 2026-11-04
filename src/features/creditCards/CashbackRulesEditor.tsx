@@ -12,6 +12,7 @@ import { DEFAULT_RULE_LABEL } from '@/types/cashback-form'
 import { CashbackRuleForm } from './CashbackRuleForm'
 import { CardCashbackCapField } from './CardCashbackCapField'
 import { getErrorMessage } from '@/services/api-errors'
+import { useDialogBusyGuard } from '@/hooks/useDialogBusyGuard'
 
 interface CashbackRulesEditorProps {
   card: CreditCard
@@ -140,9 +141,9 @@ function EditorBody({ card, onClose, setBusy }: {
 
 export function CashbackRulesEditor({ card, open, onOpenChange }: CashbackRulesEditorProps) {
   // Đang lưu thì không cho đóng: lỗi của lần lưu sẽ không còn chỗ hiển thị.
-  const [busy, setBusy] = useState(false)
+  const { setBusy, handleOpenChange } = useDialogBusyGuard(onOpenChange)
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next) }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <EditorBody key={card.id} card={card} setBusy={setBusy} onClose={() => onOpenChange(false)} />
       </DialogContent>

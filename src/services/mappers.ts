@@ -1,5 +1,6 @@
 import { BankAccountSchema, TransactionSchema } from '@/types/account'
 import { CreditCardSchema, CreditCardTransactionSchema } from '@/types/creditCard'
+import { toInt, toISO } from './row-values'
 
 /** Row của bảng `transactions` (snake_case, như PostgREST trả về). */
 export interface TransactionRow {
@@ -49,54 +50,43 @@ export interface CreditCardRow {
   last_updated: string
 }
 
-/** bigint/numeric của Postgres có thể về dạng string; VND < 2^53 nên Number() an toàn. */
-const toInt = (v: number | string): number => Math.round(Number(v))
-
-/**
- * Chuẩn hoá timestamptz của Postgres về ISO-8601 dạng `Z`.
- *
- * PostgREST trả "2026-08-05T03:00:00+00:00" nhưng Zod `.datetime()` chỉ chấp nhận
- * hậu tố `Z`, nên parse thẳng sẽ fail "Invalid ISO datetime".
- * Frontend đã coi mọi timestamp là UTC rồi đổi sang giờ VN khi hiển thị
- * (utils/dates.ts), nên toISOString() giữ nguyên đúng thời điểm.
- */
-const toISO = (v: string): string => new Date(v).toISOString()
+/** Trường chung của mọi giao dịch (TK và thẻ); phần còn lại do từng mapper tự thêm. */
+function baseTransactionFields(row: TransactionRow) {
+  const amount = toInt(row.amount)
+  return {
+    id: row.id,
+    amount,
+    description: row.description ?? '',
+    category: row.category ?? undefined,
+    kind: row.kind,
+    status: row.status,
+    transactionDate: toISO(row.transaction_date),
+  }
+}
 
 export function mapTransaction(row: TransactionRow) {
-  const amount = toInt(row.amount)
+  const base = baseTransactionFields(row)
   // account_id không bao giờ null ở đây: getTransactions luôn lọc
   // .eq('account_id', ...) nên row chưa resolve FK không thể lọt vào.
   // Dùng '' làm fallback để Zod bắt được ngay nếu giả định này sai.
   return TransactionSchema.parse({
-    id: row.id,
+    ...base,
     accountId: row.account_id ?? '',
-    amount,
-    description: row.description ?? '',
     merchantName: row.merchant_name ?? undefined,
-    category: row.category ?? undefined,
-    kind: row.kind,
-    type: amount >= 0 ? 'income' : 'expense',
-    status: row.status,
-    transactionDate: toISO(row.transaction_date),
+    type: base.amount >= 0 ? 'income' : 'expense',
   })
 }
 
 export function mapCreditCardTransaction(row: TransactionRow) {
-  const amount = toInt(row.amount)
+  const base = baseTransactionFields(row)
   return CreditCardTransactionSchema.parse({
-    id: row.id,
+    ...base,
     cardId: row.card_id ?? '',
-    amount,
-    description: row.description ?? '',
     merchantName: row.merchant_name ?? row.description ?? '',
-    category: row.category ?? undefined,
     mcc: row.mcc ?? undefined,
-    kind: row.kind,
     // Parser chỉ suy được purchase; tiền vào thẻ = thanh toán dư nợ.
-    type: amount > 0 ? 'payment' : 'purchase',
-    status: row.status,
-    transactionDate: toISO(row.transaction_date),
     // billingCycleStart/End không lưu DB — utils/billingCycle.ts tự tính từ statement_date.
+    type: base.amount > 0 ? 'payment' : 'purchase',
   })
 }
 

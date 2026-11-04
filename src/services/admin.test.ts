@@ -4,7 +4,7 @@ import { z } from 'zod'
 vi.mock('@/lib/supabase', () => ({ supabase: { functions: { invoke: vi.fn() } } }))
 
 import { supabase } from '@/lib/supabase'
-import { adminKey, adminUser, auditEntry } from '@/test/fixtures/admin'
+import { adminKey, adminKeyWire, adminUser, auditEntry, auditEntryWire } from '@/test/fixtures/admin'
 import { getAdminUser, listAdminUsers, listAudit, runAdminMutation } from './admin'
 
 const invoke = vi.mocked(supabase.functions.invoke)
@@ -40,7 +40,7 @@ describe('gọi function admin: body đúng action', () => {
   })
 
   it('getAdminUser gửi get_user kèm userId và tách user/keys', async () => {
-    invoke.mockResolvedValue(ok({ user: adminUser({ id: 'u1' }), keys: [adminKey({ id: 'k1' })] }))
+    invoke.mockResolvedValue(ok({ user: adminUser({ id: 'u1' }), keys: [adminKeyWire(adminKey({ id: 'k1' }))] }))
     const r = await getAdminUser('u1')
     expect(invoke).toHaveBeenCalledWith('admin', { body: { action: 'get_user', userId: 'u1' } })
     expect(r.keys[0].id).toBe('k1')
@@ -55,7 +55,7 @@ describe('gọi function admin: body đúng action', () => {
   })
 
   it('listAudit gửi list_audit, limit 200 (toàn hệ thống, không còn lọc theo user)', async () => {
-    invoke.mockResolvedValue(ok({ entries: [auditEntry({ id: 1 })] }))
+    invoke.mockResolvedValue(ok({ entries: [auditEntryWire(auditEntry({ id: 1 }))] }))
     const entries = await listAudit()
     expect(invoke).toHaveBeenCalledWith('admin', { body: { action: 'list_audit', limit: 200 } })
     expect(entries).toHaveLength(1)
@@ -86,7 +86,7 @@ describe('Zod ở biên service: response sai -> ApiError invalid_response (khô
   })
 
   it('action audit lạ bị từ chối -> invalid_response', async () => {
-    invoke.mockResolvedValue(ok({ entries: [{ ...auditEntry({ id: 1 }), action: 'drop_table' }] }))
+    invoke.mockResolvedValue(ok({ entries: [{ ...auditEntryWire(auditEntry({ id: 1 })), action: 'drop_table' }] }))
     await expect(listAudit()).rejects.toEqual(INVALID_RESPONSE)
   })
 

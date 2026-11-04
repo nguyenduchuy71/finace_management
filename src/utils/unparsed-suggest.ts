@@ -1,4 +1,4 @@
-import { toVietnamDate } from './dates'
+import { toVietnamDate, vnLocalToISO, VN_UTC_OFFSET_HOURS } from './dates'
 
 /**
  * Đoán sẵn số tiền / thời điểm / đuôi TK-thẻ từ một tin chưa parse, để điền trước form
@@ -83,10 +83,5 @@ export function suggestFromText(text: string, receivedAtISO: string): UnparsedSu
 /** Chuỗi "YYYY-MM-DDTHH:mm" giờ VN có phải thời điểm có thật (Date không tự cuộn 29/02 -> 01/03). */
 function isRealVnDateTime(local: string): boolean {
   const t = Date.parse(vnLocalToISO(local))
-  return !Number.isNaN(t) && new Date(t + 7 * 3_600_000).toISOString().slice(0, 16) === local
-}
-
-/** "YYYY-MM-DDTHH:mm" (giờ VN, từ ô datetime-local) -> ISO có offset cho RPC. */
-export function vnLocalToISO(local: string): string {
-  return `${local}:00+07:00`
+  return !Number.isNaN(t) && new Date(t + VN_UTC_OFFSET_HOURS * 3_600_000).toISOString().slice(0, 16) === local
 }

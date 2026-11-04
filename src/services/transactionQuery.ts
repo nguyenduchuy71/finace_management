@@ -15,6 +15,28 @@ export interface TransactionFilters {
   category?: Category | 'all'
 }
 
+/** Trang rỗng — trả khi chưa chọn TK/thẻ hoặc thẻ không thể có giao dịch thu. */
+export function emptyTxPage() {
+  return { data: [] as never[], nextCursor: null as string | null, total: 0 }
+}
+
+/** Bộ lọc từ store -> tham số service (`search` rỗng thành undefined). Thẻ không có `category`. */
+export function toTxQueryOptions(f: {
+  searchQuery: string
+  dateFrom: string | null
+  dateTo: string | null
+  txType: 'all' | 'income' | 'expense'
+  category?: Category | 'all'
+}): TransactionFilters {
+  return {
+    search: f.searchQuery || undefined,
+    dateFrom: f.dateFrom,
+    dateTo: f.dateTo,
+    txType: f.txType,
+    category: f.category,
+  }
+}
+
 /**
  * Áp filter + phân trang keyset cho query transactions.
  *

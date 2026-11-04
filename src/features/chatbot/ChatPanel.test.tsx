@@ -32,7 +32,6 @@ describe('ChatPanel', () => {
       isLoading: false,
       apiConfig: null,
       showSettings: false,
-      regenerateCallback: null,
     })
   })
 

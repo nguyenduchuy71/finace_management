@@ -1,6 +1,7 @@
 // Xác định user gọi function: API key theo user (Authorization: Bearer vj_…) hoặc
 // đường legacy single-tenant (x-shortcut-secret -> DEFAULT_USER_ID) giữ tới phase 4.
 
+import { bearerToken } from '../_shared/http.ts'
 import { secretMatches } from './shortcut-auth.ts'
 import { normalizeOwnerNames } from './internal-transfer.ts'
 
@@ -36,11 +37,6 @@ const KEY_FORMAT = /^vj_[A-Za-z0-9_-]{43}$/
 export async function sha256Hex(s: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
-function bearerToken(headers: Headers): string | null {
-  const m = /^Bearer\s+(\S+)$/i.exec(headers.get('authorization') ?? '')
-  return m ? m[1] : null
 }
 
 export async function resolveCaller(

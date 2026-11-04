@@ -3,8 +3,9 @@ import { toast } from 'sonner'
 import { getUserSettings, updateOwnerNames } from '@/services/user-settings'
 import { deleteMyAccount } from '@/services/account-deletion'
 import { queryClient } from '@/lib/query-client'
+import { QK } from './query-keys'
 
-const USER_SETTINGS_KEY = ['userSettings'] as const
+const USER_SETTINGS_KEY = QK.userSettings
 
 export function useUserSettings() {
   return useQuery({ queryKey: USER_SETTINGS_KEY, queryFn: getUserSettings })
