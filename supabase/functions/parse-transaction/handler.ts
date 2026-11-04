@@ -1,9 +1,9 @@
-// Pipeline của parse-transaction: xác thực -> body/giới hạn -> OTP? -> trùng? -> regex parser -> ghi.
+// Pipeline của parse-transaction: xác thực -> body/giới hạn -> OTP? -> tin không số liệu? -> trùng? -> regex parser -> ghi.
 // Phụ thuộc (xác thực, DB) được tiêm vào để test không cần mạng.
 
 import { jsonResponse as json, readJsonBody } from '../_shared/http.ts'
 import { resolveCaller, type AuthenticateRpc, type LegacyConfig } from './api-key-auth.ts'
-import { isOtp, parseNotification } from './ingest.ts'
+import { isContentFree, isOtp, parseNotification } from './ingest.ts'
 import { MAX_BODY_LENGTH, parseIngestBody } from './request.ts'
 import type { IngestStore } from './persist.ts'
 
@@ -35,6 +35,8 @@ export function createHandler({ authenticate, legacy, store }: HandlerDeps) {
 
       // OTP / bảo mật: không phải giao dịch và KHÔNG lưu (mã còn hiệu lực).
       if (isOtp(text)) return json({ skipped: 'otp_or_security' }, 200)
+      // Tin teaser không có số liệu ("có thông báo mới"): không ghi được gì, không lưu.
+      if (isContentFree(text)) return json({ skipped: 'content_free' }, 200)
 
       if (await store.isDuplicate(text, userId)) return json({ skipped: 'duplicate' }, 200)
 
