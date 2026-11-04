@@ -6,16 +6,18 @@ iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>
 `Authorization: Bearer vj_…` (API key của user, `api-key-auth.ts` → RPC `authenticate_api_key`; Bearer có mặt thì KHÔNG rơi về
 legacy). Legacy: `x-shortcut-secret` → `DEFAULT_USER_ID` (chỉ khi đặt cả 2 secret). Body > 16.000 ký tự → 413 trước `JSON.parse`.
 `user_settings.owner_names` từ DB **phải** qua `normalizeOwnerNames` (bỏ dấu/in hoa/bỏ null) như env — mô tả giao dịch đã chuẩn hoá. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
-Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP → chống trùng (cùng `raw_text` trong 10 phút)
-→ 19 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, tên chủ TK của user) → resolve TK/thẻ
+Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP / xác nhận 3DS → tin teaser không số liệu (`isContentFree`, không lưu) →
+chống trùng (cùng `raw_text` trong 10 phút) → 28 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, tên chủ TK của user) → resolve TK/thẻ
 (phải khớp DUY NHẤT) → insert; **không khớp TK/thẻ thì KHÔNG ghi giao dịch mồ côi** mà vào hộp tin (`reason = no_account`);
 chống trùng kiểm cả `transactions` lẫn `unparsed_messages`;
 không khớp → `unparsed_messages` kèm `source`, `reason`, `user_id`, `suggested_kind` (`classify-unparsed.ts`, ưu tiên recall:
-giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolve FK/insert) dùng chung với `backfill-unparsed.ts`
+giao dịch thật không bao giờ bị gắn promo). Tin gợi ý `promo` chưa đụng tới **tự xoá sau 7 ngày** (`unparsed-retention.ts`, chạy mỗi lần
+lưu tin vào hộp — production chưa bật `pg_cron`). `ingest.ts` (parse/resolve FK/insert) dùng chung với `backfill-unparsed.ts`
 (chạy tay, dry-run mặc định). Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
 Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
 (`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
-(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check (legacy + webhook): `shortcut-auth.ts`.
+(`parsers-balance-notifications.ts`) + push thẻ MSB (trả nợ/hoàn tiền `cashback`), BIDV, LPBank, SHB SAHA, Eximbank, BaoVietBank,
+MB (`bank_name = 'MBBank'`) (`parsers-card-push.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng). Secret check (legacy + webhook): `shortcut-auth.ts`.
 **`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định; user nay tự nhập ở trang Cài đặt): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
 đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
 Bank xác định bằng đuôi thẻ/TK đối chiếu `credit_cards` — không đoán theo giọng văn.

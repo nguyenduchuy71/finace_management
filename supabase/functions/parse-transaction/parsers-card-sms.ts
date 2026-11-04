@@ -50,10 +50,11 @@ const tryHDBank: Parser = (text) => {
   })
 }
 
-// MSB — "The TD MSB 7230 thuc hien GD 3,520,000 VND luc 14:13 07/08/2026 tai MNAUMY."
+// MSB — SMS "The TD MSB 7230 thuc hien GD" và push "The TD MSB ***7230 thuc hien GD" (cùng câu)
+//       "The TD MSB 7230 thuc hien GD 3,520,000 VND luc 14:13 07/08/2026 tai MNAUMY."
 const tryMSB: Parser = (text) => {
   const m = text.match(
-    /MSB\s*(\d{4})\s*thuc hien GD\s*([\d,.]+)\s*VND\s*luc\s*(\d{2}):(\d{2})\s*(\d{2})\/(\d{2})\/(\d{4})\s*tai\s*(.+?)\./,
+    /MSB\s*\**(\d{4})\s*thuc hien GD\s*([\d,.]+)\s*VND\s*luc\s*(\d{2}):(\d{2})\s*(\d{2})\/(\d{2})\/(\d{4})\s*tai\s*(.+?)\./,
   )
   if (!m) return null
   const [, card, amountStr, hh, min, dd, mm, yyyy, merchant] = m

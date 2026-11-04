@@ -9,7 +9,8 @@
 //   Legacy x-shortcut-secret (single-tenant) còn nhận tới phase 4. `source` tuỳ chọn —
 //   xem docs/ios-shortcut-setup.md
 //
-// Luồng: xác thực key -> OTP? -> trùng? -> regex parser -> (không khớp) unparsed_messages + gợi ý loại
+// Luồng: xác thực key -> OTP? -> tin không có số liệu? -> trùng? -> regex parser -> (không khớp) unparsed_messages
+//   + gợi ý loại (tin quảng cáo tự xoá sau 7 ngày, unparsed-retention.ts)
 
 import { serve } from 'https://deno.land/std@0.203.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -17,7 +18,8 @@ import { parseOwnerNames } from './internal-transfer.ts'
 import { normalizeInput } from './helpers.ts'
 import { resolveCaller } from './api-key-auth.ts'
 import { classifyUnparsed } from './classify-unparsed.ts'
-import { insertTransaction, isOtp, parseNotification, resolveRefs } from './ingest.ts'
+import { insertTransaction, isContentFree, isOtp, parseNotification, resolveRefs } from './ingest.ts'
+import { purgeStalePromos } from './unparsed-retention.ts'
 import type { ParsedTransaction } from './types.ts'
 
 const supabase = createClient(
@@ -129,6 +131,7 @@ async function saveUnparsed(
       suggested_kind: suggested,
     })
   if (error) console.error('saveUnparsed failed', error.code, error.message)
+  await purgeStalePromos(supabase, userId)
 }
 
 serve(async (req) => {
@@ -170,6 +173,9 @@ serve(async (req) => {
     // OTP / bảo mật: không phải giao dịch và KHÔNG lưu (mã còn hiệu lực).
     if (isOtp(text)) {
       return json({ skipped: 'otp_or_security' }, 200)
+    }
+    if (isContentFree(text)) {
+      return json({ skipped: 'content_free' }, 200)
     }
 
     if (await isDuplicate(text, userId)) {

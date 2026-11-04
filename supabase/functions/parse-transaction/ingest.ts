@@ -18,7 +18,25 @@ export type ParseOutcome =
  * có dạng không dấu nên OTP có dấu lọt xuống unparsed_messages nguyên văn.
  */
 export function isOtp(text: string): boolean {
-  return /OTP|m[aáàảãạ]\s*x[aáàảãạ]c\s*th[uưúùủũụứừửữự]c/i.test(text)
+  // "Bạn có giao dịch cần xác thực" = xác nhận 3DS, giao dịch chưa xảy ra (thành công thì bank báo tin khác).
+  return /OTP|m[aáàảãạ]\s*x[aáàảãạ]c\s*th[uưúùủũụứừửữự]c|giao dịch cần xác thực/i.test(text)
+}
+
+/**
+ * Tin "teaser" KHÔNG mang số liệu (app chỉ báo "có thông báo mới") — không ghi được giao dịch và user cũng không
+ * phân loại được gì từ nó -> không lưu. Production 18 ngày: 30 tin, riêng VPBank 22. Neo cả tin (^…$): bank thêm
+ * chi tiết vào nội dung thì tin không còn khớp và lại vào hộp tin như thường.
+ */
+const CONTENT_FREE = [
+  /^Thông báo VPBank\s+Quý khách có thông báo biến động số dư mới\.?$/,
+  /^Thông báo BIDV\s+Quý khách nhận được thông báo mới\.?$/,
+  /^Thông báo HDBank\s+Thông báo HDBank$/,
+  /^Thông tin thanh toán\s+Quý khách có thông báo thanh toán\.?$/,
+  /^Thanh toán thẻ tín dụng thành công\s+Quý khách đã thực hiện thanh toán thẻ tín dụng thành công\.?$/,
+]
+
+export function isContentFree(text: string): boolean {
+  return CONTENT_FREE.some((re) => re.test(text))
 }
 
 /** Chạy lần lượt các parser trên text ĐÃ normalizeInput(). `now` = thời điểm nhận tin. */

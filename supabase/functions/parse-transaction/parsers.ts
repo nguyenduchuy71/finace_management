@@ -7,6 +7,7 @@ import { last4, nowVN, parseVND, vnDate } from './helpers.ts'
 import { build } from './parser-build.ts'
 import { balanceNotificationParsers } from './parsers-balance-notifications.ts'
 import { cardSmsParsers } from './parsers-card-sms.ts'
+import { cardPushParsers } from './parsers-card-push.ts'
 
 // ---------------------------------------------------------------------------
 // LPBank — app notification (định dạng THẬT, xác nhận 07/09/2026)
@@ -143,12 +144,14 @@ export const parsers: Parser[] = [
   tryBIDV,
   // Push "biến động số dư" (BIDV/OCB/HDBank TK, Vietinbank, SHB SAHA, Cake, Sacombank Pay)
   ...balanceNotificationParsers,
+  // Push giao dịch thẻ (MSB trả nợ/hoàn tiền, BIDV, LPBank, SHB SAHA, Eximbank, BaoVietBank, MB)
+  ...cardPushParsers,
 ]
 
 // ---------------------------------------------------------------------------
 // CÁCH THÊM PARSER CHO BANK MỚI
 //
-// CHƯA CÓ parser: Eximbank, VIB, ACB, HSBC, KBank, BaoVietBank, ShinhanBank.
+// CHƯA CÓ parser: VIB, ACB, HSBC, KBank, ShinhanBank.
 // OCB/Cake/Vietinbank/Sacombank Pay/SHB SAHA/BIDV push: parsers-balance-notifications.ts
 // SHB/HDBank/MSB/VPBank/WOORIVN (giao dịch thẻ): parsers-card-sms.ts. Parser mới đặt vào file theo nhóm,
 // và chèn vào mảng `parsers` ĐÚNG vị trí (cụ thể trước tổng quát).

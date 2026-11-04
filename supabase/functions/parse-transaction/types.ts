@@ -24,7 +24,7 @@ export interface ParsedTransaction {
   // Loại dòng tiền (transactions.kind). Không set = 'normal', hoặc do
   // detectInternalTransfer() ở index.ts suy từ nội dung. Parser chỉ set khi
   // định dạng LUÔN mang một nghĩa (vd thông báo trả nợ thẻ Sacombank Pay).
-  kind?: 'normal' | 'internal_transfer'
+  kind?: 'normal' | 'internal_transfer' | 'cashback'
 }
 
 /**
