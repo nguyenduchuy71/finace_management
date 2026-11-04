@@ -7,20 +7,22 @@ iOS Shortcut POST `{ "text": "<nội dung notification>", "source": "<bank_name>
 legacy). Legacy: `x-shortcut-secret` → `DEFAULT_USER_ID` (chỉ khi đặt cả 2 secret). Body > 16.000 ký tự → 413 trước `JSON.parse`.
 `user_settings.owner_names` từ DB **phải** qua `normalizeOwnerNames` (bỏ dấu/in hoa/bỏ null) như env — mô tả giao dịch đã chuẩn hoá. Setup Shortcut (trigger Notification iOS 27 / Message / Email): `docs/ios-shortcut-setup.md`.
 Cấu trúc: `index.ts` (nối dây) → `handler.ts` (pipeline, tiêm auth/DB) · `request.ts` (MAX_BODY_LENGTH 16000 / MAX_TEXT_LENGTH 2000, thuần) · `persist.ts` (chống trùng, ghi). HTTP dùng chung 3 function ở `supabase/functions/_shared/http.ts` (CORS, `jsonResponse`, `bearerToken`, `readJsonBody`).
-Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP → chống trùng (cùng `raw_text` trong 10 phút)
-→ 19 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, tên chủ TK của user) → resolve TK/thẻ
+Luồng: `normalizeInput` (**NFC** — iOS gửi NFD, regex NFC không khớp) → OTP / xác nhận 3DS → tin teaser không số liệu (`isContentFree`, không lưu) →
+chống trùng (cùng `raw_text` trong 10 phút) → 28 regex parser → `withKind` (nhận diện chuyển nội bộ, `internal-transfer.ts`, tên chủ TK của user) → resolve TK/thẻ
 (phải khớp DUY NHẤT) → `credit-ingest.ts` gọi RPC `ingest_transaction` (insert + trừ 1 credit NGUYÊN TỬ; **không còn `.from('transactions').insert` nào trong functions**);
 **không khớp TK/thẻ thì KHÔNG ghi giao dịch mồ côi** mà vào hộp tin (`reason = no_account`, miễn phí);
 hết credit → tin giữ (`reason = no_credit`, kèm `parsed_payload`) và trả **202 `{skipped:'no_credit'}`**; quá trần 300 tin treo → **402 `{error:'no_credit'}`** và tin không lưu;
 chủ app `unlimited` không bị trừ/giữ (cả đường legacy `x-shortcut-secret`, vì cùng RPC);
 chống trùng kiểm cả `transactions` lẫn `unparsed_messages`;
 không khớp → `unparsed_messages` kèm `source`, `reason`, `user_id`, `suggested_kind` (`classify-unparsed.ts`, ưu tiên recall:
-giao dịch thật không bao giờ bị gắn promo). `ingest.ts` (parse/resolve FK) + `credit-ingest.ts` (ghi + trừ credit) dùng chung với `backfill-unparsed.ts`
+giao dịch thật không bao giờ bị gắn promo). Tin gợi ý `promo` chưa đụng tới **tự xoá sau 7 ngày** (`unparsed-retention.ts`, gọi từ
+`saveUnparsed` — production chưa bật `pg_cron`). `ingest.ts` (parse/resolve FK) + `credit-ingest.ts` (ghi + trừ credit) dùng chung với `backfill-unparsed.ts`
 (chạy tay, dry-run mặc định; ghi qua cùng RPC nên cũng trừ credit, hết credit thì tin giữ nguyên trong hộp, xoá giao dịch do lostRace thì xoá + hoàn credit NGUYÊN TỬ qua RPC `discard_backfilled_tx`, chạy lại an toàn).
 TK/thẻ bị xoá giữa `resolveRefs` và RPC (`P0002`/`23503`): `ingestParsed` trả `no_account` → tin vào hộp tin (`persist.ts`), không 500. Parser nhận `now` = thời điểm nhận tin cho tin không ghi ngày/năm.
 Parser: LPBank (app + SMS), UOB, Sacombank, MoMo, BIDV (`parsers.ts`) + SHB, HDBank, MSB, VPBank, WOORIVN thẻ
 (`parsers-card-sms.ts`) + BIDV push, Vietinbank, OCB TK/thẻ, SHB SAHA, HDBank TK, Cake thẻ, Sacombank Pay trả nợ
-(`parsers-balance-notifications.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng).
+(`parsers-balance-notifications.ts`) + push thẻ MSB (trả nợ/hoàn tiền `cashback`), BIDV, LPBank, SHB SAHA, Eximbank, BaoVietBank,
+MB (`bank_name = 'MBBank'`) (`parsers-card-push.ts`). Thứ tự mảng `parsers` quan trọng (khớp trước thắng).
 **MoMo** (tin không có số TK, `account_ref: null`): `resolveRefs` gắn vào tài khoản `bank_name = 'MoMo'` của user nếu có ĐÚNG 1; 0 hoặc ≥ 2 thì vào hộp tin (`no_account`) — không đoán. Form TK chấp nhận mask bất kỳ 4 ký tự cho MoMo (vd 4 số cuối điện thoại). Secret check (legacy + webhook): `shortcut-auth.ts`.
 **`OWNER_NAMES` hiện KHÔNG đặt trên production** (user quyết định; user nay tự nhập ở trang Cài đặt): BIDV trả nợ thẻ tính là chi, chuyển giữa TK của mình
 đếm cả thu lẫn chi — chỉ "THANH TOAN THE TIN DUNG" và Sacombank Pay trả nợ được gắn nội bộ.
