@@ -3,6 +3,7 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { classifyUnparsed } from './classify-unparsed.ts'
 import { insertTransaction, resolveRefs, type Refs } from './ingest.ts'
+import { purgeStalePromos } from './unparsed-retention.ts'
 import type { ParsedTransaction } from './types.ts'
 
 /** Shortcut gửi lại / automation chạy 2 lần trong khoảng này -> coi là trùng. */
@@ -52,6 +53,8 @@ export function createIngestStore(supabase: SupabaseClient) {
         suggested_kind: suggested,
       })
     if (error) console.error('saveUnparsed failed', error.code, error.message)
+    // Tin quảng cáo chưa đụng tới quá 7 ngày -> xoá (unparsed-retention.ts).
+    await purgeStalePromos(supabase, userId)
   }
 
   /**

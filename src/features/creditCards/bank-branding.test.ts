@@ -72,6 +72,13 @@ describe('getBankBrand — gradient thẻ', () => {
   })
 })
 
+describe('MBBank', () => {
+  it('có trong danh sách để form chuẩn hoá đúng tên parser ghi (bank_name = MBBank)', () => {
+    expect(KNOWN_BANK_NAMES).toContain('MBBank')
+    expect(canonicalBankName('mbbank')).toBe('MBBank')
+  })
+})
+
 describe('MoMo', () => {
   it('có trong danh sách đã biết và chuẩn hoá hoa/thường đúng tên parser đặt', () => {
     expect(KNOWN_BANK_NAMES).toContain('MoMo')
