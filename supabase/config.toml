@@ -40,6 +40,24 @@ enabled = true
 # Không có mail server ở local/single-user -> bỏ xác nhận email
 enable_confirmations = false
 
+# Mẫu cho production (chỉnh qua dashboard / Management API, KHÔNG `config push`). Bỏ comment ở local để thử
+# thì phải đặt biến env tương ứng trước `supabase start`.
+# [auth.email.smtp]
+# enabled = true
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "no-reply@<domain đã verify ở Resend>"
+# sender_name = "Ví Jade"
+
+# Captcha Turnstile: secret ở đây, site key ở VITE_TURNSTILE_SITE_KEY (frontend). Bật ở Auth mà frontend chưa có
+# site key -> mọi đăng nhập/đăng ký bị từ chối; nên deploy site key TRƯỚC rồi mới bật Auth.
+# [auth.captcha]
+# enabled = true
+# provider = "turnstile"
+# secret = "env(TURNSTILE_SECRET_KEY)"
+
 [studio]
 enabled = true
 port = 54323

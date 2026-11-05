@@ -25,7 +25,8 @@ src/
 │   ├── legal/           # PrivacyPage, TermsPage (default export, lazy), LegalLayout (+ LegalValue: marker "[chưa điền]" khi env trống)
 │   ├── landing/         # LandingPage + Header/Hero/Features/HowItWorks/Security (trang chủ công khai, số liệu minh hoạ tĩnh)
 │   └── auth/            # AuthProvider (xoá cache khi đổi user / mất phiên), LoginPage (báo riêng user_banned), SignupPage,
-│                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây)
+│                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây),
+│                        #   CaptchaWidget + use-captcha-token (Turnstile cho Login/Signup; tắt khi thiếu VITE_TURNSTILE_SITE_KEY)
 ├── components/
 │   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts,
 │   │                    #   BrandMark (+ APP_NAME — tên sản phẩm một chỗ), ThemeToggleButton

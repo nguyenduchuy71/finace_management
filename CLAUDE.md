@@ -44,9 +44,12 @@ Nếu `supabase` không có trong PATH (cài qua nvm): `~/.nvm/versions/node/<ve
 ```bash
 VITE_SUPABASE_URL=http://127.0.0.1:54321      # `supabase status` cho local
 VITE_SUPABASE_ANON_KEY=<anon-key>
+VITE_TURNSTILE_SITE_KEY=                      # trống = không captcha (src/config/captcha-config.ts)
 ```
 Anon key nằm trong bundle JS của browser — **RLS ở DB là lớp bảo vệ duy nhất**.
 Production: set 2 biến này trong Vercel dashboard (không hardcode vào `vercel.json`).
+Turnstile: site key đặt ở Vercel và deploy TRƯỚC khi bật captcha ở Supabase Auth (ngược lại = mọi đăng nhập bị từ chối);
+CSP `vercel.json` đã mở `challenges.cloudflare.com` (script-src + frame-src). Secret của edge function: `supabase/functions/.env.example`.
 
 Biến pháp lý (đặt trong Vercel **Production**; `.env.example` để trống): `VITE_LEGAL_OPERATOR_NAME`, `VITE_LEGAL_CONTACT_EMAIL`,
 `VITE_DATA_REGION` — nguồn duy nhất là `src/config/legal-config.ts`, hiện trên `/privacy` và `/terms`. Trống thì dev thấy marker

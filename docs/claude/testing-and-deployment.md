@@ -76,8 +76,15 @@ Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số
 
 ## Checklist bật `enable_signup` (production) — chỉ tài liệu, làm tay
 
+⚠️ Thực tế (kiểm 2026-11-05): production ĐANG MỞ signup từ 2026-10-27 (user quyết định), xác nhận email bật nhưng dùng SMTP
+mặc định (`rate_limit_email_sent = 2`/giờ) và CHƯA có captcha — mục 1 nên làm sớm nhất.
+
 Production giữ `enable_signup = false` cho tới khi đủ TẤT CẢ:
 1. Email confirmations bật + SMTP riêng (credit chào mừng chỉ cấp sau khi xác nhận email) + captcha production.
+   Turnstile, ĐÚNG thứ tự: (a) tạo widget ở Cloudflare (domain Vercel); (b) đặt `VITE_TURNSTILE_SITE_KEY` ở Vercel Production rồi
+   deploy — chỉ hiện widget, chưa bắt buộc; (c) PATCH `/config/auth` `security_captcha_enabled: true`,
+   `security_captcha_provider: "turnstile"`, `security_captcha_secret`. Làm (c) trước (b) = mọi đăng nhập/đăng ký bị từ chối.
+   Mẫu khối `[auth.email.smtp]` / `[auth.captcha]` có trong `supabase/config.toml` (comment).
 2. `credit_settings` / `credit_packages` đúng giá; ít nhất 1 ví (MoMo hoặc ZaloPay) có merchant production, `supabase secrets set` key
    production, `PAYMENT_ENV=production`, thử nạp thật gói nhỏ nhất.
 3. Biến pháp lý đã đặt ở Vercel Production: `VITE_LEGAL_OPERATOR_NAME`, `VITE_LEGAL_CONTACT_EMAIL`, `VITE_DATA_REGION`
