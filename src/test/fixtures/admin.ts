@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import type { AdminKey, AdminUser, AuditEntry } from '@/types/admin'
+import type { AdminOrder, AdminOrdersResult, ReconcileStatus } from '@/types/admin-orders'
 
 /** User mặc định: đang hoạt động, có 1 key còn hiệu lực. Ghi đè từng trường khi cần. */
 export const adminUser = (over: Partial<AdminUser> & { id: string }): AdminUser => ({
@@ -16,6 +17,8 @@ export const adminUser = (over: Partial<AdminUser> & { id: string }): AdminUser 
   txCount30d: 0,
   unparsed30d: {},
   parseRate30d: null,
+  creditBalance: 100,
+  creditUnlimited: false,
   ...over,
 })
 
@@ -57,3 +60,24 @@ export const sessionWithRole = (role: string | undefined): Session =>
     access_token: 'token',
     user: { id: 'me', app_metadata: role === undefined ? {} : { role } },
   }) as unknown as Session
+
+/** Đơn thanh toán mặc định: lệch tiền, MoMo, 50.000đ = 500 credit. */
+export const adminOrder = (over: Partial<AdminOrder> & { id: string }): AdminOrder => ({
+  userId: 'u1',
+  email: 'nguoi.dung@local.dev',
+  provider: 'momo',
+  providerOrderRef: `261030_${over.id}`,
+  providerTxId: null,
+  amountVnd: 50000,
+  credits: 500,
+  status: 'mismatch',
+  createdAt: '2026-10-30T01:00:00Z',
+  paidAt: null,
+  lastCheckedAt: null,
+  ...over,
+})
+
+/** Response `list_orders`: mặc định đối soát khoẻ (vừa chạy, 200, không đơn kẹt) -> không hiện banner. */
+export const ordersResult = (orders: AdminOrder[], reconcile: ReconcileStatus | null = {
+  lastOutcome: 'sent', lastAt: new Date().toISOString(), lastHttpStatus: 200, stalePending: 0,
+}): AdminOrdersResult => ({ orders, reconcile })

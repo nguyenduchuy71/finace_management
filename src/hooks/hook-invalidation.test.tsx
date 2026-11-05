@@ -102,12 +102,12 @@ describe('invalidation: tài khoản', () => {
 })
 
 describe('invalidation: hộp tin chưa phân loại', () => {
-  it('resolve tạo giao dịch -> hộp tin + 4 nhóm dẫn xuất', async () => {
+  it('resolve tạo giao dịch -> hộp tin + 4 nhóm dẫn xuất + số dư credit (trừ 1 credit)', async () => {
     vi.mocked(resolveUnparsed).mockResolvedValue('tx1')
     const { hook, keys } = setup(useResolveUnparsed)
     await act(async () => { await hook.result.current.mutateAsync({ messageId: 'm', kind: 'normal' }) })
     expect(keys()).toEqual([
-      ['unparsedMessages'], ['transactions'], ['creditCardTransactions'], ['dashboardStats'], ['cardCycleExpenses'],
+      ['unparsedMessages'], ['transactions'], ['creditCardTransactions'], ['dashboardStats'], ['cardCycleExpenses'], ['credits'],
     ])
   })
 
@@ -118,11 +118,11 @@ describe('invalidation: hộp tin chưa phân loại', () => {
     expect(keys()).toEqual([['unparsedMessages']])
   })
 
-  it('resolve lỗi -> vẫn tải lại hộp tin', async () => {
+  it('resolve lỗi -> vẫn tải lại hộp tin + số dư (hết credit thường do số dư hiển thị đã cũ)', async () => {
     vi.mocked(resolveUnparsed).mockRejectedValue(new Error('đã xử lý'))
     const { hook, keys } = setup(useResolveUnparsed)
     await act(async () => { await hook.result.current.mutateAsync({ messageId: 'm', kind: 'promo' }).catch(() => {}) })
-    expect(keys()).toEqual([['unparsedMessages']])
+    expect(keys()).toEqual([['unparsedMessages'], ['credits']])
   })
 })
 

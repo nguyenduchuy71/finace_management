@@ -10,6 +10,8 @@ vi.mock('@/services/admin', () => ({
   getAdminUser: vi.fn(),
   listAudit: vi.fn(),
   runAdminMutation: vi.fn(),
+  listAdminOrders: vi.fn(),
+  resolveAdminOrder: vi.fn(),
 }))
 vi.mock('@/features/auth/mfa', async (orig) => ({
   ...(await orig<typeof import('@/features/auth/mfa')>()),
@@ -19,10 +21,10 @@ vi.mock('@/features/auth/mfa', async (orig) => ({
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-import { listAdminUsers, listAudit, getAdminUser } from '@/services/admin'
+import { listAdminUsers, listAudit, getAdminUser, listAdminOrders } from '@/services/admin'
 import { getMfaStatus } from '@/features/auth/mfa'
 import { AuthContext } from '@/features/auth/AuthProvider'
-import { adminUser, sessionWithRole } from '@/test/fixtures/admin'
+import { adminOrder, adminUser, ordersResult, sessionWithRole } from '@/test/fixtures/admin'
 import AdminPage from './AdminPage'
 
 /** Route giống App.tsx: /admin (trang thật) và /accounts (đích chuyển hướng). */
@@ -49,6 +51,7 @@ beforeEach(() => {
   vi.mocked(getMfaStatus).mockResolvedValue({ step: 'verified' })
   vi.mocked(listAdminUsers).mockResolvedValue([adminUser({ id: 'u1', email: 'a@local.dev' })])
   vi.mocked(listAudit).mockResolvedValue([])
+  vi.mocked(listAdminOrders).mockResolvedValue(ordersResult([adminOrder({ id: 'm1' })]))
   vi.mocked(getAdminUser).mockResolvedValue({ user: adminUser({ id: 'u1' }), keys: [] })
 })
 
@@ -69,10 +72,11 @@ describe('AdminPage — guard quyền', () => {
 })
 
 describe('AdminPage — admin', () => {
-  it('admin aal2 -> tiêu đề, hai tab và danh sách user', async () => {
+  it('admin aal2 -> tiêu đề, ba tab và danh sách user', async () => {
     renderAt('admin')
     expect(await screen.findByRole('heading', { name: 'Quản trị' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'User' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Đơn thanh toán' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Nhật ký' })).toBeInTheDocument()
     expect(await screen.findByText('a@local.dev')).toBeInTheDocument()
   })
@@ -86,6 +90,7 @@ describe('AdminPage — admin', () => {
     // Lúc mount không mở dòng nào -> không gọi get_user (không ghi audit view_user thừa).
     expect(getAdminUser).not.toHaveBeenCalled()
     expect(listAudit).not.toHaveBeenCalled()
+    expect(listAdminOrders).not.toHaveBeenCalled()
   })
 
   it('chuyển sang tab Nhật ký: tải audit 1 lần, KHÔNG tải lại danh sách user (cache còn mới)', async () => {
@@ -96,6 +101,20 @@ describe('AdminPage — admin', () => {
     expect(await screen.findByText('Chưa có thao tác nào.')).toBeInTheDocument()
     await new Promise((r) => setTimeout(r, 200))
     expect(listAudit).toHaveBeenCalledTimes(1)
+    expect(listAdminUsers).toHaveBeenCalledTimes(1)
+  })
+
+  it('tab Đơn thanh toán (mount thật): tải đúng 1 lần, hiện đơn, không gọi get_user và không tải lại user', async () => {
+    renderAt('admin')
+    await screen.findByText('a@local.dev')
+    expect(listAdminOrders).not.toHaveBeenCalled()
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Đơn thanh toán' }), { button: 0, ctrlKey: false })
+    fireEvent.click(screen.getByRole('tab', { name: 'Đơn thanh toán' }))
+    expect(await screen.findByText('261030_m1')).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 300))
+    expect(listAdminOrders).toHaveBeenCalledTimes(1)
+    expect(listAdminOrders).toHaveBeenCalledWith({ status: null, provider: null })
+    expect(getAdminUser).not.toHaveBeenCalled()
     expect(listAdminUsers).toHaveBeenCalledTimes(1)
   })
 

@@ -3,6 +3,7 @@ import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import { assertLegalEnv } from './src/config/legal-env-guard'
 
 /**
  * Chặn build production thiếu URL Supabase hợp lệ. Thiếu thì app trắng trang ngay khi mở
@@ -18,7 +19,11 @@ function assertSupabaseUrl(mode: string) {
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }) => {
-  if (command === 'build') assertSupabaseUrl(mode)
+  if (command === 'build') {
+    assertSupabaseUrl(mode)
+    // Chỉ chặn trên Vercel production (VERCEL_ENV); build local / CI verify không đặt biến này nên vẫn qua.
+    assertLegalEnv(process.env.VERCEL_ENV, { ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env })
+  }
   return {
     plugins: [
       react(),

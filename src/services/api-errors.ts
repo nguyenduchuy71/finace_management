@@ -29,9 +29,26 @@ export function toApiError(e: PostgrestError, overrides?: Record<string, string>
   return {
     code,
     // `overrides`: thông điệp riêng của từng RPC cho mã dùng chung (vd P0002 ở
-    // resolve_unparsed không phải "không tìm thấy thẻ").
+    // delete_bank_account không phải "không tìm thấy thẻ").
     message: overrides?.[code] ?? ERROR_MESSAGES[code] ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.',
   }
+}
+
+/**
+ * Mã lỗi (`{ error: '<code>' }`) trong body của lỗi HTTP từ `supabase.functions.invoke`: FunctionsHttpError mang
+ * Response gốc ở `context`. Không đọc được thì 'internal_error'.
+ */
+export async function readFunctionErrorCode(error: unknown): Promise<string> {
+  const context = (error as { context?: unknown })?.context
+  if (context instanceof Response) {
+    try {
+      const body = await context.json()
+      if (typeof body?.error === 'string') return body.error
+    } catch {
+      // body không phải JSON -> giữ mã chung
+    }
+  }
+  return 'internal_error'
 }
 
 /** Thông điệp "không thấy thẻ" dùng ở nhiều nơi (xoá thẻ, đặt trần hoàn tiền). */

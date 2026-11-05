@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
-import { toApiError, countRows } from './api-errors'
+import { toApiError, countRows, readFunctionErrorCode } from './api-errors'
+import type { ApiError } from '@/types/api'
 import { toISO } from './row-values'
 import {
   UnparsedMessageSchema, type ResolveKind, type ResolveTxInput, type UnparsedMessage,
@@ -11,7 +12,7 @@ import {
  * `raw_text` là nguyên văn thông báo (số dư, tên, STK) — cần để user đọc và phân loại,
  * RLS chỉ cho chính chủ đọc.
  */
-const UNPARSED_COLUMNS = 'id, raw_text, source, received_at, suggested_kind'
+const UNPARSED_COLUMNS = 'id, raw_text, source, received_at, suggested_kind, reason'
 
 /**
  * Hộp tin chỉ chứa phần parser bỏ sót (vài tin/ngày sau khi lọc quảng cáo), nên lấy
@@ -25,6 +26,7 @@ interface UnparsedRow {
   source: string | null
   received_at: string
   suggested_kind: string | null
+  reason: string | null
 }
 
 function mapUnparsed(row: UnparsedRow): UnparsedMessage {
@@ -35,6 +37,7 @@ function mapUnparsed(row: UnparsedRow): UnparsedMessage {
     source: row.source,
     receivedAt: toISO(row.received_at),
     suggestedKind: row.suggested_kind,
+    onHold: row.reason === 'no_credit',
   })
 }
 
@@ -69,34 +72,58 @@ export async function getUnparsedCount(): Promise<number> {
   )
 }
 
+/** Thông điệp theo mã lỗi của edge function `resolve-unparsed`. */
 const RESOLVE_ERRORS: Record<string, string> = {
-  P0002: 'Không tìm thấy tin, tài khoản hoặc thẻ (có thể đã bị xoá).',
-  '22023': 'Tin đã được xử lý hoặc dữ liệu giao dịch không hợp lệ.',
-  '23503': 'Tài khoản hoặc thẻ vừa bị xoá. Chọn lại nguồn tiền.',
+  insufficient_credit: 'Hết credit — nạp thêm để phân loại.',
+  suspended: 'Tài khoản đang bị khoá, không phân loại được tin.',
+  not_found: 'Không tìm thấy tin, tài khoản hoặc thẻ (có thể đã bị xoá).',
+  invalid_request: 'Tin đã được xử lý, đang chờ nạp credit, hoặc dữ liệu giao dịch không hợp lệ.',
+  account_gone: 'Tài khoản hoặc thẻ vừa bị xoá. Chọn lại nguồn tiền.',
+  unauthorized: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+}
+
+async function toResolveError(error: unknown): Promise<ApiError> {
+  const code = await readFunctionErrorCode(error)
+  console.error('[resolve-unparsed]', code)
+  return { code, message: RESOLVE_ERRORS[code] ?? 'Đã có lỗi xảy ra. Vui lòng thử lại.' }
 }
 
 /**
- * Xử lý một tin qua RPC `resolve_unparsed` (nguyên tử: tạo giao dịch + đánh dấu tin).
- * Loại normal / internal_transfer / cashback cần `tx`; card_reminder / promo thì không.
- * Trả id giao dịch đã tạo (hoặc null).
+ * Xử lý một tin qua edge function `resolve-unparsed` (RPC nguyên tử: tạo giao dịch + trừ 1 credit + đánh dấu tin).
+ * Loại normal / internal_transfer / cashback cần `tx` và TỐN 1 credit (unlimited miễn phí); card_reminder / promo
+ * không tạo giao dịch nên miễn phí. Web không còn ghi giao dịch trực tiếp (không có quyền INSERT transactions).
+ * Trả id giao dịch đã tạo (hoặc null). Hết credit -> ApiError code `insufficient_credit`.
  */
 export async function resolveUnparsed(
   messageId: string, kind: ResolveKind, tx?: ResolveTxInput,
 ): Promise<string | null> {
-  const { data, error } = await supabase.rpc('resolve_unparsed', {
-    p_msg_id: messageId,
-    p_kind: kind,
-    p_tx: tx
-      ? {
-          amount: tx.amount,
-          transaction_date: tx.transactionDate,
-          description: tx.description ?? null,
-          merchant_name: tx.merchantName ?? null,
-          account_id: tx.accountId ?? null,
-          card_id: tx.cardId ?? null,
-        }
-      : null,
-  })
-  if (error) throw toApiError(error, RESOLVE_ERRORS)
-  return z.string().uuid().nullable().parse(data)
+  let res: { data: unknown; error: unknown }
+  try {
+    res = await supabase.functions.invoke('resolve-unparsed', {
+      body: {
+        message_id: messageId,
+        kind,
+        tx: tx
+          ? {
+              amount: tx.amount,
+              transaction_date: tx.transactionDate,
+              description: tx.description ?? null,
+              merchant_name: tx.merchantName ?? null,
+              account_id: tx.accountId ?? null,
+              card_id: tx.cardId ?? null,
+            }
+          : null,
+      },
+    })
+  } catch (e) {
+    // invoke có thể throw khi mất mạng.
+    throw await toResolveError(e)
+  }
+  if (res.error) throw await toResolveError(res.error)
+  const parsed = z.object({ transaction_id: z.string().uuid().nullable() }).safeParse(res.data)
+  if (!parsed.success) {
+    console.error('[resolve-unparsed] invalid response', parsed.error.issues)
+    throw { code: 'invalid_response', message: 'Phản hồi không đúng định dạng. Vui lòng thử lại.' } satisfies ApiError
+  }
+  return parsed.data.transaction_id
 }

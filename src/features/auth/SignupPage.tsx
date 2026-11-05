@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { PRIVACY_POLICY_VERSION } from '@/types/api-key'
+import { CaptchaWidget } from './CaptchaWidget'
+import { CAPTCHA_FAILED_MESSAGE, CAPTCHA_MISSING_MESSAGE, useCaptchaToken } from './use-captcha-token'
 
 const MIN_PASSWORD = 8
 
@@ -21,6 +23,7 @@ function signupErrorMessage(code: string | undefined): string {
     case 'over_email_send_rate_limit':
     case 'over_request_rate_limit': return 'Thử quá nhiều lần. Đợi vài phút rồi thử lại.'
     case 'email_address_invalid': return 'Email không hợp lệ.'
+    case 'captcha_failed': return CAPTCHA_FAILED_MESSAGE
     default: return 'Đăng ký thất bại. Vui lòng thử lại.'
   }
 }
@@ -33,6 +36,7 @@ export function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [checkEmail, setCheckEmail] = useState(false)
+  const captcha = useCaptchaToken()
 
   if (loading) return null
   if (session) return <Navigate to="/settings" replace />
@@ -47,6 +51,10 @@ export function SignupPage() {
       setError('Cần đồng ý với cách xử lý dữ liệu để tạo tài khoản.')
       return
     }
+    if (captcha.required && !captcha.token) {
+      setError(CAPTCHA_MISSING_MESSAGE)
+      return
+    }
     setError(null)
     setSubmitting(true)
     try {
@@ -57,6 +65,7 @@ export function SignupPage() {
           // Trigger handle_new_user ghi phiên bản + thời điểm đồng ý vào user_settings.
           data: { privacy_policy_version: PRIVACY_POLICY_VERSION },
           emailRedirectTo: `${window.location.origin}/settings`,
+          ...(captcha.token && { captchaToken: captcha.token }),
         },
       })
       if (err) setError(signupErrorMessage(err.code))
@@ -67,6 +76,7 @@ export function SignupPage() {
       setError('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')
     } finally {
       setSubmitting(false)
+      if (captcha.required) captcha.reset()
     }
   }
 
@@ -111,9 +121,15 @@ export function SignupPage() {
               <span>
                 Tôi đồng ý cho ứng dụng lưu và xử lý nội dung thông báo ngân hàng tôi gửi lên (gồm số tiền,
                 số dư, tên người giao dịch) để ghi và thống kê giao dịch của riêng tôi. Tôi có thể xoá tài khoản
-                cùng toàn bộ dữ liệu bất cứ lúc nào trong Cài đặt.
+                cùng toàn bộ dữ liệu bất cứ lúc nào trong Cài đặt. Tôi đã đọc{' '}
+                <Link to="/privacy" target="_blank" className="text-primary underline">Chính sách bảo mật</Link>{' '}
+                và <Link to="/terms" target="_blank" className="text-primary underline">Điều khoản sử dụng</Link>.
               </span>
             </label>
+
+            {captcha.required && (
+              <CaptchaWidget key={captcha.widgetKey} siteKey={captcha.siteKey} onToken={captcha.setToken} />
+            )}
 
             {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 

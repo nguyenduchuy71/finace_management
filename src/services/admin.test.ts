@@ -5,7 +5,10 @@ vi.mock('@/lib/supabase', () => ({ supabase: { functions: { invoke: vi.fn() } } 
 
 import { supabase } from '@/lib/supabase'
 import { adminKey, adminKeyWire, adminUser, auditEntry, auditEntryWire } from '@/test/fixtures/admin'
-import { getAdminUser, listAdminUsers, listAudit, runAdminMutation } from './admin'
+import {
+  adjustAdminCredit, getAdminUser, listAdminOrders, listAdminUsers, listAudit, resolveAdminOrder, runAdminMutation,
+} from './admin'
+import { adminOrder } from '@/test/fixtures/admin'
 
 const invoke = vi.mocked(supabase.functions.invoke)
 type InvokeResult = Awaited<ReturnType<typeof supabase.functions.invoke>>
@@ -163,5 +166,80 @@ describe('lỗi function -> ApiError (code + message tiếng Việt)', () => {
     invoke.mockResolvedValue(httpError(403, { error: 'forbidden', email: 'x@y.z' }))
     await expect(listAdminUsers()).rejects.toBeTruthy()
     expect(console.error).toHaveBeenCalledWith('[admin]', 'forbidden')
+  })
+})
+
+describe('credit', () => {
+  it('getAdminUser đổi sổ cái snake_case sang camelCase; thiếu ledger -> mảng rỗng', async () => {
+    invoke.mockResolvedValue(ok({
+      user: adminUser({ id: 'u1' }), keys: [],
+      ledger: [{ id: 3, delta: -1, kind: 'usage', created_at: '2026-10-30T10:00:00Z' }],
+    }))
+    expect((await getAdminUser('u1')).ledger).toEqual([{ id: 3, delta: -1, kind: 'usage', createdAt: '2026-10-30T10:00:00Z' }])
+    invoke.mockResolvedValue(ok({ user: adminUser({ id: 'u1' }), keys: [] }))
+    expect((await getAdminUser('u1')).ledger).toEqual([])
+  })
+
+  it('adjustAdminCredit gửi adjust_credit kèm delta + lý do, trả số dư mới', async () => {
+    invoke.mockResolvedValue(ok({ balance: 15 }))
+    expect(await adjustAdminCredit('u1', -5, 'hoan tac nhap nham')).toBe(15)
+    expect(invoke).toHaveBeenCalledWith('admin', {
+      body: { action: 'adjust_credit', userId: 'u1', delta: -5, reason: 'hoan tac nhap nham' },
+    })
+  })
+
+  it('insufficient_credit / invalid_delta -> thông điệp tiếng Việt, không lộ mã', async () => {
+    invoke.mockResolvedValue(httpError(400, { error: 'insufficient_credit' }))
+    await expect(adjustAdminCredit('u1', -999, 'tru qua tay')).rejects.toEqual({
+      code: 'insufficient_credit', message: 'Số dư không đủ để trừ.',
+    })
+    invoke.mockResolvedValue(httpError(400, { error: 'invalid_delta' }))
+    await expect(adjustAdminCredit('u1', 0, 'khong doi gi')).rejects.toMatchObject({ code: 'invalid_delta' })
+  })
+})
+
+describe('đơn thanh toán', () => {
+  it('listAdminOrders gửi list_orders kèm bộ lọc và trả mảng đã validate', async () => {
+    invoke.mockResolvedValue(ok({ orders: [adminOrder({ id: 'o1' })], reconcile: null }))
+    const r = await listAdminOrders({ status: 'mismatch', provider: null })
+    expect(invoke).toHaveBeenCalledWith('admin', { body: { action: 'list_orders', status: 'mismatch', provider: null } })
+    expect(r.orders[0].providerOrderRef).toBe('261030_o1')
+    expect(r.reconcile).toBeNull()
+  })
+
+  it('listAdminOrders: trạng thái lạ trong response -> invalid_response (không đưa dữ liệu sai lên UI)', async () => {
+    invoke.mockResolvedValue(ok({ orders: [{ ...adminOrder({ id: 'o1' }), status: 'refunded' }] }))
+    await expect(listAdminOrders({ status: null, provider: null })).rejects.toMatchObject({ code: 'invalid_response' })
+  })
+
+  it('resolveAdminOrder gửi resolve_order và trả kết quả', async () => {
+    invoke.mockResolvedValue(ok({ status: 'paid', credits: 500, balance: 600 }))
+    expect(await resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).toEqual({ status: 'paid', credits: 500, balance: 600 })
+    expect(invoke).toHaveBeenCalledWith('admin', {
+      body: { action: 'resolve_order', orderId: 'o1', option: 'mark_paid', reason: 'đã đối chiếu' },
+    })
+  })
+
+  it('resolveAdminOrder gửi providerTxId khi có; 409 tx_id_in_use và 400 invalid_input có thông điệp riêng', async () => {
+    invoke.mockResolvedValue(ok({ status: 'paid', credits: 500, balance: 600 }))
+    await resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu', 'TX42')
+    expect(invoke).toHaveBeenLastCalledWith('admin', {
+      body: { action: 'resolve_order', orderId: 'o1', option: 'mark_paid', reason: 'đã đối chiếu', providerTxId: 'TX42' },
+    })
+    invoke.mockResolvedValue(httpError(409, { error: 'tx_id_in_use' }))
+    await expect(resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu', 'TX42')).rejects.toMatchObject({
+      code: 'tx_id_in_use', message: expect.stringContaining('đã gắn với một đơn khác'),
+    })
+    invoke.mockResolvedValue(httpError(400, { error: 'invalid_input' }))
+    await expect(resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).rejects.toMatchObject({
+      code: 'invalid_input', message: expect.stringContaining('mã giao dịch'),
+    })
+  })
+
+  it('resolveAdminOrder: 409 order_not_resolvable -> thông điệp tiếng Việt, giữ mã', async () => {
+    invoke.mockResolvedValue(httpError(409, { error: 'order_not_resolvable' }))
+    await expect(resolveAdminOrder('o1', 'mark_paid', 'đã đối chiếu')).rejects.toMatchObject({
+      code: 'order_not_resolvable', message: expect.stringContaining('đã được xử lý'),
+    })
   })
 })

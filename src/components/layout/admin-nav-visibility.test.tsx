@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('@/features/unparsed/UnparsedCountBadge', () => ({ UnparsedCountBadge: () => null }))
+vi.mock('@/features/credits/CreditBalanceBadge', () => ({ CreditBalanceBadge: () => null }))
 vi.mock('@/lib/supabase', () => ({ supabase: { auth: { signOut: vi.fn() } } }))
 
 import { AuthContext } from '@/features/auth/AuthProvider'

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/query-client'
 import { UnparsedCountBadge } from '@/features/unparsed/UnparsedCountBadge'
+import { CreditBalanceBadge } from '@/features/credits/CreditBalanceBadge'
 import { visibleNavItems } from './nav-items'
 import { BrandMark } from './BrandMark'
 import { ThemeToggleButton } from './ThemeToggleButton'
@@ -52,6 +53,7 @@ export function AppHeader() {
 
         {/* Theme Toggle + Logout */}
         <div className="flex items-center gap-1 shrink-0">
+        <CreditBalanceBadge />
         <ThemeToggleButton />
         <Button
           variant="ghost"

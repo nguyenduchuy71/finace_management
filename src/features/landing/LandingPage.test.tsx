@@ -27,6 +27,12 @@ describe('LandingPage', () => {
     expect(screen.getByRole('list', { name: 'Ngân hàng được hỗ trợ' })).toBeInTheDocument()
   })
 
+  it('chân trang có liên kết chính sách bảo mật và điều khoản', () => {
+    renderAt(null)
+    expect(screen.getByRole('link', { name: 'Chính sách bảo mật' })).toHaveAttribute('href', '/privacy')
+    expect(screen.getByRole('link', { name: 'Điều khoản sử dụng' })).toHaveAttribute('href', '/terms')
+  })
+
   it('đã đăng nhập -> vào thẳng /accounts như trước', () => {
     renderAt({ user: { id: 'u1' } } as Session)
     expect(screen.getByText('Trang giao dịch')).toBeInTheDocument()

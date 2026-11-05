@@ -16,5 +16,6 @@ export const QK = {
   accountTxCount: ['accountTxCount'],
   apiKeys: ['apiKeys'],
   userSettings: ['userSettings'],
+  credits: ['credits'],
   admin: ['admin'],
 } as const
