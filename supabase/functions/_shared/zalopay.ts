@@ -1,8 +1,10 @@
 // ZaloPay Gateway (order API v2): dựng create/query, kiểm MAC callback, đọc kết quả. Hàm thuần (trừ HMAC async).
 //
-// Nguồn: docs.zalopay.vn (order-create, order-query, callback, secure-data-transmission). Chưa chạy thật lần nào
-// (không có key sandbox công khai). Điểm CHƯA kiểm: host sandbox/production, mã trả callback (1 / -1 / 0 như sample),
-// MAC của query (key1), content-type create/query (form-urlencoded theo docs).
+// Nguồn: docs.zalopay.vn (order-create, order-query, callback, secure-data-transmission).
+// ĐÃ chạy thật trên sandbox (2026-11-05, app_id 554 công khai): host sb-openapi, form-urlencoded, MAC create + MAC query
+// (key1) đúng — create trả return_code 1 + order_url, query đơn chưa trả trả return_code 3 -> pending.
+// Điểm CHƯA kiểm: callback thật (cần URL công khai + trả tiền trên app ZaloPay sandbox), mã trả callback (1 / -1 / 0 như
+// sample), host production.
 // MAC create/query: HMAC(key1, a|b|c...); MAC callback: HMAC(key2, chuỗi `data` THÔ nhận được).
 
 import { hmacSha256Hex, signatureValid } from './payment-hmac.ts'
