@@ -34,7 +34,8 @@ export function CardVisual({ card }: { card: CreditCard }) {
         <div aria-hidden className="h-7 w-10 rounded-md bg-gradient-to-br from-amber-200 to-amber-400 opacity-90" />
 
         <div className="space-y-1">
-          <p aria-hidden className="money text-lg font-semibold tracking-[0.2em]">•••• •••• •••• {last4}</p>
+          {/* < 360px thu nhỏ: dòng số này từng đẩy cả trang tràn ngang 4px ở 320px (WCAG 1.4.10) */}
+          <p aria-hidden className="money whitespace-nowrap text-base font-semibold tracking-[0.12em] min-[360px]:text-lg min-[360px]:tracking-[0.2em]">•••• •••• •••• {last4}</p>
           <div className="flex items-end justify-between gap-2 text-xs">
             <div className="min-w-0">
               <p className="truncate font-medium">{card.cardName}</p>

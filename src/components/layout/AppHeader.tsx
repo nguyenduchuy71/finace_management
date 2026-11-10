@@ -25,9 +25,9 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-5xl mx-auto section-padding-x h-14 flex items-center justify-between gap-4">
-        {/* Logo — về Tổng quan; < sm chỉ còn ô logo để header 360–375px không tràn ngang */}
+        {/* Logo — về Tổng quan; < lg chỉ còn ô logo: 375px từng tràn ngang, 768px nav bị xuống dòng */}
         <Link to="/dashboard" aria-label={`${APP_NAME} — Tổng quan`} className="flex items-center gap-2 shrink-0 rounded-lg touch-target">
-          <BrandMark compact />
+          <BrandMark hideNameBelow="lg" />
         </Link>
 
         {/* Navigation — chỉ >= md (đo: 640–767px tràn 126px); hẹp hơn dùng MobileTabBar ở đáy */}
@@ -37,7 +37,7 @@ export function AppHeader() {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-lg heading-label transition-colors duration-200 touch-target flex items-center gap-2 ${
+                `px-2 lg:px-3 py-1.5 rounded-lg heading-label whitespace-nowrap transition-colors duration-200 touch-target flex items-center gap-2 ${
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
