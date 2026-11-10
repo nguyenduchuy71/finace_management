@@ -103,7 +103,7 @@ Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER
 /admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```
 
-Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `sm`) và thanh tab dưới `MobileTabBar` (< `sm`).
+Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `md`) và thanh tab dưới `MobileTabBar` (< `md`; 640–767px nav header từng tràn 126px).
 `visibleNavItems(isAdmin)` lọc mục `adminOnly`; `shortLabel` cho tab điện thoại khi nhãn dài (5 cột ở 360px ≈ 65px/cột —
 "Thẻ tín dụng" xuống 2 dòng), kèm `aria-label` = nhãn đầy đủ.
 

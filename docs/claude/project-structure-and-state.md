@@ -28,7 +28,7 @@ src/
 │                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây),
 │                        #   CaptchaWidget + use-captcha-token (Turnstile cho Login/Signup; tắt khi thiếu VITE_TURNSTILE_SITE_KEY)
 ├── components/
-│   ├── layout/          # AppShell, AppHeader, MobileTabBar (< sm), PageHeader, nav-items.ts,
+│   ├── layout/          # AppShell, AppHeader, MobileTabBar (< md), PageHeader, nav-items.ts,
 │   │                    #   BrandMark (+ APP_NAME — tên sản phẩm một chỗ), ThemeToggleButton
 │   ├── empty-state/     # EmptyState (icon + tiêu đề + mô tả + hành động)
 │   ├── filters/         # FilterBar, SearchInput, DateRangePicker, CategoryFilter, ExportButton

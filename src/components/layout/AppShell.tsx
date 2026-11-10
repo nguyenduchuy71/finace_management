@@ -10,8 +10,9 @@ export function AppShell() {
     <div className="min-h-screen bg-background text-foreground">
       <AppHeader />
       {/* Main content area — section-padding-x for horizontal, py-6 for vertical breathing room */}
-      {/* pb dưới cùng trên mobile: chừa chỗ cho MobileTabBar (h-16 + safe-area) để nội dung cuối không bị che */}
-      <main className="max-w-5xl mx-auto section-padding-x pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-6 section-spacing">
+      {/* pb dưới cùng: chừa chỗ cho MobileTabBar (h-16) + nút trợ lý AI (đáy 5rem + 3rem) + safe-area,
+          để nút/số tiền cuối trang không nằm dưới nút tròn. >= md nút ở bottom-4, cao 3.5rem. */}
+      <main className="max-w-5xl mx-auto section-padding-x pt-6 pb-[calc(9rem+env(safe-area-inset-bottom))] md:pb-24 section-spacing">
         <SuspendedBanner />
         <Outlet />
       </main>
