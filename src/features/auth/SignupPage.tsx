@@ -9,8 +9,7 @@ import { Card } from '@/components/ui/card'
 import { PRIVACY_POLICY_VERSION } from '@/types/api-key'
 import { CaptchaWidget } from './CaptchaWidget'
 import { CAPTCHA_FAILED_MESSAGE, CAPTCHA_MISSING_MESSAGE, useCaptchaToken } from './use-captcha-token'
-
-const MIN_PASSWORD = 8
+import { MIN_PASSWORD } from './password-policy'
 
 /**
  * Thông điệp theo mã lỗi GoTrue. Không hiện "email đã tồn tại": khi bật xác nhận email

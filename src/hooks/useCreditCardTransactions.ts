@@ -6,10 +6,10 @@ import { QK } from './query-keys'
 
 export function useCreditCardTransactions() {
   const filters = useCreditCardFilterParams()
-  const { cardId, dateFrom, dateTo, searchQuery, txType } = filters
+  const { cardId, dateFrom, dateTo, searchQuery, txType, category } = filters
 
   return useInfiniteQuery({
-    queryKey: [...QK.creditCardTransactions, cardId, { dateFrom, dateTo, searchQuery, txType }],
+    queryKey: [...QK.creditCardTransactions, cardId, { dateFrom, dateTo, searchQuery, txType, category }],
     queryFn: ({ pageParam }) => {
       if (!cardId) return Promise.resolve(emptyTxPage())
       return getCreditCardTransactions(cardId, pageParam as string | undefined, TX_PAGE_SIZE, toTxQueryOptions(filters))

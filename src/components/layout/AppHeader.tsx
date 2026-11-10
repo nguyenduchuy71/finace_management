@@ -1,12 +1,12 @@
 import { LogOut } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
 import { queryClient } from '@/lib/query-client'
 import { UnparsedCountBadge } from '@/features/unparsed/UnparsedCountBadge'
 import { CreditBalanceBadge } from '@/features/credits/CreditBalanceBadge'
 import { visibleNavItems } from './nav-items'
-import { BrandMark } from './BrandMark'
+import { APP_NAME, BrandMark } from './BrandMark'
 import { ThemeToggleButton } from './ThemeToggleButton'
 import { useIsAdmin } from '@/hooks/useAdmin'
 
@@ -25,19 +25,19 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-5xl mx-auto section-padding-x h-14 flex items-center justify-between gap-4">
-        {/* Logo / Brand */}
-        <div className="flex items-center gap-2 shrink-0">
-          <BrandMark />
-        </div>
+        {/* Logo — về Tổng quan; < lg chỉ còn ô logo: 375px từng tràn ngang, 768px nav bị xuống dòng */}
+        <Link to="/dashboard" aria-label={`${APP_NAME} — Tổng quan`} className="flex items-center gap-2 shrink-0 rounded-lg touch-target">
+          <BrandMark hideNameBelow="lg" />
+        </Link>
 
-        {/* Navigation — chỉ >= sm; điện thoại dùng MobileTabBar ở đáy */}
-        <nav aria-label="Điều hướng chính" className="hidden sm:flex items-center gap-1">
+        {/* Navigation — chỉ >= md (đo: 640–767px tràn 126px); hẹp hơn dùng MobileTabBar ở đáy */}
+        <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-1">
           {navItems.map(({ to, label, icon: Icon, showUnparsedBadge }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-lg heading-label transition-colors duration-200 touch-target flex items-center gap-2 ${
+                `px-2 lg:px-3 py-1.5 rounded-lg heading-label whitespace-nowrap transition-colors duration-200 touch-target flex items-center gap-2 ${
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
@@ -53,17 +53,17 @@ export function AppHeader() {
 
         {/* Theme Toggle + Logout */}
         <div className="flex items-center gap-1 shrink-0">
-        <CreditBalanceBadge />
-        <ThemeToggleButton />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleLogout}
-          aria-label="Đăng xuất"
-          className="touch-target shrink-0 transition-colors duration-200"
-        >
-          <LogOut className="h-5 w-5" />
-        </Button>
+          <CreditBalanceBadge />
+          <ThemeToggleButton />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            aria-label="Đăng xuất"
+            className="touch-target shrink-0 transition-colors duration-200"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </div>
     </header>

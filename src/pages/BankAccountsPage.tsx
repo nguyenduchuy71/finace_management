@@ -5,6 +5,7 @@ import { UnparsedInbox } from '@/features/unparsed/UnparsedInbox'
 import { UnparsedCountBadge } from '@/features/unparsed/UnparsedCountBadge'
 import { Building2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { SetupChecklist } from '@/features/onboarding/SetupChecklist'
 
 type View = 'inbox' | 'recorded'
 
@@ -20,6 +21,7 @@ export function BankAccountsPage() {
   return (
     <div className="space-y-4">
       <PageHeader icon={Building2} title="Giao dịch ngân hàng" description="Tin nhắn ngân hàng tự nạp từ iPhone" />
+      <SetupChecklist />
 
       <Tabs value={view} onValueChange={(v) => setParams(v === 'inbox' ? {} : { view: v }, { replace: true })}>
         <TabsList>

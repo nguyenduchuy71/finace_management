@@ -15,6 +15,7 @@ export const QK = {
   creditCardTxCount: ['creditCardTxCount'],
   accountTxCount: ['accountTxCount'],
   apiKeys: ['apiKeys'],
+  setupProgress: ['setupProgress'],
   userSettings: ['userSettings'],
   credits: ['credits'],
   admin: ['admin'],

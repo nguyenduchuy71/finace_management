@@ -8,6 +8,8 @@ import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { SignupPage } from '@/features/auth/SignupPage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { LandingPage } from '@/features/landing/LandingPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { BankAccountsPage } from '@/pages/BankAccountsPage'
@@ -31,6 +33,9 @@ export function App() {
             <Route index element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            {/* Công khai nhưng cần phiên khôi phục do liên kết email tạo ra — xem ResetPasswordPage */}
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/privacy" element={<Suspense fallback={<LegalFallback />}><PrivacyPage /></Suspense>} />
             <Route path="/terms" element={<Suspense fallback={<LegalFallback />}><TermsPage /></Suspense>} />
             <Route element={<ProtectedRoute />}>

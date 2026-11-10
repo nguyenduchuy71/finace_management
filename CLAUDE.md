@@ -99,11 +99,13 @@ Edge function secrets (`supabase secrets set`): `SHORTCUT_SECRET`, `DEFAULT_USER
 /settings      → SettingsPage (số dư + lịch sử credit, nạp credit MoMo/ZaloPay + lịch sử đơn, API key cho Shortcut, tên chủ TK, xoá tài khoản)
 /payment/return → PaymentReturnPage (?order=<id>; ví đưa user về; CHỈ hiển thị + poll trạng thái đơn, không bao giờ cộng credit)
 /signup        → SignupPage (public; ô đồng ý xử lý dữ liệu -> metadata privacy_policy_version)
+/forgot-password → ForgotPasswordPage (public; gửi liên kết đặt lại, báo trung tính; captcha như Login)
+/reset-password → ResetPasswordPage (public; cần phiên khôi phục do liên kết email tạo — không có phiên = "Liên kết không còn hiệu lực")
 /privacy, /terms → PrivacyPage / TermsPage (public, lazy; nội dung tĩnh trong features/legal/; version = PRIVACY_POLICY_VERSION ở types/api-key.ts — đổi nội dung thì tăng số này)
 /admin         → AdminPage (lazy chunk; chỉ admin — `useIsAdmin()`; nội dung sau MfaGate TOTP). User thường -> /accounts
 ```
 
-Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `sm`) và thanh tab dưới `MobileTabBar` (< `sm`).
+Điều hướng: `src/components/layout/nav-items.ts` là **nguồn duy nhất** cho header (≥ `md`) và thanh tab dưới `MobileTabBar` (< `md`; 640–767px nav header từng tràn 126px).
 `visibleNavItems(isAdmin)` lọc mục `adminOnly`; `shortLabel` cho tab điện thoại khi nhãn dài (5 cột ở 360px ≈ 65px/cột —
 "Thẻ tín dụng" xuống 2 dòng), kèm `aria-label` = nhãn đầy đủ.
 

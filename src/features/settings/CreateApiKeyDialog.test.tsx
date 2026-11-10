@@ -153,7 +153,7 @@ describe('CreateApiKeyDialog — bước 2: hiện key đúng một lần', () =
     submit()
     const keyInput = await screen.findByDisplayValue(FULL_KEY)
     fireEvent.keyDown(keyInput, { key: 'Escape' })
-    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }))
     expect(onOpenChange).not.toHaveBeenCalled()
     expect(screen.getByDisplayValue(FULL_KEY)).toBeInTheDocument()
   })

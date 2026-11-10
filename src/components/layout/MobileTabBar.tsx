@@ -5,7 +5,7 @@ import { visibleNavItems } from './nav-items'
 import { useIsAdmin } from '@/hooks/useAdmin'
 
 /**
- * Thanh tab cố định đáy màn hình cho điện thoại (< sm) — dùng được bằng một tay.
+ * Thanh tab cố định đáy màn hình cho điện thoại / tablet dọc (< md) — dùng được bằng một tay.
  * Đệm safe-area để không nằm dưới thanh home của iPhone (index.html có viewport-fit=cover).
  */
 export function MobileTabBar() {
@@ -13,7 +13,7 @@ export function MobileTabBar() {
   return (
     <nav
       aria-label="Điều hướng chính"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-[env(safe-area-inset-bottom)] sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       {/* Số cột theo số mục đang hiện (admin có thêm "Quản trị") */}
       <ul className="grid" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>

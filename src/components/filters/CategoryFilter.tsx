@@ -1,44 +1,42 @@
+import { useState } from 'react'
+import { Check, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import { useFilterStore } from '@/stores/filterStore'
 import { CATEGORY_TAXONOMY, getCategoryLabel } from '@/utils/categories'
 import type { Category } from '@/types/categories'
 
-export function CategoryFilter() {
+const OPTIONS: (Category | 'all')[] = ['all', ...(Object.keys(CATEGORY_TAXONOMY) as Category[])]
+
+/** Lọc theo danh mục. Đánh dấu mục đang chọn và đóng ngay khi chọn (trước đây popover đứng nguyên). */
+export function CategoryFilter({ className }: { className?: string }) {
   const category = useFilterStore((s) => s.category)
   const setCategory = useFilterStore((s) => s.setCategory)
+  const [open, setOpen] = useState(false)
 
-  const displayLabel = category === 'all' ? 'Danh mục' : getCategoryLabel(category)
+  const label = (c: Category | 'all') => (c === 'all' ? 'Mọi danh mục' : getCategoryLabel(c))
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="w-[140px] min-h-[44px]"
-        >
-          {displayLabel}
+        <Button variant="outline" className={cn('w-[160px] min-h-[44px] justify-start gap-2', className)}>
+          <Tag className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
+          <span className="truncate">{category === 'all' ? 'Danh mục' : getCategoryLabel(category)}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2">
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={() => setCategory('all')}
-            className="text-left text-sm p-2 rounded hover:bg-accent transition-colors duration-200"
-          >
-            Tất cả
-          </button>
-          {Object.keys(CATEGORY_TAXONOMY).map((cat) => (
+      <PopoverContent className="w-56 p-1" align="start">
+        <div role="group" aria-label="Danh mục" className="flex flex-col">
+          {OPTIONS.map((c) => (
             <button
-              key={cat}
-              onClick={() => setCategory(cat as Category)}
-              className="text-left text-sm p-2 rounded hover:bg-accent transition-colors duration-200"
+              key={c}
+              type="button"
+              aria-pressed={category === c}
+              onClick={() => { setCategory(c); setOpen(false) }}
+              className="flex min-h-[40px] items-center justify-between gap-2 rounded-md px-2 text-left text-sm transition-colors duration-200 hover:bg-accent"
             >
-              {getCategoryLabel(cat as Category)}
+              {label(c)}
+              {category === c && <Check className="h-4 w-4 text-primary" aria-hidden />}
             </button>
           ))}
         </div>

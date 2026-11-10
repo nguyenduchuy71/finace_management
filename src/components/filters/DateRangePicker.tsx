@@ -2,13 +2,16 @@ import { useState } from 'react'
 import { format, parse } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
+import { isRangeSelectionComplete } from '@/utils/date-range-selection'
 import { CalendarIcon, X } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Button } from '@/components/ui/button'
 import { useFilterStore } from '@/stores/filterStore'
+import { cn } from '@/lib/utils'
 
-export function DateRangePicker() {
+/** `className`: trong sheet bộ lọc (điện thoại) cần full bề ngang. */
+export function DateRangePicker({ className }: { className?: string }) {
   const setDateRange = useFilterStore((s) => s.setDateRange)
   const dateFrom = useFilterStore((s) => s.dateFrom)
   const dateTo = useFilterStore((s) => s.dateTo)
@@ -25,8 +28,7 @@ export function DateRangePicker() {
       range?.from ? format(range.from, 'yyyy-MM-dd') : null,
       range?.to ? format(range.to, 'yyyy-MM-dd') : null,
     )
-    // Close popover when both dates selected
-    if (range?.from && range?.to) setOpen(false)
+    if (isRangeSelectionComplete(range)) setOpen(false)
   }
 
   function handleClear() {
@@ -40,7 +42,7 @@ export function DateRangePicker() {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="justify-start min-h-[44px] max-w-[280px]"
+          className={cn('justify-start min-h-[44px] max-w-[280px]', className)}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
           <span className="truncate text-sm">

@@ -71,7 +71,7 @@ describe('BankAccountsPage', () => {
     renderPage('/accounts?view=recorded')
     expect(await screen.findByRole('tab', { name: /Vietcombank/ })).toBeInTheDocument()
     await waitFor(() => expect(getTransactions).toHaveBeenCalledWith('vcb-checking-001', undefined, expect.any(Number), expect.anything()))
-    expect(screen.getByRole('button', { name: 'Sửa tài khoản đang chọn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thao tác với tài khoản đang chọn' })).toBeInTheDocument()
   })
 
   it('thêm tài khoản: chuẩn hoá tên ngân hàng, gửi giá trị đã validate, chọn TK vừa tạo', async () => {

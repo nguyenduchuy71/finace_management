@@ -60,12 +60,8 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
           <p className="text-xs text-muted-foreground">{formatDisplayDate(tx.transactionDate)}</p>
           <TransactionKindBadge kind={tx.kind} />
-          <Badge
-            variant={isPending ? 'secondary' : 'default'}
-            className="text-xs px-1.5 py-0"
-          >
-            {isPending ? 'Chờ xử lý' : 'Đã hạch toán'}
-          </Badge>
+          {/* Chỉ báo ngoại lệ: "Đã hạch toán" trên mọi dòng chỉ thêm nhiễu (dòng ngân hàng cũng không hiện) */}
+          {isPending && <Badge variant="secondary" className="text-xs px-1.5 py-0">Chờ xử lý</Badge>}
         </div>
         {/* MCC do user tự gán — dùng để tính hoàn tiền theo rule của thẻ */}
         <div className="flex flex-wrap items-center gap-2 mt-1.5">
@@ -82,7 +78,8 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
               type="button"
               aria-busy={updateMcc.isPending}
               onClick={() => setMcc(suggestion)}
-              className="text-xs text-primary underline-offset-2 hover:underline aria-busy:opacity-50"
+              title={`Gợi ý: ${formatMcc(suggestion)}`}
+              className="max-w-full truncate text-xs text-primary underline-offset-2 hover:underline aria-busy:opacity-50"
             >
               Gợi ý: {formatMcc(suggestion)}
             </button>
@@ -93,7 +90,7 @@ export function CreditCardTransactionRow({ transaction: tx, card }: CreditCardTr
             size="sm"
             onClick={() => setEditing(true)}
             aria-label={`Sửa giao dịch ${merchantLabel}`}
-            className="ml-auto h-8 gap-1 px-2 text-xs text-muted-foreground"
+            className="ml-auto touch-target gap-1 px-2 text-xs text-muted-foreground"
           >
             <Pencil className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Sửa</span>

@@ -64,7 +64,7 @@ export function ChatPanel() {
       {/* Panel — mobile: bottom sheet; desktop: bottom-right fixed panel */}
       <div className="fixed z-50 bg-background border border-border shadow-2xl flex flex-col overflow-hidden
         bottom-0 left-0 right-0 rounded-t-2xl max-h-[85vh]
-        sm:bottom-20 sm:right-4 sm:left-auto sm:w-[380px] sm:h-[520px] sm:rounded-2xl sm:max-h-none">
+        sm:bottom-36 md:bottom-20 sm:right-4 sm:left-auto sm:w-[380px] sm:h-[520px] sm:rounded-2xl sm:max-h-none">
 
         {/* Header */}
         <div className="flex items-center justify-between section-padding-x py-2 border-b border-border shrink-0">

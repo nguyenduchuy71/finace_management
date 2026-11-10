@@ -1,113 +1,87 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, parse } from 'date-fns'
+import { vi } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
-import { CalendarIcon, X } from 'lucide-react'
+import { isRangeSelectionComplete } from '@/utils/date-range-selection'
+import { CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { useDashboardStore } from '@/stores/dashboardStore'
+import { cn } from '@/lib/utils'
+import { useDashboardDateRange, useDashboardStore } from '@/stores/dashboardStore'
+import { DASHBOARD_PRESETS, formatPeriodRange } from '@/utils/dashboard-periods'
 
+const CHIP = 'touch-target rounded-full px-4'
+
+/**
+ * Chọn kỳ thống kê: preset một chạm + "Tuỳ chọn" (lịch). Cùng một giao diện ở mọi bề rộng
+ * (trước đây điện thoại là 2 ô date gốc mm/dd/yyyy, tràn ngang ở 320–360px).
+ * Nhãn kỳ luôn hiện để số liệu bên dưới không thiếu ngữ cảnh.
+ */
 export function DashboardDatePicker() {
-  const { dateFrom, dateTo, setDateRange, resetDateRange } = useDashboardStore()
+  const period = useDashboardStore((s) => s.period)
+  const setPeriod = useDashboardStore((s) => s.setPeriod)
+  const setDateRange = useDashboardStore((s) => s.setDateRange)
+  const { dateFrom, dateTo } = useDashboardDateRange()
   const [open, setOpen] = useState(false)
 
-  // Desktop Calendar popover — only shown on sm+ screens
-  const range: DateRange | undefined = dateFrom
-    ? { from: new Date(dateFrom), to: dateTo ? new Date(dateTo) : undefined }
+  // `parse` theo giờ máy — `new Date('yyyy-MM-dd')` là nửa đêm UTC, lệch 1 ngày ở múi giờ âm.
+  const selected: DateRange | undefined = dateFrom
+    ? { from: toLocalDate(dateFrom), to: dateTo ? toLocalDate(dateTo) : undefined }
     : undefined
 
-  function handleDesktopSelect(selected: DateRange | undefined) {
-    if (!selected) {
-      setDateRange(null, null)
+  function handleSelect(range: DateRange | undefined) {
+    // Bỏ chọn hết trên lịch = không giới hạn ngày -> chip "Tất cả" (không để "Tuỳ chọn" sáng với kỳ rỗng)
+    if (!range?.from && !range?.to) {
+      setPeriod('all')
       return
     }
-    const from = selected.from ? format(selected.from, 'yyyy-MM-dd') : null
-    const to = selected.to ? format(selected.to, 'yyyy-MM-dd') : null
-    setDateRange(from, to)
-    // Close popover when both dates selected
-    if (selected.from && selected.to) setOpen(false)
+    setDateRange(
+      range?.from ? format(range.from, 'yyyy-MM-dd') : null,
+      range?.to ? format(range.to, 'yyyy-MM-dd') : null,
+    )
+    if (isRangeSelectionComplete(range)) setOpen(false)
   }
-
-  function handleNativeFrom(e: React.ChangeEvent<HTMLInputElement>) {
-    setDateRange(e.target.value || null, dateTo)
-  }
-
-  function handleNativeTo(e: React.ChangeEvent<HTMLInputElement>) {
-    setDateRange(dateFrom, e.target.value || null)
-  }
-
-  const displayLabel = dateFrom
-    ? `${dateFrom}${dateTo ? ' → ' + dateTo : ''}`
-    : 'Chọn khoảng thời gian'
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <span className="text-sm font-medium text-foreground">Kỳ thống kê:</span>
-
-      {/* Mobile: native date inputs (visible only on mobile) */}
-      <div className="flex items-center gap-2 sm:hidden">
-        <input
-          type="date"
-          value={dateFrom ?? ''}
-          onChange={handleNativeFrom}
-          className="min-h-[48px] rounded-md border border-input bg-background px-3 text-sm"
-          aria-label="Từ ngày"
-        />
-        <span className="text-muted-foreground">→</span>
-        <input
-          type="date"
-          value={dateTo ?? ''}
-          onChange={handleNativeTo}
-          className="min-h-[48px] rounded-md border border-input bg-background px-3 text-sm"
-          aria-label="Đến ngày"
-        />
-      </div>
-
-      {/* Desktop: Calendar popover (hidden on mobile) */}
-      <div className="hidden sm:flex items-center gap-2">
+    <div className="space-y-2">
+      <div role="group" aria-label="Kỳ thống kê" className="flex flex-wrap gap-2">
+        {DASHBOARD_PRESETS.map(({ id, label }) => (
+          <Button
+            key={id}
+            size="sm"
+            variant={period === id ? 'default' : 'outline'}
+            aria-pressed={period === id}
+            className={CHIP}
+            onClick={() => setPeriod(id)}
+          >
+            {label}
+          </Button>
+        ))}
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
-              className="min-h-[44px] justify-start gap-2 text-left font-normal"
+              size="sm"
+              variant={period === 'custom' ? 'default' : 'outline'}
+              aria-pressed={period === 'custom'}
+              className={cn(CHIP, 'gap-1.5')}
             >
-              <CalendarIcon className="h-4 w-4 shrink-0" />
-              <span className={dateFrom ? '' : 'text-muted-foreground'}>{displayLabel}</span>
+              <CalendarIcon className="h-4 w-4" aria-hidden />
+              Tuỳ chọn
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={range}
-              onSelect={handleDesktopSelect}
-              numberOfMonths={2}
-            />
+            <Calendar mode="range" selected={selected} onSelect={handleSelect} locale={vi} numberOfMonths={1} initialFocus />
           </PopoverContent>
         </Popover>
-        {(dateFrom || dateTo) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={resetDateRange}
-            className="min-h-[44px] min-w-[44px]"
-            aria-label="Xóa bộ lọc ngày"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
       </div>
-
-      {/* Mobile clear button */}
-      {(dateFrom || dateTo) && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={resetDateRange}
-          className="sm:hidden min-h-[44px] text-muted-foreground"
-        >
-          Xóa lọc
-        </Button>
-      )}
+      <p className="body-sm text-muted-foreground" aria-live="polite">
+        Kỳ thống kê: <span className="money font-medium text-foreground">{formatPeriodRange(dateFrom, dateTo)}</span>
+      </p>
     </div>
   )
+}
+
+function toLocalDate(ymd: string): Date {
+  return parse(ymd, 'yyyy-MM-dd', new Date())
 }

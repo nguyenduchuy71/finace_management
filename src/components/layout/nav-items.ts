@@ -12,7 +12,7 @@ export interface NavItem {
   adminOnly?: boolean
 }
 
-/** Nguồn duy nhất cho điều hướng: header (>= sm) và thanh tab dưới (< sm) cùng đọc mảng này. */
+/** Nguồn duy nhất cho điều hướng: header (>= md) và thanh tab dưới (< md) cùng đọc mảng này. */
 export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { to: '/accounts', label: 'Ngân hàng', icon: Building2, showUnparsedBadge: true },

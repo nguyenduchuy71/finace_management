@@ -16,6 +16,8 @@ interface StatCardProps {
   transactionCount: number
   delta?: number | null  // NEW: month-over-month percentage
   deltaLoading?: boolean // NEW: true while previous month data still loading
+  /** false: kỳ đang xem không phải một tháng trọn vẹn → không so với tháng trước, không hiện chip. */
+  compareAvailable?: boolean
   isError?: boolean
   onRetry?: () => void
   children?: ReactNode  // slot for SourceSubtotals
@@ -27,6 +29,7 @@ export function StatCard({
   transactionCount,
   delta,
   deltaLoading,
+  compareAvailable = true,
   isError,
   onRetry,
   children,
@@ -43,8 +46,8 @@ export function StatCard({
   let deltaMessage: string | null = null
   let deltaColorClass = 'text-muted-foreground'
 
-  if (transactionCount === 0) {
-    deltaMessage = null // No delta message for zero transactions
+  if (transactionCount === 0 || !compareAvailable) {
+    deltaMessage = null // Không có giao dịch, hoặc kỳ không so được với tháng trước
   } else if (deltaLoading === true) {
     deltaMessage = 'Đang tính...'
     deltaColorClass = 'text-muted-foreground'

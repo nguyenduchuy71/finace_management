@@ -19,7 +19,7 @@ import { TransactionListError } from '@/features/transactions/TransactionListErr
 export function MultiCardTransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useMultiCardTransactions()
-  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s, { withCategory: false }))
+  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s))
   const { data: cardsData } = useCreditCards()
   const now = useNow()
 

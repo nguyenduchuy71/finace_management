@@ -9,6 +9,7 @@ import { StatCardSkeleton } from '@/features/dashboard/StatCardSkeleton'
 import { SourceSubtotals } from '@/features/dashboard/SourceSubtotals'
 import { CategoryChartSkeleton } from '@/features/dashboard/CategoryChartSkeleton'
 import { BudgetProgressSection } from '@/features/dashboard/BudgetProgressSection'
+import { SetupChecklist } from '@/features/onboarding/SetupChecklist'
 
 // Recharts is ~372KB — lazy-load CategoryChart so recharts chunk only loads on dashboard mount.
 // CategoryChartSkeleton (no recharts dependency) shows while the chunk is fetched.
@@ -17,13 +18,15 @@ const CategoryChart = lazy(() =>
 )
 
 export function DashboardPage() {
-  const { data, incomeDelta, expenseDelta, deltaLoading, isLoading, isError, refetch } =
+  const { data, incomeDelta, expenseDelta, compareAvailable, deltaLoading, isLoading, isError, refetch } =
     useDashboardStats()
 
   return (
     <div className="space-y-6">
       {/* Page header */}
       <PageHeader icon={LayoutDashboard} title="Tổng quan" />
+
+      <SetupChecklist />
 
       {/* Date range picker — prominent at top, independent of main filter store */}
       <DashboardDatePicker />
@@ -55,6 +58,7 @@ export function DashboardPage() {
               transactionCount={data?.transactionCount ?? 0}
               delta={incomeDelta}
               deltaLoading={deltaLoading}
+              compareAvailable={compareAvailable}
               isError={isError}
               onRetry={refetch}
             >
@@ -75,6 +79,7 @@ export function DashboardPage() {
               transactionCount={data?.transactionCount ?? 0}
               delta={expenseDelta}
               deltaLoading={deltaLoading}
+              compareAvailable={compareAvailable}
               isError={isError}
               onRetry={refetch}
             >
