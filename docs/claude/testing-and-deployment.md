@@ -74,6 +74,15 @@ Integration credit (`credit-ledger.integration.test.ts`) tự chứa: đưa số
 
 ---
 
+## Quên mật khẩu (production) — làm tay một lần
+
+Luồng: `/forgot-password` → `resetPasswordForEmail(redirectTo = <origin>/reset-password)` → email → `/reset-password` (phiên khôi phục) → `updateUser({ password })`.
+1. Supabase Auth → URL Configuration: **Site URL** = domain Vercel production; **Redirect URLs** thêm `https://<domain>/reset-password`
+   (và URL preview nếu muốn thử ở preview). Thiếu thì GoTrue bỏ `redirect_to`, đưa user về Site URL: user có phiên khôi phục ở trang chủ
+   nhưng không thấy form đặt mật khẩu. Local đã chạy được với `config.toml` hiện tại (đã thử E2E qua Mailpit 2026-11-10).
+2. SMTP: SMTP mặc định chỉ 2 email/giờ (dùng chung với email xác nhận đăng ký) — user sẽ gặp "Gửi quá nhiều lần". Cần SMTP riêng (mục 1 checklist dưới).
+3. Captcha (khi bật): GoTrue kiểm captcha cả ở `/recover` — trang Quên mật khẩu đã gửi `captchaToken`.
+
 ## Checklist bật `enable_signup` (production) — chỉ tài liệu, làm tay
 
 ⚠️ Thực tế (kiểm 2026-11-05): production ĐANG MỞ signup từ 2026-10-27 (user quyết định), xác nhận email bật nhưng dùng SMTP

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-11-10 — Cải thiện UI/UX (điện thoại, người dùng mới, quên mật khẩu)
+
+Plan + báo cáo: `plans/261110-1715-ui-ux-improvement/` (`UI_UX_IMPROVEMENT_PLAN.md`, `UI_UX_IMPROVEMENT_REPORT.md`).
+
+### Sửa
+- Dialog/AlertDialog không còn tràn khỏi màn điện thoại (form thêm thẻ cao 856px ở màn 667px mất cả nút Lưu): < sm là bottom sheet
+  cuộn trong viewport, footer dính; đóng dialog trả focus về phần tử đã mở nó (trước rơi về `<body>`).
+- Không còn cuộn ngang ở 320–1920px (header 375px tràn 42px làm mất nút Đăng xuất; 640–767px tràn 126px; thẻ vật lý ở 320px).
+- Dashboard: mặc định **Tháng này** (trước là toàn bộ thời gian nhưng ghi "Kỳ này" và so % với một tháng); chỉ so "% vs tháng trước"
+  khi kỳ là một tháng trọn vẹn; chip preset thay ô date gốc trên điện thoại.
+- Lọc Danh mục ở trang Thẻ nay thật sự lọc (trước chỉ CSV có lọc, danh sách thì không).
+- Lịch khoảng ngày không còn đóng sau lần bấm đầu (react-day-picker v9 trả from = to).
+- Tab: chữ mục chưa chọn đạt AA (2,3:1 → 6:1); số TK trên tab tài khoản đạt AA; tab TK có panel thật (`aria-controls` hợp lệ).
+
+### Thêm
+- **Quên mật khẩu**: `/forgot-password` + `/reset-password`, link "Quên mật khẩu?" và nút hiện/ẩn mật khẩu ở đăng nhập.
+- Hướng dẫn bắt đầu 3 bước cho user mới (Ngân hàng + Tổng quan), tạo API key ngay tại chỗ.
+- Sheet "Bộ lọc (n)" trên điện thoại; menu ⋯ Sửa/Xoá ngay cạnh thẻ/TK đang chọn.
+- Dòng giao dịch thẻ gọn hơn: chỉ hiện badge khi "Chờ xử lý", nút Sửa 44px.
+
 ## 2026-10-27 — Rà soát maintainability: sửa lỗi review phát hiện
 
 Plan: `plans/261027-1832-maintainability-refactor/` (phase 1). Review: `plans/reports/code-reviewer-261027-1832-*.md`.

@@ -26,15 +26,21 @@ src/
 │   ├── landing/         # LandingPage + Header/Hero/Features/HowItWorks/Security (trang chủ công khai, số liệu minh hoạ tĩnh)
 │   └── auth/            # AuthProvider (xoá cache khi đổi user / mất phiên), LoginPage (báo riêng user_banned), SignupPage,
 │                        #   ProtectedRoute, MfaGate + mfa.ts (TOTP; `supabase.auth.mfa` chỉ ở đây),
-│                        #   CaptchaWidget + use-captcha-token (Turnstile cho Login/Signup; tắt khi thiếu VITE_TURNSTILE_SITE_KEY)
+│                        #   CaptchaWidget + use-captcha-token (Turnstile cho Login/Signup/Quên mật khẩu; tắt khi thiếu VITE_TURNSTILE_SITE_KEY),
+│                        #   ForgotPasswordPage + ResetPasswordPage (password-recovery.ts, password-policy.ts MIN_PASSWORD=8),
+│                        #   AuthCard (khung trang auth), PasswordInput (nút hiện/ẩn)
+│   ├── onboarding/      # SetupChecklist (3 bước: TK/thẻ → API key → tin đầu tiên; suy ra từ dữ liệu, ẩn theo user ở localStorage)
 ├── components/
 │   ├── layout/          # AppShell, AppHeader, MobileTabBar (< md), PageHeader, nav-items.ts,
 │   │                    #   BrandMark (+ APP_NAME — tên sản phẩm một chỗ), ThemeToggleButton
 │   ├── empty-state/     # EmptyState (icon + tiêu đề + mô tả + hành động)
-│   ├── filters/         # FilterBar, SearchInput, DateRangePicker, CategoryFilter, ExportButton
+│   ├── filters/         # FilterBar (< sm: ô tìm + sheet "Bộ lọc (n)"), SearchInput, DateRangePicker, CategoryFilter, ExportButton
+│   ├── entity-actions/  # EntityActionsMenu (menu ⋯ Sửa/Xoá cạnh thẻ/TK đang chọn; mở dialog sau khi trả focus về nút ⋯)
 │   ├── budget/          # BudgetProgressBar, BudgetSettings
 │   ├── form/            # FormField (nhãn+gợi ý+lỗi), form-aria (describedBy)
-│   └── ui/              # shadcn components + CategoryBadge, TransactionKindBadge, MeterBar (thanh tiến độ)
+│   └── ui/              # shadcn components + CategoryBadge, TransactionKindBadge, MeterBar (thanh tiến độ), dropdown-menu,
+│                        #   dialog-surface-classes (Dialog/AlertDialog: < sm bottom sheet, cuộn trong viewport, footer dính),
+│                        #   use-return-focus (đóng dialog điều khiển bằng state -> focus về phần tử đã mở nó)
 ├── hooks/               # useAccounts, useTransactions, useCreditCards, useCreditCardTransactions, useMultiCardTransactions,
 │                        #   useCreditCardMutations, useUpdateTransactionMcc, useUpdateCardTransaction, useCashbackRules,
 │                        #   useCycleCashback, useNow, useListboxKeyboard,
@@ -51,7 +57,8 @@ src/
 │                        #   form-fields.ts (moneyAmountField), budget.ts, categories.ts
 ├── utils/               # dates, currency, categories, csv, billingCycle, mcc (+ mcc-codes sinh tự động, mcc-keywords,
 │                        #   mcc-search), cashback, cashflow, category-colors,
-│                        #   cycle-progress, group-by-day, budget-level (ngưỡng 80/100%)
+│                        #   cycle-progress, group-by-day, budget-level (ngưỡng 80/100%),
+│                        #   dashboard-periods (preset kỳ theo lịch VN, isWholeCalendarMonth), date-range-selection
 ├── test/                # fixtures/, integration-setup.ts
 └── lib/utils.ts         # cn() = clsx + twMerge
 ```
@@ -63,7 +70,7 @@ src/
 | Store | Persisted | Description |
 |---|---|---|
 | `filterStore` | No | accountId, cardId, cardIds (mục "Nhiều thẻ"), dateFrom, dateTo, searchQuery, txType, category. `resetFilters` reset `cardIds` như `cardId` |
-| `dashboardStore` | No | Independent date range for dashboard page |
+| `dashboardStore` | No | `period` (mặc định `this_month`; preset tính lại lúc đọc theo lịch VN) + khoảng tuỳ chọn. Đọc khoảng ngày qua `useDashboardDateRange()` |
 | `budgetStore` | localStorage | Budget amounts per Category |
 | `categoryOverrideStore` | localStorage | User overrides for transaction categories |
 | `chatStore` | localStorage | Chat messages, isOpen, apiConfig |
@@ -92,7 +99,8 @@ src/
 | `useSetCardCashbackCap(cardId)` | Đặt/bỏ trần hoàn tiền cả thẻ; invalidate `['creditCards']` |
 | `useCycleCashback(cardId, cycle, cardCap)` | `{ result, rules, isLoading, isError, refetch }` — rule + chi tiêu chu kỳ + trần thẻ → `computeCashback` |
 | `useNow(intervalMs = 60000)` | Thời điểm hiện tại (ISO) tự cập nhật — để chu kỳ sao kê sang kỳ mới khi tab mở qua mốc cắt |
-| `useDashboardStats()` | Current + previous month stats (month-over-month delta) |
+| `useDashboardStats()` | Thống kê kỳ đang xem; chỉ tải tháng trước + trả delta khi kỳ là đúng một tháng dương lịch (`compareAvailable`) |
+| `useSetupProgress()` | `{ progress: { hasSource, hasKey, hasData } \| null }` cho checklist bắt đầu (null khi đang tải/lỗi) |
 | `useBudgetAlerts(breakdown, budgets)` | `{ alerts, warningCount, overbudgetCount }` — fires Sonner toasts |
 | `useDebounced(value, delayMs)` | Debounced value |
 | `useUnparsedMessages(includePromo)` / `useUnparsedCount()` / `useResolveUnparsed()` | Hộp tin chưa phân loại (200 tin mới nhất, không phân trang) |
