@@ -58,8 +58,18 @@ describe('Quên mật khẩu', () => {
     expect(resetPasswordForEmail).toHaveBeenCalledWith('an@x.vn', { redirectTo: `${window.location.origin}/reset-password` })
   })
 
-  it('quá giới hạn gửi -> báo đợi, vẫn ở form', async () => {
+  it('giới hạn gửi EMAIL (chỉ chạm khi email có tài khoản) -> vẫn báo trung tính, không lộ email tồn tại', async () => {
     resetPasswordForEmail.mockResolvedValue({ error: { code: 'over_email_send_rate_limit' } })
+    renderAt('/forgot-password')
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'an@x.vn' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi liên kết đặt lại' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Nếu an@x.vn có tài khoản')
+    expect(screen.getByRole('status')).toHaveFocus()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('giới hạn theo yêu cầu (trước khi tra email) -> báo đợi, vẫn ở form', async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: { code: 'over_request_rate_limit' } })
     renderAt('/forgot-password')
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'an@x.vn' } })
     fireEvent.click(screen.getByRole('button', { name: 'Gửi liên kết đặt lại' }))
@@ -113,6 +123,6 @@ describe('Đặt mật khẩu mới (/reset-password)', () => {
     expect(input).toHaveAttribute('type', 'password')
     fireEvent.click(screen.getAllByRole('button', { name: 'Hiện mật khẩu' })[0])
     expect(input).toHaveAttribute('type', 'text')
-    expect(screen.getByRole('button', { name: 'Ẩn mật khẩu' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getAllByRole('button', { name: 'Hiện mật khẩu' })[0]).toHaveAttribute('aria-pressed', 'true')
   })
 })

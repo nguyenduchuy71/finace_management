@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
@@ -11,7 +11,6 @@ import { CAPTCHA_FAILED_MESSAGE, CAPTCHA_MISSING_MESSAGE, useCaptchaToken } from
 
 function requestErrorMessage(code: string): string {
   switch (code) {
-    case 'over_email_send_rate_limit':
     case 'over_request_rate_limit': return 'Gửi quá nhiều lần. Đợi vài phút rồi thử lại.'
     case 'email_address_invalid':
     case 'validation_failed': return 'Email không hợp lệ.'
@@ -26,6 +25,9 @@ export function ForgotPasswordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
   const captcha = useCaptchaToken()
+  // Khối thông báo thay hẳn form nên live region chèn kèm nội dung có thể không được đọc: chuyển focus vào nó.
+  const sentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (sent) sentRef.current?.focus() }, [sent])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,8 +38,10 @@ export function ForgotPasswordPage() {
     setSubmitting(true)
     try {
       const code = await requestPasswordReset(email, captcha.token)
-      if (code) toast.error(requestErrorMessage(code))
-      else setSent(true)
+      // Giới hạn GỬI EMAIL chỉ chạm tới khi GoTrue thật sự gửi (= email có tài khoản): báo lỗi riêng sẽ lộ
+      // email nào đã đăng ký -> hiện như thành công (thông điệp trung tính đã dặn chờ / thử lại).
+      if (!code || code === 'over_email_send_rate_limit') setSent(true)
+      else toast.error(requestErrorMessage(code))
     } catch {
       toast.error('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.')
     } finally {
@@ -49,10 +53,10 @@ export function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthCard title="Kiểm tra email">
-        <div role="status" className="space-y-3 text-sm">
+        <div ref={sentRef} tabIndex={-1} role="status" className="space-y-3 text-sm outline-none">
           <MailCheck className="h-6 w-6 text-primary" aria-hidden />
           {/* Trung tính: không xác nhận email có tồn tại hay không */}
-          <p>Nếu <strong>{email.trim()}</strong> có tài khoản, thư chứa liên kết đặt lại mật khẩu sẽ tới trong vài phút. Kiểm tra cả mục thư rác.</p>
+          <p>Nếu <strong>{email.trim()}</strong> có tài khoản, thư chứa liên kết đặt lại mật khẩu sẽ tới trong vài phút. Kiểm tra cả mục thư rác. Không thấy thư sau 10 phút thì thử gửi lại sau.</p>
           <Link to="/login" className="text-primary underline">Về trang đăng nhập</Link>
         </div>
       </AuthCard>

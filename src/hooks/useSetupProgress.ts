@@ -22,7 +22,9 @@ export function useSetupProgress(): { progress: SetupProgress | null } {
   const accounts = useAccounts()
   const cards = useCreditCards()
   const keys = useApiKeys()
-  const data = useQuery({ queryKey: QK.setupProgress, queryFn: hasReceivedAnyMessage })
+  // staleTime 0: tin đầu tiên tới từ server (Shortcut), client không biết lúc nào để invalidate —
+  // lấy lại mỗi lần mount / quay lại tab. Có tin rồi thì checklist ẩn hẳn, truy vấn không chạy nữa.
+  const data = useQuery({ queryKey: QK.setupProgress, queryFn: hasReceivedAnyMessage, staleTime: 0 })
 
   if (!accounts.data || !cards.data || !keys.data || data.data === undefined) return { progress: null }
   return {

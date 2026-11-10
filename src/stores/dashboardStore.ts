@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useNow } from '@/hooks/useNow'
 import { useShallow } from 'zustand/react/shallow'
 import {
   DEFAULT_DASHBOARD_PERIOD,
@@ -29,10 +30,14 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
   resetDateRange: () => set({ ...DASHBOARD_INITIAL_STATE }),
 }))
 
-/** Khoảng ngày đang áp dụng (preset → tính theo hôm nay ở VN; custom → giá trị đã chọn). */
+/**
+ * Khoảng ngày đang áp dụng (preset → tính theo hôm nay ở VN; custom → giá trị đã chọn).
+ * `useNow` (mỗi phút) để tab mở qua nửa đêm cuối tháng tự sang tháng mới, không đợi re-render khác.
+ */
 export function useDashboardDateRange(): DateRangeValue {
   const { period, dateFrom, dateTo } = useDashboardStore(
     useShallow((s) => ({ period: s.period, dateFrom: s.dateFrom, dateTo: s.dateTo })),
   )
-  return period === 'custom' ? { dateFrom, dateTo } : presetRange(period)
+  const now = useNow()
+  return period === 'custom' ? { dateFrom, dateTo } : presetRange(period, now)
 }

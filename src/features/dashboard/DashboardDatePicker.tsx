@@ -31,6 +31,11 @@ export function DashboardDatePicker() {
     : undefined
 
   function handleSelect(range: DateRange | undefined) {
+    // Bỏ chọn hết trên lịch = không giới hạn ngày -> chip "Tất cả" (không để "Tuỳ chọn" sáng với kỳ rỗng)
+    if (!range?.from && !range?.to) {
+      setPeriod('all')
+      return
+    }
     setDateRange(
       range?.from ? format(range.from, 'yyyy-MM-dd') : null,
       range?.to ? format(range.to, 'yyyy-MM-dd') : null,

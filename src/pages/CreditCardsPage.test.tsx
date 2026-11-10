@@ -80,7 +80,6 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     expect(screen.queryByText('selector')).not.toBeInTheDocument()
     expect(screen.queryByText('tx-list')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Thao tác với thẻ đang chọn' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Thao tác với thẻ đang chọn' })).not.toBeInTheDocument()
   })
 
   it('đang tải: không nháy trạng thái rỗng', () => {
@@ -97,14 +96,16 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     expect(screen.getByLabelText('Tên thẻ')).toHaveValue('')
   })
 
-  it('có thẻ đang chọn: hiện đủ selector, danh sách và nút sửa/xoá', () => {
+  it('có thẻ đang chọn: hiện đủ selector, danh sách và menu ⋯ có Sửa + Xoá', async () => {
+    const u = userEvent.setup()
     state.cards = [card]
     useFilterStore.setState({ cardId: 'card-1' })
     renderPage()
     expect(screen.getByText('selector')).toBeInTheDocument()
     expect(screen.getByText('tx-list')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' })).toBeInTheDocument()
+    await u.click(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' }))
+    expect(await screen.findByRole('menuitem', { name: 'Sửa thẻ' })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: 'Xoá thẻ' })).toBeInTheDocument()
   })
 
   it('nút Sửa mở form điền sẵn thẻ đang chọn', async () => {
