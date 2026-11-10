@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { format, parse } from 'date-fns'
 import { vi } from 'date-fns/locale'
 import type { DateRange } from 'react-day-picker'
+import { isRangeSelectionComplete } from '@/utils/date-range-selection'
 import { CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -34,7 +35,7 @@ export function DashboardDatePicker() {
       range?.from ? format(range.from, 'yyyy-MM-dd') : null,
       range?.to ? format(range.to, 'yyyy-MM-dd') : null,
     )
-    if (range?.from && range?.to) setOpen(false)
+    if (isRangeSelectionComplete(range)) setOpen(false)
   }
 
   return (

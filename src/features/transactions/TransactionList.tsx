@@ -13,7 +13,7 @@ import { TransactionListError } from './TransactionListError'
 export function TransactionList() {
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useTransactions()
-  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s, { withCategory: true }))
+  const hasActiveFilters = useFilterStore((s) => selectHasActiveFilters(s))
 
   // useMemo: flatMap trong thân render chạy lại mỗi lần re-render (đổi filter,
   // debounce search...) trên toàn bộ tập đã tải. CreditCardTransactionList đã làm

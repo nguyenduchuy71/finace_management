@@ -12,7 +12,8 @@ import { MultiCardTransactionList } from '@/features/creditCards/MultiCardTransa
 import { Button } from '@/components/ui/button'
 import { useCreditCards } from '@/hooks/useCreditCards'
 import { useFilterStore } from '@/stores/filterStore'
-import { CreditCard, Pencil, Plus, Trash2 } from 'lucide-react'
+import { CreditCard, Plus } from 'lucide-react'
+import { EntityActionsMenu } from '@/components/entity-actions/EntityActionsMenu'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { EmptyState } from '@/components/empty-state/EmptyState'
 
@@ -51,27 +52,9 @@ export function CreditCardsPage() {
         icon={CreditCard}
         title="Thẻ tín dụng"
         actions={
-          <>
-            {view === 'card' && card && (
-              <>
-                <Button
-                  variant="outline" size="sm" aria-label="Sửa thẻ đang chọn"
-                  onClick={() => setFormMode({ kind: 'edit', cardId: card.id })}
-                >
-                  <Pencil className="h-4 w-4" /> Sửa
-                </Button>
-                <Button
-                  variant="outline" size="sm" aria-label="Xoá thẻ đang chọn"
-                  onClick={() => setDeleteTargetId(card.id)}
-                >
-                  <Trash2 className="h-4 w-4" /> Xoá
-                </Button>
-              </>
-            )}
-            <Button size="sm" onClick={openCreate}>
-              <Plus className="h-4 w-4" /> Thêm thẻ
-            </Button>
-          </>
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Thêm thẻ
+          </Button>
         }
       />
 
@@ -100,7 +83,15 @@ export function CreditCardsPage() {
 
           <TabsContent value="card" className="mt-4 space-y-4">
             {/* Combobox có tìm kiếm thay cho Tabs: 41 thẻ vượt xa ngưỡng ~15 mục mà tabs còn dùng được. */}
-            <CreditCardSelector />
+            <CreditCardSelector
+              actions={card && (
+                <EntityActionsMenu
+                  label="Thao tác với thẻ đang chọn" noun="thẻ"
+                  onEdit={() => setFormMode({ kind: 'edit', cardId: card.id })}
+                  onDelete={() => setDeleteTargetId(card.id)}
+                />
+              )}
+            />
             {card && <BillingCycleInfoCard card={card} />}
             <FilterBar />
             <CreditCardTransactionList />

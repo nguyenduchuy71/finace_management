@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { FilterBar } from './FilterBar'
 import { useFilterStore } from '@/stores/filterStore'
 
@@ -82,5 +82,26 @@ describe('FilterBar', () => {
     render(<FilterBar />)
     expect(screen.getByTestId('export-button')).toBeInTheDocument()
     expect(screen.getByText('Xuất CSV')).toBeInTheDocument()
+  })
+})
+
+describe('FilterBar — sheet bộ lọc trên điện thoại', () => {
+  it('nút "Bộ lọc" đếm bộ lọc đang bật (không tính ô tìm) và mở sheet chứa các control', async () => {
+    useFilterStore.setState({ category: 'Ăn uống', txType: 'expense', searchQuery: 'grab' })
+    render(<FilterBar />)
+    const trigger = screen.getByRole('button', { name: 'Bộ lọc, 2 đang bật' })
+    fireEvent.click(trigger)
+    const sheet = await screen.findByRole('dialog', { name: 'Bộ lọc' })
+    expect(within(sheet).getByRole('combobox', { name: 'Loại giao dịch' })).toBeInTheDocument()
+    expect(within(sheet).getByRole('button', { name: /Ăn uống/ })).toBeInTheDocument()
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Xóa bộ lọc' }))
+    expect(useFilterStore.getState()).toMatchObject({ category: 'all', txType: 'all' })
+    fireEvent.click(within(sheet).getByRole('button', { name: 'Xem kết quả' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('không bật gì: nút không có số đếm', () => {
+    render(<FilterBar />)
+    expect(screen.getByRole('button', { name: 'Bộ lọc' })).toBeInTheDocument()
   })
 })

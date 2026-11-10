@@ -20,7 +20,7 @@ export function emptyTxPage() {
   return { data: [] as never[], nextCursor: null as string | null, total: 0 }
 }
 
-/** Bộ lọc từ store -> tham số service (`search` rỗng thành undefined). Thẻ không có `category`. */
+/** Bộ lọc từ store -> tham số service (`search` rỗng thành undefined). */
 export function toTxQueryOptions(f: {
   searchQuery: string
   dateFrom: string | null

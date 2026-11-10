@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ChevronsUpDown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,8 @@ import type { CreditCard } from '@/types/creditCard'
  * dropdown tối đa ~15 mục, 41 là gấp 2,7 lần. Combobox có ô tìm kiếm thu 41 mục
  * xuống còn vài mục chỉ với 1-2 phím gõ.
  */
-export function CreditCardSelector() {
+/** `actions`: nút thao tác với thẻ đang chọn (menu ⋯), đặt ngay cạnh ô chọn. */
+export function CreditCardSelector({ actions }: { actions?: ReactNode } = {}) {
   const cardId = useFilterStore((s) => s.cardId)
   const setCardId = useFilterStore((s) => s.setCardId)
   const { data, isLoading } = useCreditCards()
@@ -51,7 +52,7 @@ export function CreditCardSelector() {
   const listboxId = 'credit-card-listbox'
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -61,7 +62,7 @@ export function CreditCardSelector() {
             aria-expanded={open}
             aria-controls={open ? listboxId : undefined}
             aria-label="Chọn thẻ tín dụng"
-            className="h-auto w-full justify-between gap-3 px-3 py-2 sm:w-96"
+            className="h-auto min-w-0 flex-1 justify-between gap-3 px-3 py-2 sm:w-96 sm:flex-none"
           >
             {selected ? (
               <span className="flex min-w-0 items-center gap-3">
@@ -90,7 +91,8 @@ export function CreditCardSelector() {
         </PopoverContent>
       </Popover>
 
-      <span className="text-sm text-muted-foreground">
+      {actions}
+      <span className="hidden text-sm text-muted-foreground sm:inline">
         {cards.length} thẻ
       </span>
     </div>

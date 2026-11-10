@@ -21,13 +21,14 @@ export function useMultiCardTransactions() {
       dateTo: s.dateTo,
       searchQuery: s.searchQuery,
       txType: s.txType,
+      category: s.category,
     }))
   )
-  const { dateFrom, dateTo, searchQuery, txType } = filters
+  const { dateFrom, dateTo, searchQuery, txType, category } = filters
   const sortedIds = useMemo(() => [...cardIds].sort(), [cardIds])
 
   return useInfiniteQuery({
-    queryKey: [...QK.creditCardTransactions, 'multi', sortedIds, { dateFrom, dateTo, searchQuery, txType }],
+    queryKey: [...QK.creditCardTransactions, 'multi', sortedIds, { dateFrom, dateTo, searchQuery, txType, category }],
     queryFn: ({ pageParam }) =>
       getCreditCardTransactions({ cardIds: sortedIds }, pageParam as string | undefined, TX_PAGE_SIZE, toTxQueryOptions(filters)),
     initialPageParam: undefined as string | undefined,

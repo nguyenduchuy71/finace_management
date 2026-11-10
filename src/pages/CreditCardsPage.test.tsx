@@ -20,7 +20,10 @@ vi.mock('@/hooks/useCreditCards', () => ({
     refetch: state.refetch,
   }),
 }))
-vi.mock('@/features/creditCards/CreditCardSelector', () => ({ CreditCardSelector: () => <div>selector</div> }))
+// Mock giữ khe `actions` (menu ⋯ Sửa/Xoá thẻ đang chọn nằm cạnh ô chọn thẻ)
+vi.mock('@/features/creditCards/CreditCardSelector', () => ({
+  CreditCardSelector: ({ actions }: { actions?: React.ReactNode }) => <div>selector{actions}</div>,
+}))
 vi.mock('@/features/creditCards/CreditCardTransactionList', () => ({ CreditCardTransactionList: () => <div>tx-list</div> }))
 vi.mock('@/features/creditCards/BillingCycleInfoCard', () => ({ BillingCycleInfoCard: () => <div>cycle-info</div> }))
 vi.mock('@/components/filters/FilterBar', () => ({
@@ -37,6 +40,12 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), warning: vi.fn() } }))
 
 import { CreditCardsPage } from './CreditCardsPage'
 import { useFilterStore } from '@/stores/filterStore'
+
+/** Sửa/Xoá thẻ nằm trong menu ⋯ cạnh ô chọn thẻ. */
+async function chooseCardAction(u: ReturnType<typeof userEvent.setup>, item: 'Sửa thẻ' | 'Xoá thẻ') {
+  await u.click(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' }))
+  await u.click(await screen.findByRole('menuitem', { name: item }))
+}
 
 const card = {
   id: 'card-1', bankName: 'SHB', cardName: 'SHB Visa', cardNumber: '****x265',
@@ -70,8 +79,8 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     expect(screen.getByText('Chưa có thẻ tín dụng nào')).toBeInTheDocument()
     expect(screen.queryByText('selector')).not.toBeInTheDocument()
     expect(screen.queryByText('tx-list')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Sửa thẻ đang chọn' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Xoá thẻ đang chọn' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Thao tác với thẻ đang chọn' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Thao tác với thẻ đang chọn' })).not.toBeInTheDocument()
   })
 
   it('đang tải: không nháy trạng thái rỗng', () => {
@@ -94,8 +103,8 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     renderPage()
     expect(screen.getByText('selector')).toBeInTheDocument()
     expect(screen.getByText('tx-list')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sửa thẻ đang chọn' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Xoá thẻ đang chọn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' })).toBeInTheDocument()
   })
 
   it('nút Sửa mở form điền sẵn thẻ đang chọn', async () => {
@@ -103,7 +112,7 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     state.cards = [card]
     useFilterStore.setState({ cardId: 'card-1' })
     renderPage()
-    await u.click(screen.getByRole('button', { name: 'Sửa thẻ đang chọn' }))
+    await chooseCardAction(u, 'Sửa thẻ')
     expect(await screen.findByText('Sửa thẻ tín dụng')).toBeInTheDocument()
     expect(screen.getByLabelText('Tên thẻ')).toHaveValue('SHB Visa')
   })
@@ -123,7 +132,7 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     state.cards = [card]
     useFilterStore.setState({ cardId: 'card-1' })
     renderPage()
-    await u.click(screen.getByRole('button', { name: 'Xoá thẻ đang chọn' }))
+    await chooseCardAction(u, 'Xoá thẻ')
     expect(await screen.findByText(/Xoá thẻ “SHB Visa”\?/)).toBeInTheDocument()
     expect(await screen.findByText('7')).toBeInTheDocument()
   })
@@ -144,7 +153,7 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     state.cards = [card]
     useFilterStore.setState({ cardId: 'card-1' })
     const view = renderPage()
-    await u.click(screen.getByRole('button', { name: 'Sửa thẻ đang chọn' }))
+    await chooseCardAction(u, 'Sửa thẻ')
     expect(await screen.findByText('Sửa thẻ tín dụng')).toBeInTheDocument()
 
     state.cards = [{ ...card, id: 'card-2', cardName: 'Thẻ khác' }]
@@ -159,7 +168,7 @@ describe('CreditCardsPage — quản lý thẻ', () => {
     state.cards = [card, other]
     useFilterStore.setState({ cardId: 'card-1' })
     const view = renderPage()
-    await u.click(screen.getByRole('button', { name: 'Xoá thẻ đang chọn' }))
+    await chooseCardAction(u, 'Xoá thẻ')
     expect(await screen.findByText(/Xoá thẻ “SHB Visa”\?/)).toBeInTheDocument()
 
     state.cards = [other]
@@ -184,7 +193,7 @@ describe('CreditCardsPage — mục Từng thẻ / Nhiều thẻ', () => {
     expect(screen.getByText('selector')).toBeInTheDocument()
     expect(screen.getByText('tx-list')).toBeInTheDocument()
     expect(screen.queryByText('multi-list')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sửa thẻ đang chọn' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Thao tác với thẻ đang chọn' })).toBeInTheDocument()
   })
 
   it('chuyển "Nhiều thẻ": ghi ?view=all, hiện danh sách gộp, ẩn Sửa/Xoá và nút xuất', async () => {
@@ -195,7 +204,7 @@ describe('CreditCardsPage — mục Từng thẻ / Nhiều thẻ', () => {
     expect(screen.getByText('multi-list')).toBeInTheDocument()
     expect(screen.getByText('filter-bar (không xuất)')).toBeInTheDocument()
     expect(screen.queryByText('tx-list')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Sửa thẻ đang chọn' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Thao tác với thẻ đang chọn' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Thêm thẻ/ })).toBeInTheDocument()
   })
 

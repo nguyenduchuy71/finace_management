@@ -48,15 +48,12 @@ export const useFilterStore = create<FilterState>()((set) => ({
 
 /**
  * Có bộ lọc nào đang bật không. Trả boolean nguyên thuỷ nên không cần useShallow.
- * `withCategory=false` cho thẻ tín dụng: thẻ không có bộ lọc danh mục.
+ * Danh mục áp cho cả giao dịch thẻ (trước đây trang thẻ hiện nút Danh mục nhưng không lọc).
  */
 export function selectHasActiveFilters(
   s: Pick<FilterState, 'searchQuery' | 'dateFrom' | 'dateTo' | 'txType' | 'category'>,
-  { withCategory }: { withCategory: boolean },
 ): boolean {
-  return Boolean(
-    s.searchQuery || s.dateFrom || s.dateTo || s.txType !== 'all' || (withCategory && s.category !== 'all')
-  )
+  return Boolean(s.searchQuery || s.dateFrom || s.dateTo || s.txType !== 'all' || s.category !== 'all')
 }
 
 /** Như `useFilterParams` nhưng cho một thẻ (không có danh mục) — cũng PHẢI dùng useShallow. */
@@ -68,6 +65,7 @@ export function useCreditCardFilterParams() {
       dateTo: state.dateTo,
       searchQuery: state.searchQuery,
       txType: state.txType,
+      category: state.category,
     }))
   )
 }

@@ -7,7 +7,8 @@ import { FilterBar } from '@/components/filters/FilterBar'
 import { Button } from '@/components/ui/button'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useFilterStore } from '@/stores/filterStore'
-import { Landmark, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Landmark, Plus } from 'lucide-react'
+import { EntityActionsMenu } from '@/components/entity-actions/EntityActionsMenu'
 import { EmptyState } from '@/components/empty-state/EmptyState'
 
 /** Form đang thêm TK mới, hoặc sửa một TK (theo id); null = đóng. Xem CreditCardsPage. */
@@ -31,18 +32,6 @@ export function RecordedTransactionsView() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-end gap-2">
-        {account && (
-          <>
-            <Button variant="outline" size="sm" aria-label="Sửa tài khoản đang chọn"
-              onClick={() => setFormMode({ kind: 'edit', accountId: account.id })}>
-              <Pencil className="h-4 w-4" /> Sửa
-            </Button>
-            <Button variant="outline" size="sm" aria-label="Xoá tài khoản đang chọn"
-              onClick={() => setDeleteTargetId(account.id)}>
-              <Trash2 className="h-4 w-4" /> Xoá
-            </Button>
-          </>
-        )}
         <Button size="sm" onClick={openCreate}><Plus className="h-4 w-4" /> Thêm tài khoản</Button>
       </div>
 
@@ -61,7 +50,17 @@ export function RecordedTransactionsView() {
         />
       ) : (
         <>
-          <AccountTabs />
+          {/* Menu ⋯ ngay cạnh tab TK đang chọn: rõ đang sửa/xoá TK nào */}
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1"><AccountTabs /></div>
+            {account && (
+              <EntityActionsMenu
+                label="Thao tác với tài khoản đang chọn" noun="tài khoản"
+                onEdit={() => setFormMode({ kind: 'edit', accountId: account.id })}
+                onDelete={() => setDeleteTargetId(account.id)}
+              />
+            )}
+          </div>
           <FilterBar />
           <TransactionList />
         </>

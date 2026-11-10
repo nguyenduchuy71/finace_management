@@ -72,7 +72,8 @@ export function CashbackSummary({ card, cycle }: CashbackSummaryProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      {/* flex-wrap: ở 375px nút "Cài đặt hoàn tiền" từng bị cắt chữ */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="flex items-center gap-2 text-sm font-semibold">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-cashback-soft text-cashback">
             <Coins aria-hidden className="h-4 w-4" />
