@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { useDashboardStore } from '@/stores/dashboardStore'
+import { DASHBOARD_INITIAL_STATE, useDashboardStore } from '@/stores/dashboardStore'
 import { DashboardPage } from '@/pages/DashboardPage'
 import * as dashboardService from '@/services/dashboard'
 import type { DashboardStats } from '@/types/dashboard'
@@ -52,7 +52,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks()
-  useDashboardStore.setState({ dateFrom: null, dateTo: null })
+  useDashboardStore.setState({ ...DASHBOARD_INITIAL_STATE })
+  vi.useRealTimers()
 })
 
 function createWrapper() {
@@ -224,7 +225,7 @@ describe('DashboardPage', () => {
         }
       })
 
-      useDashboardStore.setState({ dateFrom: '2026-01-01', dateTo: '2026-01-31' })
+      useDashboardStore.setState({ period: 'custom', dateFrom: '2026-01-01', dateTo: '2026-01-31' })
       renderDashboardPage()
 
       await waitFor(() => {
@@ -239,6 +240,32 @@ describe('DashboardPage', () => {
       // Second call should be previous month (Dec 2025)
       expect(capturedCalls[1].dateFrom).toBe('2025-12-01')
       expect(capturedCalls[1].dateTo).toBe('2025-12-31')
+    })
+
+    it('mặc định "Tháng này" theo lịch VN (18:00 UTC 31/03 đã là 01/04 ở VN) và so với tháng trước', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-03-31T18:00:00Z'))
+      renderDashboardPage()
+      await screen.findByText('Tổng thu')
+      const calls = vi.mocked(dashboardService.getDashboardStats).mock.calls.map(([f]) => f)
+      expect(calls).toContainEqual({ dateFrom: '2026-04-01', dateTo: '2026-04-30' })
+      expect(calls).toContainEqual({ dateFrom: '2026-03-01', dateTo: '2026-03-31' })
+      expect(screen.getByText('01/04/2026 – 30/04/2026')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Tháng này' })).toHaveAttribute('aria-pressed', 'true')
+      // 8 giao dịch, 2 kỳ bằng nhau -> có chip so sánh
+      expect(screen.getAllByText(/vs tháng trước/).length).toBe(2)
+    })
+
+    it('"Tất cả": không giới hạn ngày, không tải tháng trước, không hiện "% vs tháng trước"', async () => {
+      renderDashboardPage()
+      await screen.findByText('Tổng thu')
+      vi.mocked(dashboardService.getDashboardStats).mockClear()
+      fireEvent.click(screen.getByRole('button', { name: 'Tất cả' }))
+      await waitFor(() => expect(screen.getByText('Toàn bộ thời gian')).toBeInTheDocument())
+      await waitFor(() => expect(dashboardService.getDashboardStats).toHaveBeenCalledWith({ dateFrom: null, dateTo: null }))
+      expect(dashboardService.getDashboardStats).toHaveBeenCalledTimes(1)
+      expect(screen.queryByText(/vs tháng trước/)).not.toBeInTheDocument()
+      expect(screen.queryByText('Chưa đủ dữ liệu')).not.toBeInTheDocument()
     })
   })
 })
