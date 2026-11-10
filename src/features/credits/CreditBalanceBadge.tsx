@@ -32,7 +32,7 @@ export function CreditBalanceBadge({ className }: { className?: string }) {
     >
       <Coins className="h-3.5 w-3.5" aria-hidden />
       <span>{label}</span>
-      {heldCount > 0 && <span className="rounded-full bg-warning px-1.5 text-[10px] font-semibold text-black">{heldCount} chờ</span>}
+      {heldCount > 0 && <span className="rounded-full bg-warning px-1.5 text-[10px] font-semibold text-warning-foreground">{heldCount} chờ</span>}
     </Link>
   )
 }

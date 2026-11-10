@@ -68,7 +68,7 @@ export function BudgetSettings({ open, onOpenChange }: BudgetSettingsProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Đặt ngân sách theo danh mục</DialogTitle>
           <DialogDescription>

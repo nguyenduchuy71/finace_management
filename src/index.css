@@ -46,6 +46,7 @@
     --color-internal: var(--internal);
     --color-internal-soft: var(--internal-soft);
     --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
     --color-cat-1: var(--cat-1);
     --color-cat-1-soft: var(--cat-1-soft);
     --color-cat-2: var(--cat-2);
@@ -107,6 +108,7 @@
     --internal: oklch(0.5 0.07 255);
     --internal-soft: oklch(0.95 0.02 255);
     --warning: oklch(0.76 0.16 75);
+    --warning-foreground: oklch(0.22 0.03 250);
 
     /* Biểu đồ theo danh mục (utils/category-colors.ts), cùng tông CategoryBadge:
        1 Ăn uống cam · 2 Mua sắm hồng · 3 Di chuyển xanh dương · 4 Giải trí tím · 5 Hóa đơn hổ phách · 6 Khác xám */
@@ -170,6 +172,7 @@
     --internal: oklch(0.76 0.07 250);
     --internal-soft: oklch(0.76 0.07 250 / 15%);
     --warning: oklch(0.82 0.15 80);
+    --warning-foreground: oklch(0.2 0.04 200);
 
     --chart-1: oklch(0.76 0.15 50);
     --chart-2: oklch(0.74 0.17 0);
