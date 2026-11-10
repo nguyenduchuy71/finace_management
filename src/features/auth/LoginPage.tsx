@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { Wallet } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card } from '@/components/ui/card'
-import { APP_NAME } from '@/components/layout/BrandMark'
+import { AuthCard } from './AuthCard'
+import { PasswordInput } from './PasswordInput'
 import { CaptchaWidget } from './CaptchaWidget'
 import { CAPTCHA_FAILED_MESSAGE, CAPTCHA_MISSING_MESSAGE, useCaptchaToken } from './use-captcha-token'
 
@@ -51,13 +50,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm p-6">
-        <Link to="/" className="mb-6 flex w-fit items-center gap-2" aria-label="Về trang chủ">
-          <Wallet className="h-5 w-5 text-primary" />
-          <span className="heading-h3 tracking-tight">{APP_NAME}</span>
-        </Link>
-
+    <AuthCard>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="email" className="heading-label">Email</label>
@@ -67,9 +60,12 @@ export function LoginPage() {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="password" className="heading-label">Mật khẩu</label>
-            <Input
-              id="password" type="password" autoComplete="current-password" required
+            <div className="flex items-baseline justify-between gap-2">
+              <label htmlFor="password" className="heading-label">Mật khẩu</label>
+              <Link to="/forgot-password" className="text-sm text-primary underline-offset-2 hover:underline">Quên mật khẩu?</Link>
+            </div>
+            <PasswordInput
+              id="password" autoComplete="current-password" required
               value={password} onChange={(e) => setPassword(e.target.value)}
             />
           </div>
@@ -88,7 +84,6 @@ export function LoginPage() {
             <Link to="/terms" className="underline">Điều khoản sử dụng</Link>
           </p>
         </form>
-      </Card>
-    </div>
+    </AuthCard>
   )
 }

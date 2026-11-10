@@ -3,6 +3,7 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { DIALOG_FOOTER_CLASSES, DIALOG_SURFACE_CLASSES } from "./dialog-surface-classes"
+import { useReturnFocus } from "./use-return-focus"
 import { buttonVariants } from "@/components/ui/button"
 
 function AlertDialog({
@@ -29,8 +30,11 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  const focusHandlers = useReturnFocus(onOpenAutoFocus, onCloseAutoFocus)
   return (
     <AlertDialogPrimitive.Portal>
       <AlertDialogOverlay />
@@ -41,6 +45,7 @@ function AlertDialogContent({
           "sm:max-w-md",
           className
         )}
+        {...focusHandlers}
         {...props}
       />
     </AlertDialogPrimitive.Portal>

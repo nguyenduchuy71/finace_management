@@ -50,19 +50,19 @@ export function RecordedTransactionsView() {
         />
       ) : (
         <>
-          {/* Menu ⋯ ngay cạnh tab TK đang chọn: rõ đang sửa/xoá TK nào */}
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1"><AccountTabs /></div>
-            {account && (
+          {/* Menu ⋯ ngay cạnh tab TK đang chọn: rõ đang sửa/xoá TK nào. Bộ lọc + danh sách là panel của tab. */}
+          <AccountTabs
+            actions={account && (
               <EntityActionsMenu
                 label="Thao tác với tài khoản đang chọn" noun="tài khoản"
                 onEdit={() => setFormMode({ kind: 'edit', accountId: account.id })}
                 onDelete={() => setDeleteTargetId(account.id)}
               />
             )}
-          </div>
-          <FilterBar />
-          <TransactionList />
+          >
+            <FilterBar />
+            <TransactionList />
+          </AccountTabs>
         </>
       )}
 

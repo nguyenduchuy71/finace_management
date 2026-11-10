@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { DIALOG_FOOTER_CLASSES, DIALOG_SURFACE_CLASSES } from "./dialog-surface-classes"
+import { useReturnFocus } from "./use-return-focus"
 
 function Dialog({
   ...props
@@ -50,10 +51,13 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const focusHandlers = useReturnFocus(onOpenAutoFocus, onCloseAutoFocus)
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -64,6 +68,7 @@ function DialogContent({
           "sm:max-w-lg",
           className
         )}
+        {...focusHandlers}
         {...props}
       >
         {children}
